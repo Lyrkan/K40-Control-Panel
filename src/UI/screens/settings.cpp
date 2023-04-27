@@ -1,0 +1,428 @@
+#include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <lvgl.h>
+#include <math.h>
+#include <WiFi.h>
+
+#include "UI/screens/settings.h"
+#include "macros.h"
+#include "settings.h"
+#include "wifi.h"
+
+lv_obj_t *ui_settings_screen;
+lv_obj_t *ui_settings_wifi_ssid_value;
+lv_obj_t *ui_settings_wifi_connect_button;
+
+static lv_obj_t *ui_settings_menu;
+static lv_obj_t *ui_settings_menu_back_button;
+static lv_obj_t *ui_settings_menu_back_button_label;
+static lv_obj_t *ui_settings_root_page;
+static lv_obj_t *ui_settings_wifi_page;
+static lv_obj_t *ui_settings_bed_page;
+static lv_obj_t *ui_settings_probes_page;
+static lv_obj_t *ui_settings_alerts_page;
+static lv_obj_t *ui_settings_ota_page;
+
+static lv_obj_t *ui_settings_keyboard;
+
+static lv_obj_t *ui_settings_wifi_page_panel;
+static lv_obj_t *ui_settings_wifi_passphrase_value;
+static lv_obj_t *ui_settings_wifi_connect_button_label;
+static lv_obj_t *ui_settings_wifi_disconnect_button;
+static lv_obj_t *ui_settings_wifi_disconnect_button_label;
+static lv_obj_t *ui_settings_wifi_current_ip_label;
+
+static lv_obj_t *ui_settings_bed_screw_pitch_value;
+static lv_obj_t *ui_settings_bed_microstep_multiplier_value;
+static lv_obj_t *ui_settings_bed_steps_per_revolution_value;
+static lv_obj_t *ui_settings_bed_acceleration_value;
+static lv_obj_t *ui_settings_bed_moving_speed_value;
+static lv_obj_t *ui_settings_bed_homing_speed_value;
+
+static void ui_settings_load_bed_settings() {
+    // Acquire bed settings mutex
+    while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdPASS)
+        ;
+
+    lv_spinbox_set_value(ui_settings_bed_screw_pitch_value, (int)(bed_settings.screw_pitch * 1000));
+    lv_spinbox_set_value(ui_settings_bed_microstep_multiplier_value, (int)(bed_settings.microstep_multiplier));
+    lv_spinbox_set_value(ui_settings_bed_steps_per_revolution_value, (int)(bed_settings.steps_per_revolution));
+    lv_spinbox_set_value(ui_settings_bed_acceleration_value, (int)(bed_settings.acceleration));
+    lv_spinbox_set_value(ui_settings_bed_moving_speed_value, (int)(bed_settings.moving_speed));
+    lv_spinbox_set_value(ui_settings_bed_homing_speed_value, (int)(bed_settings.homing_speed));
+
+    // Release bed settings mutex
+    xSemaphoreGive(bed_settings_mutex);
+}
+
+static void ui_settings_save_bed_settings() {
+    // Acquire bed settings mutex
+    while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdPASS)
+        ;
+
+    bed_settings.screw_pitch = (float_t)lv_spinbox_get_value(ui_settings_bed_screw_pitch_value) / 1000;
+    bed_settings.microstep_multiplier = lv_spinbox_get_value(ui_settings_bed_microstep_multiplier_value);
+    bed_settings.steps_per_revolution = lv_spinbox_get_value(ui_settings_bed_steps_per_revolution_value);
+    bed_settings.acceleration = lv_spinbox_get_value(ui_settings_bed_acceleration_value);
+    bed_settings.moving_speed = lv_spinbox_get_value(ui_settings_bed_moving_speed_value);
+    bed_settings.homing_speed = lv_spinbox_get_value(ui_settings_bed_homing_speed_value);
+    settings_schedule_save(SETTINGS_TYPE_BED);
+
+    // Release bed settings mutex
+    xSemaphoreGive(bed_settings_mutex);
+}
+
+static void ui_settings_textarea_focused_event_handler(lv_event_t *e) {
+    lv_event_code_t event_code = lv_event_get_code(e);
+    lv_obj_t *target = lv_event_get_target(e);
+    lv_obj_t *keyboard = (lv_obj_t *)lv_event_get_user_data(e);
+
+    switch (event_code) {
+    case LV_EVENT_FOCUSED:
+        lv_keyboard_set_textarea(keyboard, target);
+        lv_obj_clear_flag(ui_settings_keyboard, LV_OBJ_FLAG_HIDDEN);
+        break;
+    case LV_EVENT_DEFOCUSED:
+        lv_obj_add_flag(ui_settings_keyboard, LV_OBJ_FLAG_HIDDEN);
+        break;
+    default:
+        // Ignore
+        break;
+    }
+}
+
+static void ui_settings_wifi_connect_button_handler(lv_event_t *e) {
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if (event_code != LV_EVENT_CLICKED) {
+        return;
+    }
+
+    wifi_connect(
+        lv_textarea_get_text(ui_settings_wifi_ssid_value),
+        lv_textarea_get_text(ui_settings_wifi_passphrase_value));
+}
+
+static void ui_settings_wifi_disconnect_button_handler(lv_event_t *e) {
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if (event_code != LV_EVENT_CLICKED) {
+        return;
+    }
+
+    wifi_disconnect();
+}
+
+static void ui_settings_spinbox_increment_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *spinbox = (lv_obj_t *)lv_event_get_user_data(e);
+    if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_increment(spinbox);
+    }
+}
+
+static void ui_settings_spinbox_decrement_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *spinbox = (lv_obj_t *)lv_event_get_user_data(e);
+    if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_decrement(spinbox);
+    }
+}
+
+static void ui_settings_spinbox_value_changed_handler(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *target = lv_event_get_target(e);
+
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        if (target == ui_settings_bed_screw_pitch_value || target == ui_settings_bed_microstep_multiplier_value ||
+            target == ui_settings_bed_steps_per_revolution_value || target == ui_settings_bed_acceleration_value ||
+            target == ui_settings_bed_moving_speed_value || target == ui_settings_bed_homing_speed_value) {
+            ui_settings_save_bed_settings();
+        }
+    }
+}
+
+static lv_obj_t *ui_settings_create_spinbox_field(
+    lv_obj_t *parent, const char *label, int32_t min, int32_t max, uint8_t digit_count, uint8_t separator_position) {
+
+    lv_obj_t *cont = lv_menu_cont_create(parent);
+
+    lv_obj_t *label_obj = lv_label_create(cont);
+    lv_obj_set_width(label_obj, 100);
+    lv_obj_set_height(label_obj, LV_SIZE_CONTENT);
+    lv_label_set_text(label_obj, label);
+
+    lv_obj_t *spinbox = lv_spinbox_create(cont);
+    lv_spinbox_set_range(spinbox, min, max);
+    lv_spinbox_set_digit_format(spinbox, digit_count, separator_position);
+    lv_obj_set_width(spinbox, 100);
+
+    lv_coord_t spinbox_height = lv_obj_get_height(spinbox);
+
+    lv_obj_t *btn_decrement = lv_btn_create(cont);
+    lv_obj_set_size(btn_decrement, spinbox_height, spinbox_height);
+    lv_obj_set_style_bg_img_src(btn_decrement, LV_SYMBOL_MINUS, 0);
+    lv_obj_add_event_cb(btn_decrement, ui_settings_spinbox_decrement_handler, LV_EVENT_ALL, spinbox);
+
+    lv_obj_t *btn_increment = lv_btn_create(cont);
+    lv_obj_set_size(btn_increment, spinbox_height, spinbox_height);
+    lv_obj_set_style_bg_img_src(btn_increment, LV_SYMBOL_PLUS, 0);
+    lv_obj_add_event_cb(btn_increment, ui_settings_spinbox_increment_handler, LV_EVENT_ALL, spinbox);
+
+    // Move decrement button before the spinbox
+    lv_obj_swap(spinbox, btn_decrement);
+
+    // Center label on the vertical axis
+    lv_obj_set_y(label_obj, (spinbox_height / 2) - (lv_obj_get_height(label_obj) / 2));
+
+    return spinbox;
+}
+
+void ui_settings_init() {
+    ui_settings_screen = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(ui_settings_screen, lv_color_hex(0xF6F6F6), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_clear_flag(ui_settings_screen, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Create menu
+    ui_settings_menu = lv_menu_create(ui_settings_screen);
+    lv_obj_set_width(ui_settings_menu, 460);
+    lv_obj_set_height(ui_settings_menu, 255);
+    lv_obj_set_x(ui_settings_menu, 10);
+    lv_obj_set_y(ui_settings_menu, -10);
+    lv_obj_set_align(ui_settings_menu, LV_ALIGN_BOTTOM_LEFT);
+    lv_obj_set_style_bg_opa(ui_settings_menu, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_settings_menu, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Create back button
+    lv_obj_t *ui_settings_menu_back_button = lv_menu_get_main_header_back_btn(ui_settings_menu);
+    lv_obj_t *ui_settings_menu_back_button_label = lv_label_create(ui_settings_menu_back_button);
+    lv_label_set_text(ui_settings_menu_back_button_label, "Back");
+
+    // Create menu pages
+    ui_settings_wifi_page = lv_menu_page_create(ui_settings_menu, "WiFi");
+    ui_settings_bed_page = lv_menu_page_create(ui_settings_menu, "Bed");
+    ui_settings_probes_page = lv_menu_page_create(ui_settings_menu, "Probes");
+    ui_settings_alerts_page = lv_menu_page_create(ui_settings_menu, "Alerts");
+    ui_settings_ota_page = lv_menu_page_create(ui_settings_menu, "OTA updates");
+
+    // Root page
+    ui_settings_root_page = lv_menu_page_create(ui_settings_menu, NULL);
+    lv_menu_set_page(ui_settings_menu, ui_settings_root_page);
+    lv_obj_t *item_cont;
+    lv_obj_t *item_label;
+
+    item_cont = lv_menu_cont_create(ui_settings_root_page);
+    item_label = lv_label_create(item_cont);
+    lv_label_set_text(item_label, "WiFi");
+    lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_wifi_page);
+
+    item_cont = lv_menu_cont_create(ui_settings_root_page);
+    item_label = lv_label_create(item_cont);
+    lv_label_set_text(item_label, "Bed");
+    lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_bed_page);
+
+    item_cont = lv_menu_cont_create(ui_settings_root_page);
+    item_label = lv_label_create(item_cont);
+    lv_label_set_text(item_label, "Probes");
+    lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_probes_page);
+
+    item_cont = lv_menu_cont_create(ui_settings_root_page);
+    item_label = lv_label_create(item_cont);
+    lv_label_set_text(item_label, "Alerts");
+    lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_alerts_page);
+
+    item_cont = lv_menu_cont_create(ui_settings_root_page);
+    item_label = lv_label_create(item_cont);
+    lv_label_set_text(item_label, "OTA Updates");
+    lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_ota_page);
+
+    // Keyboard
+    ui_settings_keyboard = lv_keyboard_create(ui_settings_screen);
+    lv_obj_set_width(ui_settings_keyboard, lv_pct(100));
+    lv_obj_set_height(ui_settings_keyboard, lv_pct(40));
+    lv_obj_set_align(ui_settings_keyboard, LV_ALIGN_BOTTOM_LEFT);
+    lv_obj_set_pos(ui_settings_keyboard, 0, 0);
+    lv_obj_set_style_text_font(ui_settings_keyboard, &font_default_14, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_add_flag(ui_settings_keyboard, LV_OBJ_FLAG_HIDDEN);
+
+    // WiFi Page
+    ui_settings_wifi_page_panel = lv_obj_create(ui_settings_wifi_page);
+    lv_obj_set_width(ui_settings_wifi_page_panel, lv_pct(100));
+    lv_obj_set_height(ui_settings_wifi_page_panel, lv_pct(100));
+    lv_obj_set_x(ui_settings_wifi_page_panel, 0);
+    lv_obj_set_y(ui_settings_wifi_page_panel, 0);
+    lv_obj_set_style_bg_opa(ui_settings_wifi_page_panel, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_settings_wifi_page_panel, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_clear_flag(ui_settings_wifi_page_panel, LV_OBJ_FLAG_SCROLLABLE);
+
+    ui_settings_wifi_ssid_value = lv_textarea_create(ui_settings_wifi_page_panel);
+    lv_obj_set_width(ui_settings_wifi_ssid_value, lv_pct(100));
+    lv_obj_set_height(ui_settings_wifi_ssid_value, LV_SIZE_CONTENT);
+    lv_obj_set_x(ui_settings_wifi_ssid_value, 0);
+    lv_obj_set_y(ui_settings_wifi_ssid_value, 0);
+    lv_textarea_set_placeholder_text(ui_settings_wifi_ssid_value, "WIFI SSID");
+    lv_textarea_set_one_line(ui_settings_wifi_ssid_value, true);
+    lv_obj_add_event_cb(
+        ui_settings_wifi_ssid_value,
+        ui_settings_textarea_focused_event_handler,
+        LV_EVENT_ALL,
+        ui_settings_keyboard);
+
+    ui_settings_wifi_passphrase_value = lv_textarea_create(ui_settings_wifi_page_panel);
+    lv_obj_set_width(ui_settings_wifi_passphrase_value, lv_pct(100));
+    lv_obj_set_height(ui_settings_wifi_passphrase_value, LV_SIZE_CONTENT);
+    lv_obj_set_x(ui_settings_wifi_passphrase_value, 0);
+    lv_obj_set_y(ui_settings_wifi_passphrase_value, 44);
+    lv_textarea_set_placeholder_text(ui_settings_wifi_passphrase_value, "WIFI Passphrase");
+    lv_textarea_set_one_line(ui_settings_wifi_passphrase_value, true);
+    lv_textarea_set_password_mode(ui_settings_wifi_passphrase_value, true);
+    lv_obj_add_event_cb(
+        ui_settings_wifi_passphrase_value,
+        ui_settings_textarea_focused_event_handler,
+        LV_EVENT_ALL,
+        ui_settings_keyboard);
+
+    ui_settings_wifi_connect_button = lv_btn_create(ui_settings_wifi_page_panel);
+    lv_obj_set_width(ui_settings_wifi_connect_button, 100);
+    lv_obj_set_height(ui_settings_wifi_connect_button, 40);
+    lv_obj_set_x(ui_settings_wifi_connect_button, 0);
+    lv_obj_set_y(ui_settings_wifi_connect_button, 110);
+    lv_obj_set_align(ui_settings_wifi_connect_button, LV_ALIGN_TOP_RIGHT);
+    lv_obj_add_flag(ui_settings_wifi_connect_button, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+    lv_obj_clear_flag(ui_settings_wifi_connect_button, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(
+        ui_settings_wifi_connect_button,
+        ui_settings_wifi_connect_button_handler,
+        LV_EVENT_CLICKED,
+        NULL);
+
+    ui_settings_wifi_connect_button_label = lv_label_create(ui_settings_wifi_connect_button);
+    lv_obj_set_width(ui_settings_wifi_connect_button_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_settings_wifi_connect_button_label, LV_SIZE_CONTENT);
+    lv_obj_set_align(ui_settings_wifi_connect_button_label, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_settings_wifi_connect_button_label, "Connect");
+
+    ui_settings_wifi_disconnect_button = lv_btn_create(ui_settings_wifi_page_panel);
+    lv_obj_set_width(ui_settings_wifi_disconnect_button, 100);
+    lv_obj_set_height(ui_settings_wifi_disconnect_button, 40);
+    lv_obj_set_x(ui_settings_wifi_disconnect_button, 0);
+    lv_obj_set_y(ui_settings_wifi_disconnect_button, 110);
+    lv_obj_set_align(ui_settings_wifi_disconnect_button, LV_ALIGN_TOP_RIGHT);
+    lv_obj_add_flag(ui_settings_wifi_disconnect_button, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+    lv_obj_clear_flag(ui_settings_wifi_disconnect_button, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(ui_settings_wifi_disconnect_button, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_style_bg_color(
+        ui_settings_wifi_disconnect_button,
+        lv_color_hex(0xE80C0C),
+        LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_add_event_cb(
+        ui_settings_wifi_disconnect_button,
+        ui_settings_wifi_disconnect_button_handler,
+        LV_EVENT_CLICKED,
+        NULL);
+
+    ui_settings_wifi_disconnect_button_label = lv_label_create(ui_settings_wifi_disconnect_button);
+    lv_obj_set_width(ui_settings_wifi_disconnect_button_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_settings_wifi_disconnect_button_label, LV_SIZE_CONTENT);
+    lv_obj_set_align(ui_settings_wifi_disconnect_button_label, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_settings_wifi_disconnect_button_label, "Disconnect");
+
+    ui_settings_wifi_current_ip_label = lv_label_create(ui_settings_wifi_page_panel);
+    lv_obj_set_width(ui_settings_wifi_current_ip_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_settings_wifi_current_ip_label, LV_SIZE_CONTENT);
+    lv_obj_set_align(ui_settings_wifi_current_ip_label, LV_ALIGN_BOTTOM_RIGHT);
+    lv_label_set_text(ui_settings_wifi_current_ip_label, "");
+    lv_obj_set_x(ui_settings_wifi_current_ip_label, 0);
+    lv_obj_set_y(ui_settings_wifi_current_ip_label, 0);
+    lv_obj_set_style_text_font(ui_settings_wifi_current_ip_label, &font_default_12, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(
+        ui_settings_wifi_current_ip_label,
+        lv_color_hex(0xAAAAAA),
+        LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Bed page
+    ui_settings_bed_screw_pitch_value =
+        ui_settings_create_spinbox_field(ui_settings_bed_page, "Screw pitch (mm)", 0, 10000, 5, 2);
+
+    ui_settings_bed_microstep_multiplier_value =
+        ui_settings_create_spinbox_field(ui_settings_bed_page, "Microsteps multiplier", 0, 128, 3, 3);
+
+    ui_settings_bed_steps_per_revolution_value =
+        ui_settings_create_spinbox_field(ui_settings_bed_page, "Steps per revolution", 0, 10000, 5, 5);
+
+    ui_settings_bed_acceleration_value =
+        ui_settings_create_spinbox_field(ui_settings_bed_page, "Acceleration", 0, 10000, 5, 5);
+
+    ui_settings_bed_moving_speed_value =
+        ui_settings_create_spinbox_field(ui_settings_bed_page, "Moving speed", 0, 10000, 5, 5);
+
+    ui_settings_bed_homing_speed_value =
+        ui_settings_create_spinbox_field(ui_settings_bed_page, "Homing speed", 0, 10000, 5, 5);
+
+    // Init fields with current settings
+    ui_settings_load_bed_settings();
+
+    // Add value change handlers
+    // Has to be done *after* loading the settings
+    lv_obj_add_event_cb(
+        ui_settings_bed_screw_pitch_value,
+        ui_settings_spinbox_value_changed_handler,
+        LV_EVENT_VALUE_CHANGED,
+        NULL);
+    lv_obj_add_event_cb(
+        ui_settings_bed_microstep_multiplier_value,
+        ui_settings_spinbox_value_changed_handler,
+        LV_EVENT_VALUE_CHANGED,
+        NULL);
+    lv_obj_add_event_cb(
+        ui_settings_bed_steps_per_revolution_value,
+        ui_settings_spinbox_value_changed_handler,
+        LV_EVENT_VALUE_CHANGED,
+        NULL);
+    lv_obj_add_event_cb(
+        ui_settings_bed_acceleration_value,
+        ui_settings_spinbox_value_changed_handler,
+        LV_EVENT_VALUE_CHANGED,
+        NULL);
+    lv_obj_add_event_cb(
+        ui_settings_bed_moving_speed_value,
+        ui_settings_spinbox_value_changed_handler,
+        LV_EVENT_VALUE_CHANGED,
+        NULL);
+    lv_obj_add_event_cb(
+        ui_settings_bed_homing_speed_value,
+        ui_settings_spinbox_value_changed_handler,
+        LV_EVENT_VALUE_CHANGED,
+        NULL);
+}
+
+void ui_settings_update() {
+    static unsigned long last_update = 0;
+    unsigned long current_time = millis();
+
+    if (current_time - last_update > SETTINGS_STATE_UPDATE_INTERVAL) {
+        // Update WiFi indicators
+        switch (WiFi.status()) {
+        case WL_CONNECTED:
+            lv_obj_add_flag(ui_settings_wifi_connect_button, LV_OBJ_FLAG_HIDDEN);      // Hide connect button
+            lv_obj_clear_flag(ui_settings_wifi_disconnect_button, LV_OBJ_FLAG_HIDDEN); // Show disconnect button
+            break;
+        case WL_IDLE_STATUS:
+            lv_obj_clear_flag(ui_settings_wifi_connect_button, LV_OBJ_FLAG_HIDDEN);  // Show connect button
+            lv_obj_add_flag(ui_settings_wifi_disconnect_button, LV_OBJ_FLAG_HIDDEN); // Hide disconnect button
+            lv_obj_add_state(ui_settings_wifi_connect_button, LV_STATE_DISABLED);    // Disable connect button
+        case WL_CONNECT_FAILED:
+        case WL_CONNECTION_LOST:
+        case WL_DISCONNECTED:
+            lv_obj_clear_flag(ui_settings_wifi_connect_button, LV_OBJ_FLAG_HIDDEN);  // Show connect button
+            lv_obj_add_flag(ui_settings_wifi_disconnect_button, LV_OBJ_FLAG_HIDDEN); // Hide disconnect button
+            lv_obj_clear_state(ui_settings_wifi_connect_button, LV_STATE_DISABLED);  // Enable connect button
+            break;
+        }
+
+        // Update current IP
+        lv_label_set_text(ui_settings_wifi_current_ip_label, WiFi.localIP().toString().c_str());
+
+        // Reset timer
+        last_update = current_time;
+    }
+}

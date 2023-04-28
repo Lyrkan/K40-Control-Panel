@@ -28,10 +28,10 @@ static AsyncWebServer server(80);
 static LGFX tft;
 static uint16_t touch_calibration_data[] = {274, 3922, 312, 255, 3845, 3918, 3814, 242};
 
-static TaskHandle_t state_update_task;
-static TaskHandle_t bed_update_task;
+static TaskHandle_t state_update_task_handle;
+static TaskHandle_t bed_update_task_handle;
 
-void displayFlush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
+void display_flush_cb(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
     uint32_t w = (area->x2 - area->x1 + 1);
     uint32_t h = (area->y2 - area->y1 + 1);
 
@@ -43,7 +43,7 @@ void displayFlush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_
     lv_disp_flush_ready(disp);
 }
 
-void touchpadRead(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
+static void touchpad_read_cb(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
     uint16_t touchX, touchY;
     bool touched = tft.getTouch(&touchX, &touchY);
     if (!touched) {
@@ -58,7 +58,7 @@ void touchpadRead(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
 /**
  * State update loop
  */
-void stateUpdateTask(void *params) {
+void state_update_task_func(void *params) {
     /* Setup/calibrate ADC */
     esp_adc_cal_characteristics_t adc_chars;
     esp_adc_cal_value_t val_type =
@@ -86,7 +86,7 @@ void stateUpdateTask(void *params) {
 /**
  * Bed update loop
  */
-void bedUpdateTask(void *params) {
+void bed_update_task_func(void *params) {
     bed_init();
 
     while (true) {
@@ -129,14 +129,14 @@ void setup() {
     lv_disp_drv_init(&disp_drv);
     disp_drv.hor_res = SCREEN_WIDTH;
     disp_drv.ver_res = SCREEN_HEIGHT;
-    disp_drv.flush_cb = displayFlush;
+    disp_drv.flush_cb = display_flush_cb;
     disp_drv.draw_buf = &draw_buf;
     lv_disp_drv_register(&disp_drv);
 
     /* Initialize the (dummy) input device driver */
     lv_indev_drv_init(&indev_drv);
     indev_drv.type = LV_INDEV_TYPE_POINTER;
-    indev_drv.read_cb = touchpadRead;
+    indev_drv.read_cb = touchpad_read_cb;
     lv_indev_drv_register(&indev_drv);
 
     /* Setup pins */
@@ -174,29 +174,31 @@ void setup() {
     api_init(&server);
 
     /* Initialize ElegantOTA */
-    // TODO Add authentication
-    AsyncElegantOTA.begin(&server);
+    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
+        ;
+    AsyncElegantOTA.begin(&server, ota_settings.login, ota_settings.password);
+    xSemaphoreGive(ota_settings_mutex);
     server.begin();
 
     /* Start state update loop */
     xTaskCreatePinnedToCore(
-        stateUpdateTask,
-        "StateUpdateTask",
+        state_update_task_func,
+        "state_update_task",
         10000,
         NULL,
         0,
-        &state_update_task,
+        &state_update_task_handle,
         0 // Run on core #0, UI will be updated by loop() in core#1
     );
 
     /* Start bed update loop */
     xTaskCreatePinnedToCore(
-        bedUpdateTask,
-        "BedUpdateTask",
+        bed_update_task_func,
+        "bed_update_task",
         10000,
         NULL,
         0,
-        &bed_update_task,
+        &bed_update_task_handle,
         0 // Run on core #0, UI will be updated by loop() in core#1
     );
 }

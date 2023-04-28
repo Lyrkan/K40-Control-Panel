@@ -3,12 +3,14 @@
 #include <freertos/semphr.h>
 #include <Preferences.h>
 
+#include "macros.h"
 #include "settings.h"
 
-static TaskHandle_t save_settings_task;
+static TaskHandle_t settings_save_task_handle;
 
 static const char PREFERENCES_NAMESPACE_BED[] = "bed-settings";
 static const char PREFERENCES_NAMESPACE_PROBES[] = "probes-settings";
+static const char PREFERENCES_NAMESPACE_OTA[] = "ota-settings";
 
 static const char PREFERENCES_KEY_BED_SCREW_PITCH[] = "screw-pitch";
 static const char PREFERENCES_KEY_BED_MICROSTEP_MULTIPLIER[] = "microstep-mul";
@@ -29,10 +31,14 @@ static const char PREFERENCES_KEY_PROBES_COOLING_FLOW_MAX[] = "cool_flow_max";
 static const char PREFERENCES_KEY_PROBES_COOLING_TEMP_MIN[] = "cool_temp_min";
 static const char PREFERENCES_KEY_PROBES_COOLING_TEMP_MAX[] = "cool_temp_max";
 
+static const char PREFERENCES_KEY_OTA_LOGIN[] = "login";
+static const char PREFERENCES_KEY_OTA_PASSWORD[] = "password";
+
 static Preferences preferences;
 
 SemaphoreHandle_t bed_settings_mutex = xSemaphoreCreateMutex();
 SemaphoreHandle_t probes_settings_mutex = xSemaphoreCreateMutex();
+SemaphoreHandle_t ota_settings_mutex = xSemaphoreCreateMutex();
 
 BedSettings bed_settings = {
     .screw_pitch = 0.8,
@@ -56,7 +62,12 @@ ProbesSettings probes_settings = {
     .cooling_temp_max = 30.0,
 };
 
-static void settings_save_task(void *params) {
+OTASettings ota_settings = {
+    .login = {0},
+    .password = {0},
+};
+
+static void settings_save_task_func(void *params) {
     uint32_t settings_types;
 
     while (true) {
@@ -109,6 +120,22 @@ static void settings_save_task(void *params) {
 
             // Release probes settings lock
             xSemaphoreGive(probes_settings_mutex);
+        }
+
+        if ((settings_types & SETTINGS_TYPE_OTA) != 0) {
+            Serial.println("OTA settings have changed, saving new values...");
+
+            // Acquire OTA settings lock
+            while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
+                ;
+
+            preferences.begin(PREFERENCES_NAMESPACE_OTA, false);
+            preferences.putString(PREFERENCES_KEY_OTA_LOGIN, ota_settings.login);
+            preferences.putString(PREFERENCES_KEY_OTA_PASSWORD, ota_settings.password);
+            preferences.end();
+
+            // Release OTA settings lock
+            xSemaphoreGive(ota_settings_mutex);
         }
 
         // Wait a little bit before the next check
@@ -170,16 +197,38 @@ void settings_init() {
     // Release probes settings lock
     xSemaphoreGive(probes_settings_mutex);
 
+    // Acquire OTA settings lock
+    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
+        ;
+    Serial.println("Loading OTA settings... ");
+    preferences.begin(PREFERENCES_NAMESPACE_OTA, true);
+
+    strncpy(
+        ota_settings.login,
+        preferences.getString(PREFERENCES_KEY_OTA_LOGIN).c_str(),
+        ARRAY_SIZE(ota_settings.login));
+    strncpy(
+        ota_settings.password,
+        preferences.getString(PREFERENCES_KEY_OTA_PASSWORD).c_str(),
+        ARRAY_SIZE(ota_settings.password));
+
+    preferences.end();
+
+    // Release probes settings lock
+    xSemaphoreGive(ota_settings_mutex);
+
     // Start saving task
     xTaskCreatePinnedToCore(
-        settings_save_task,
-        "SettingsSaveTask",
+        settings_save_task_func,
+        "settings_save_task",
         10000,
         NULL,
         0,
-        &save_settings_task,
+        &settings_save_task_handle,
         1 // Run on core #1, UI will also be updated by loop() in core#1
     );
 }
 
-void settings_schedule_save(uint32_t settings_types) { xTaskNotify(save_settings_task, settings_types, eSetBits); }
+void settings_schedule_save(uint32_t settings_types) {
+    xTaskNotify(settings_save_task_handle, settings_types, eSetBits);
+}

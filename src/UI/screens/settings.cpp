@@ -40,6 +40,9 @@ static lv_obj_t *ui_settings_bed_acceleration_value;
 static lv_obj_t *ui_settings_bed_moving_speed_value;
 static lv_obj_t *ui_settings_bed_homing_speed_value;
 
+static lv_obj_t *ui_settings_ota_login_value;
+static lv_obj_t *ui_settings_ota_password_value;
+
 static void ui_settings_load_bed_settings() {
     // Acquire bed settings mutex
     while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdPASS)
@@ -73,23 +76,32 @@ static void ui_settings_save_bed_settings() {
     xSemaphoreGive(bed_settings_mutex);
 }
 
-static void ui_settings_textarea_focused_event_handler(lv_event_t *e) {
-    lv_event_code_t event_code = lv_event_get_code(e);
-    lv_obj_t *target = lv_event_get_target(e);
-    lv_obj_t *keyboard = (lv_obj_t *)lv_event_get_user_data(e);
+static void ui_settings_load_ota_settings() {
+    // Acquire OTA settings mutex
+    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
+        ;
 
-    switch (event_code) {
-    case LV_EVENT_FOCUSED:
-        lv_keyboard_set_textarea(keyboard, target);
-        lv_obj_clear_flag(ui_settings_keyboard, LV_OBJ_FLAG_HIDDEN);
-        break;
-    case LV_EVENT_DEFOCUSED:
-        lv_obj_add_flag(ui_settings_keyboard, LV_OBJ_FLAG_HIDDEN);
-        break;
-    default:
-        // Ignore
-        break;
-    }
+    lv_textarea_set_text(ui_settings_ota_login_value, ota_settings.login);
+    lv_textarea_set_text(ui_settings_ota_password_value, ota_settings.password);
+
+    // Release OTA settings mutex
+    xSemaphoreGive(ota_settings_mutex);
+}
+
+static void ui_settings_save_ota_settings() {
+    // Acquire OTA settings mutex
+    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
+        ;
+
+    strncpy(ota_settings.login, lv_textarea_get_text(ui_settings_ota_login_value), ARRAY_SIZE(ota_settings.login));
+    strncpy(
+        ota_settings.password,
+        lv_textarea_get_text(ui_settings_ota_password_value),
+        ARRAY_SIZE(ota_settings.password));
+    settings_schedule_save(SETTINGS_TYPE_OTA);
+
+    // Release bed settings mutex
+    xSemaphoreGive(ota_settings_mutex);
 }
 
 static void ui_settings_wifi_connect_button_handler(lv_event_t *e) {
@@ -112,6 +124,25 @@ static void ui_settings_wifi_disconnect_button_handler(lv_event_t *e) {
     wifi_disconnect();
 }
 
+static void ui_settings_textarea_focused_event_handler(lv_event_t *e) {
+    lv_event_code_t event_code = lv_event_get_code(e);
+    lv_obj_t *target = lv_event_get_target(e);
+    lv_obj_t *keyboard = (lv_obj_t *)lv_event_get_user_data(e);
+
+    switch (event_code) {
+    case LV_EVENT_FOCUSED:
+        lv_keyboard_set_textarea(keyboard, target);
+        lv_obj_clear_flag(ui_settings_keyboard, LV_OBJ_FLAG_HIDDEN);
+        break;
+    case LV_EVENT_DEFOCUSED:
+        lv_obj_add_flag(ui_settings_keyboard, LV_OBJ_FLAG_HIDDEN);
+        break;
+    default:
+        // Ignore
+        break;
+    }
+}
+
 static void ui_settings_spinbox_increment_handler(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t *spinbox = (lv_obj_t *)lv_event_get_user_data(e);
@@ -128,7 +159,7 @@ static void ui_settings_spinbox_decrement_handler(lv_event_t *e) {
     }
 }
 
-static void ui_settings_spinbox_value_changed_handler(lv_event_t *e) {
+static void ui_settings_field_value_changed_handler(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t *target = lv_event_get_target(e);
 
@@ -137,8 +168,31 @@ static void ui_settings_spinbox_value_changed_handler(lv_event_t *e) {
             target == ui_settings_bed_steps_per_revolution_value || target == ui_settings_bed_acceleration_value ||
             target == ui_settings_bed_moving_speed_value || target == ui_settings_bed_homing_speed_value) {
             ui_settings_save_bed_settings();
+        } else if (target == ui_settings_ota_login_value || target == ui_settings_ota_password_value) {
+            ui_settings_save_ota_settings();
         }
     }
+}
+
+static lv_obj_t *ui_settings_create_textarea_field(lv_obj_t *parent, const char *label) {
+    lv_obj_t *cont = lv_menu_cont_create(parent);
+
+    lv_obj_t *label_obj = lv_label_create(cont);
+    lv_obj_set_width(label_obj, lv_pct(20));
+    lv_obj_set_height(label_obj, LV_SIZE_CONTENT);
+    lv_label_set_text(label_obj, label);
+
+    lv_obj_t *textarea = lv_textarea_create(cont);
+    lv_obj_set_width(textarea, lv_pct(80));
+    lv_textarea_set_one_line(textarea, true);
+
+    // Center label on the vertical axis
+    lv_obj_set_y(label_obj, (lv_obj_get_height(textarea) / 2) - (lv_obj_get_height(label_obj) / 2));
+
+    // Handle focus/defocused events
+    lv_obj_add_event_cb(textarea, ui_settings_textarea_focused_event_handler, LV_EVENT_ALL, ui_settings_keyboard);
+
+    return textarea;
 }
 
 static lv_obj_t *ui_settings_create_spinbox_field(
@@ -147,7 +201,7 @@ static lv_obj_t *ui_settings_create_spinbox_field(
     lv_obj_t *cont = lv_menu_cont_create(parent);
 
     lv_obj_t *label_obj = lv_label_create(cont);
-    lv_obj_set_width(label_obj, 100);
+    lv_obj_set_width(label_obj, lv_pct(20));
     lv_obj_set_height(label_obj, LV_SIZE_CONTENT);
     lv_label_set_text(label_obj, label);
 
@@ -358,39 +412,49 @@ void ui_settings_init() {
     ui_settings_bed_homing_speed_value =
         ui_settings_create_spinbox_field(ui_settings_bed_page, "Homing speed", 0, 10000, 5, 5);
 
+    // OTA page
+    ui_settings_ota_login_value = ui_settings_create_textarea_field(ui_settings_ota_page, "Login");
+    ui_settings_ota_password_value = ui_settings_create_textarea_field(ui_settings_ota_page, "Password");
+
     // Init fields with current settings
     ui_settings_load_bed_settings();
+    ui_settings_load_ota_settings();
 
     // Add value change handlers
     // Has to be done *after* loading the settings
     lv_obj_add_event_cb(
         ui_settings_bed_screw_pitch_value,
-        ui_settings_spinbox_value_changed_handler,
+        ui_settings_field_value_changed_handler,
         LV_EVENT_VALUE_CHANGED,
         NULL);
     lv_obj_add_event_cb(
         ui_settings_bed_microstep_multiplier_value,
-        ui_settings_spinbox_value_changed_handler,
+        ui_settings_field_value_changed_handler,
         LV_EVENT_VALUE_CHANGED,
         NULL);
     lv_obj_add_event_cb(
         ui_settings_bed_steps_per_revolution_value,
-        ui_settings_spinbox_value_changed_handler,
+        ui_settings_field_value_changed_handler,
         LV_EVENT_VALUE_CHANGED,
         NULL);
     lv_obj_add_event_cb(
         ui_settings_bed_acceleration_value,
-        ui_settings_spinbox_value_changed_handler,
+        ui_settings_field_value_changed_handler,
         LV_EVENT_VALUE_CHANGED,
         NULL);
     lv_obj_add_event_cb(
         ui_settings_bed_moving_speed_value,
-        ui_settings_spinbox_value_changed_handler,
+        ui_settings_field_value_changed_handler,
         LV_EVENT_VALUE_CHANGED,
         NULL);
     lv_obj_add_event_cb(
         ui_settings_bed_homing_speed_value,
-        ui_settings_spinbox_value_changed_handler,
+        ui_settings_field_value_changed_handler,
+        LV_EVENT_VALUE_CHANGED,
+        NULL);
+    lv_obj_add_event_cb(
+        ui_settings_ota_login_value,
+        ui_settings_field_value_changed_handler,
         LV_EVENT_VALUE_CHANGED,
         NULL);
 }

@@ -26,11 +26,20 @@ jobs:
               run: pip install --upgrade platformio
             - name: Build PlatformIO Project
               run: pio run
-            - uses: "marvinpinto/action-automatic-releases@v1.2.1"
+            - name: "Update experimental tag"
+              uses: rickstaa/action-create-tag@v1
               with:
-                  repo_token: "${{ secrets.GITHUB_TOKEN }}"
-                  automatic_release_tag: "latest"
+                  tag: "experimental"
+                  force_push_tag: true
+                  message: "Development release"
+            - name: Publish release
+              uses: "softprops/action-gh-release@v1"
+              with:
+                  tag_name: "experimental"
+                  name: "Development release"
+                  body: "Latest successful build of the main branch, use at your own risks"
                   prerelease: true
-                  title: "Development build"
+                  draft: false
+                  fail_on_unmatched_files: true
                   files: |
                       .pio/build/nodemcu-32s/firmware.bin

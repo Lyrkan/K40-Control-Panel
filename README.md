@@ -70,7 +70,7 @@ pio build
 
 Then flash your ESP32 using the `upload` target.
 
-OTA updates are available using the `OTA` target. In order to use it copy the `.env.dist` file to `.env` and change the value of `OTA_UPLOAD_URL` in it accordingly to the IP of your control panel.
+OTA updates are available using the `OTA` target. In order to use it copy the `.env.dist` file to `.env` and change the values of `OTA_UPLOAD_URL`, `OTA_LOGIN` and `OTA_PASSWORD` in it accordingly to the settings of your control panel.
 
 You can also take a `.bin` file and upload it through the ElegantOTA interface available at `http://<YOUR_PANEL_IP>/update`.
 

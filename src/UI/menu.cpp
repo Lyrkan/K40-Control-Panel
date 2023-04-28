@@ -85,7 +85,7 @@ void ui_menu_button_event_handler(lv_event_t *e) {
 void ui_menu_init() {
     ui_menu_panel = lv_obj_create(lv_layer_top());
     lv_obj_set_width(ui_menu_panel, 480);
-    lv_obj_set_height(ui_menu_panel, 48);
+    lv_obj_set_height(ui_menu_panel, MENU_HEIGHT);
     lv_obj_set_style_radius(ui_menu_panel, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_width(ui_menu_panel, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_color(ui_menu_panel, lv_color_white(), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -97,7 +97,7 @@ void ui_menu_init() {
 
     ui_menu_status_button = lv_btn_create(ui_menu_panel);
     lv_obj_set_width(ui_menu_status_button, 100);
-    lv_obj_set_height(ui_menu_status_button, 48);
+    lv_obj_set_height(ui_menu_status_button, MENU_HEIGHT);
     lv_obj_set_style_radius(ui_menu_status_button, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_color(ui_menu_status_button, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_menu_status_button, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -111,13 +111,13 @@ void ui_menu_init() {
     lv_obj_set_width(ui_menu_status_button_label, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_menu_status_button_label, LV_SIZE_CONTENT);
     lv_obj_set_align(ui_menu_status_button_label, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_menu_status_button_label, "Status");
+    lv_label_set_text(ui_menu_status_button_label, LV_SYMBOL_MAGNIFYING_GLASS " Status");
     lv_obj_set_style_text_color(ui_menu_status_button_label, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_menu_status_button_label, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_menu_controls_button = lv_btn_create(ui_menu_panel);
     lv_obj_set_width(ui_menu_controls_button, 100);
-    lv_obj_set_height(ui_menu_controls_button, 48);
+    lv_obj_set_height(ui_menu_controls_button, MENU_HEIGHT);
     lv_obj_set_x(ui_menu_controls_button, 100);
     lv_obj_set_y(ui_menu_controls_button, 0);
     lv_obj_set_style_radius(ui_menu_controls_button, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -133,13 +133,13 @@ void ui_menu_init() {
     lv_obj_set_width(ui_menu_controls_button_label, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_menu_controls_button_label, LV_SIZE_CONTENT);
     lv_obj_set_align(ui_menu_controls_button_label, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_menu_controls_button_label, "Controls");
+    lv_label_set_text(ui_menu_controls_button_label, LV_SYMBOL_TOGGLE_OFF " Controls");
     lv_obj_set_style_text_color(ui_menu_controls_button_label, lv_color_hex(0x808080), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_menu_controls_button_label, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_menu_bed_button = lv_btn_create(ui_menu_panel);
     lv_obj_set_width(ui_menu_bed_button, 100);
-    lv_obj_set_height(ui_menu_bed_button, 48);
+    lv_obj_set_height(ui_menu_bed_button, MENU_HEIGHT);
     lv_obj_set_x(ui_menu_bed_button, 200);
     lv_obj_set_y(ui_menu_bed_button, 0);
     lv_obj_set_style_radius(ui_menu_bed_button, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -155,13 +155,13 @@ void ui_menu_init() {
     lv_obj_set_width(ui_menu_bed_button_label, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_menu_bed_button_label, LV_SIZE_CONTENT);
     lv_obj_set_align(ui_menu_bed_button_label, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_menu_bed_button_label, "Bed");
+    lv_label_set_text(ui_menu_bed_button_label, LV_SYMBOL_ARROW_DOWN_UP_ACROSS_LINE " Bed");
     lv_obj_set_style_text_color(ui_menu_bed_button_label, lv_color_hex(0x808080), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_menu_bed_button_label, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_menu_settings_button = lv_btn_create(ui_menu_panel);
     lv_obj_set_width(ui_menu_settings_button, 100);
-    lv_obj_set_height(ui_menu_settings_button, 48);
+    lv_obj_set_height(ui_menu_settings_button, MENU_HEIGHT);
     lv_obj_set_x(ui_menu_settings_button, 300);
     lv_obj_set_y(ui_menu_settings_button, 0);
     lv_obj_set_style_radius(ui_menu_settings_button, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -177,13 +177,13 @@ void ui_menu_init() {
     lv_obj_set_width(ui_menu_settings_button_label, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_menu_settings_button_label, LV_SIZE_CONTENT);
     lv_obj_set_align(ui_menu_settings_button_label, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_menu_settings_button_label, "Settings");
+    lv_label_set_text(ui_menu_settings_button_label, LV_SYMBOl_GEAR " Settings");
     lv_obj_set_style_text_color(ui_menu_settings_button_label, lv_color_hex(0x808080), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_menu_settings_button_label, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_menu_indicators_panel = lv_obj_create(ui_menu_panel);
     lv_obj_set_width(ui_menu_indicators_panel, 80);
-    lv_obj_set_height(ui_menu_indicators_panel, 48);
+    lv_obj_set_height(ui_menu_indicators_panel, MENU_HEIGHT);
     lv_obj_set_align(ui_menu_indicators_panel, LV_ALIGN_TOP_RIGHT);
     lv_obj_set_style_radius(ui_menu_indicators_panel, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_width(ui_menu_indicators_panel, 0, LV_PART_MAIN | LV_STATE_DEFAULT);

@@ -7,6 +7,7 @@
 #include "K40/voltage_probes.h"
 #include "UI/images.h"
 #include "UI/screens/status.h"
+#include "macros.h"
 #include "queues.h"
 
 lv_obj_t *ui_status_screen;
@@ -41,6 +42,7 @@ static lv_obj_t *ui_status_fire_icon_image;
 static lv_obj_t *ui_status_fire_icon_warning;
 static lv_obj_t *ui_status_fire_label;
 static lv_obj_t *ui_status_fire_value;
+static lv_obj_t *ui_status_heap;
 
 void ui_status_init() {
     ui_status_screen = lv_obj_create(NULL);
@@ -96,7 +98,7 @@ void ui_status_init() {
     lv_obj_set_height(ui_status_voltages_v1_value, LV_SIZE_CONTENT);
     lv_obj_set_align(ui_status_voltages_v1_value, LV_ALIGN_CENTER);
     lv_label_set_text(ui_status_voltages_v1_value, "Unknown");
-    lv_obj_set_style_text_color(ui_status_voltages_v1_value, lv_color_hex(0x767676), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui_status_voltages_v1_value, lv_color_hex(0x777777), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_status_voltages_v1_value, &font_default_12, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_status_voltages_v2_bar = lv_bar_create(ui_status_main_panel);
@@ -268,6 +270,16 @@ void ui_status_init() {
     lv_obj_set_y(ui_status_fire_value, 191);
     lv_label_set_text(ui_status_fire_value, "Unknown");
     lv_obj_set_style_text_color(ui_status_fire_value, lv_color_hex(0x777777), LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_status_heap = lv_label_create(ui_status_main_panel);
+    lv_obj_set_width(ui_status_heap, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_status_heap, LV_SIZE_CONTENT);
+    lv_obj_set_x(ui_status_heap, 0);
+    lv_obj_set_y(ui_status_heap, 0);
+    lv_obj_set_align(ui_status_heap, LV_ALIGN_BOTTOM_RIGHT);
+    lv_label_set_text(ui_status_heap, "");
+    lv_obj_set_style_text_color(ui_status_heap, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_status_heap, &font_default_12, LV_PART_MAIN | LV_STATE_DEFAULT);
 }
 
 static void updateWarningIcon(lv_obj_t *warning_icon, bool show) {
@@ -351,5 +363,26 @@ void ui_status_update() {
     if (xQueueReceive(flame_sensor_status_update_queue, &flame_sensor_triggered, 0) == pdTRUE) {
         lv_label_set_text(ui_status_fire_value, flame_sensor_triggered ? "Triggered" : "OK");
         updateWarningIcon(ui_status_fire_icon_warning, flame_sensor_triggered);
+    }
+
+    // Update heap indicator
+    static unsigned long heap_status_last_update = 0;
+    unsigned long current_time = millis();
+    if (heap_status_last_update == 0) {
+        heap_status_last_update = current_time;
+    }
+
+    unsigned long delta_time = current_time - heap_status_last_update;
+    if (delta_time >= STATUS_HEAP_UPDATE_INTERVAL) {
+        char heap_status[250];
+        snprintf(
+            heap_status,
+            ARRAY_SIZE(heap_status),
+            "Heap: %d/%dkB",
+            ESP.getFreeHeap() / 1024,
+            ESP.getHeapSize() / 1024);
+        lv_label_set_text(ui_status_heap, heap_status);
+
+        heap_status_last_update = current_time;
     }
 }

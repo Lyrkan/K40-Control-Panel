@@ -3,6 +3,8 @@
 
 #include <lvgl.h>
 
+#define STATUS_HEAP_UPDATE_INTERVAL 500
+
 extern lv_obj_t *ui_status_screen;
 
 void ui_status_init();

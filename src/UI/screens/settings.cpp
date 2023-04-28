@@ -5,6 +5,7 @@
 #include <math.h>
 #include <WiFi.h>
 
+#include "UI/menu.h"
 #include "UI/screens/settings.h"
 #include "macros.h"
 #include "settings.h"
@@ -14,6 +15,8 @@ lv_obj_t *ui_settings_screen;
 lv_obj_t *ui_settings_wifi_ssid_value;
 lv_obj_t *ui_settings_wifi_connect_button;
 
+static bool settings_loaded = false;
+
 static lv_obj_t *ui_settings_menu;
 static lv_obj_t *ui_settings_menu_back_button;
 static lv_obj_t *ui_settings_menu_back_button_label;
@@ -21,7 +24,6 @@ static lv_obj_t *ui_settings_root_page;
 static lv_obj_t *ui_settings_wifi_page;
 static lv_obj_t *ui_settings_bed_page;
 static lv_obj_t *ui_settings_probes_page;
-static lv_obj_t *ui_settings_alerts_page;
 static lv_obj_t *ui_settings_ota_page;
 
 static lv_obj_t *ui_settings_keyboard;
@@ -39,6 +41,17 @@ static lv_obj_t *ui_settings_bed_steps_per_revolution_value;
 static lv_obj_t *ui_settings_bed_acceleration_value;
 static lv_obj_t *ui_settings_bed_moving_speed_value;
 static lv_obj_t *ui_settings_bed_homing_speed_value;
+
+static lv_obj_t *ui_settings_probes_v1_min_value;
+static lv_obj_t *ui_settings_probes_v1_max_value;
+static lv_obj_t *ui_settings_probes_v2_min_value;
+static lv_obj_t *ui_settings_probes_v2_max_value;
+static lv_obj_t *ui_settings_probes_v3_min_value;
+static lv_obj_t *ui_settings_probes_v3_max_value;
+static lv_obj_t *ui_settings_probes_cooling_flow_min_value;
+static lv_obj_t *ui_settings_probes_cooling_flow_max_value;
+static lv_obj_t *ui_settings_probes_cooling_temp_min_value;
+static lv_obj_t *ui_settings_probes_cooling_temp_max_value;
 
 static lv_obj_t *ui_settings_ota_login_value;
 static lv_obj_t *ui_settings_ota_password_value;
@@ -74,6 +87,47 @@ static void ui_settings_save_bed_settings() {
 
     // Release bed settings mutex
     xSemaphoreGive(bed_settings_mutex);
+}
+
+static void ui_settings_load_probes_settings() {
+    // Acquire probes settings mutex
+    while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdPASS)
+        ;
+
+    lv_spinbox_set_value(ui_settings_probes_v1_min_value, (int)(probes_settings.voltage_probe_v1_min * 100));
+    lv_spinbox_set_value(ui_settings_probes_v1_max_value, (int)(probes_settings.voltage_probe_v1_max * 100));
+    lv_spinbox_set_value(ui_settings_probes_v2_min_value, (int)(probes_settings.voltage_probe_v2_min * 100));
+    lv_spinbox_set_value(ui_settings_probes_v2_max_value, (int)(probes_settings.voltage_probe_v2_max * 100));
+    lv_spinbox_set_value(ui_settings_probes_v3_min_value, (int)(probes_settings.voltage_probe_v3_min * 100));
+    lv_spinbox_set_value(ui_settings_probes_v3_max_value, (int)(probes_settings.voltage_probe_v3_max * 100));
+    lv_spinbox_set_value(ui_settings_probes_cooling_flow_min_value, (int)(probes_settings.cooling_flow_min * 100));
+    lv_spinbox_set_value(ui_settings_probes_cooling_flow_max_value, (int)(probes_settings.cooling_flow_max * 100));
+    lv_spinbox_set_value(ui_settings_probes_cooling_temp_min_value, (int)(probes_settings.cooling_temp_min * 100));
+    lv_spinbox_set_value(ui_settings_probes_cooling_temp_max_value, (int)(probes_settings.cooling_temp_max * 100));
+
+    // Release probes settings mutex
+    xSemaphoreGive(probes_settings_mutex);
+}
+
+static void ui_settings_save_probes_settings() {
+    // Acquire probes settings mutex
+    while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdPASS)
+        ;
+
+    probes_settings.voltage_probe_v1_min = (float_t)lv_spinbox_get_value(ui_settings_probes_v1_min_value) / 100;
+    probes_settings.voltage_probe_v1_max = (float_t)lv_spinbox_get_value(ui_settings_probes_v1_max_value) / 100;
+    probes_settings.voltage_probe_v2_min = (float_t)lv_spinbox_get_value(ui_settings_probes_v2_min_value) / 100;
+    probes_settings.voltage_probe_v2_max = (float_t)lv_spinbox_get_value(ui_settings_probes_v2_max_value) / 100;
+    probes_settings.voltage_probe_v3_min = (float_t)lv_spinbox_get_value(ui_settings_probes_v3_min_value) / 100;
+    probes_settings.voltage_probe_v3_max = (float_t)lv_spinbox_get_value(ui_settings_probes_v3_max_value) / 100;
+    probes_settings.cooling_flow_min = (float_t)lv_spinbox_get_value(ui_settings_probes_cooling_flow_min_value) / 100;
+    probes_settings.cooling_flow_max = (float_t)lv_spinbox_get_value(ui_settings_probes_cooling_flow_max_value) / 100;
+    probes_settings.cooling_temp_min = (float_t)lv_spinbox_get_value(ui_settings_probes_cooling_temp_min_value) / 100;
+    probes_settings.cooling_temp_max = (float_t)lv_spinbox_get_value(ui_settings_probes_cooling_temp_max_value) / 100;
+    settings_schedule_save(SETTINGS_TYPE_PROBES);
+
+    // Release bed settings mutex
+    xSemaphoreGive(probes_settings_mutex);
 }
 
 static void ui_settings_load_ota_settings() {
@@ -129,9 +183,19 @@ static void ui_settings_textarea_focused_event_handler(lv_event_t *e) {
     lv_obj_t *target = lv_event_get_target(e);
     lv_obj_t *keyboard = (lv_obj_t *)lv_event_get_user_data(e);
 
+    // Position keyboard at the top or the bottom depending on
+    // where the targeted field is located.
+    lv_area_t target_coords;
+    lv_obj_get_coords(target, &target_coords);
+    lv_coord_t screen_height = lv_obj_get_height(ui_settings_screen);
+    bool keyboard_is_top =
+        (target_coords.y1 + (target_coords.y2 - target_coords.y1) / 2) > (MENU_HEIGHT + (screen_height / 2));
+
     switch (event_code) {
     case LV_EVENT_FOCUSED:
         lv_keyboard_set_textarea(keyboard, target);
+        lv_obj_set_align(ui_settings_keyboard, keyboard_is_top ? LV_ALIGN_TOP_MID : LV_ALIGN_BOTTOM_MID);
+        lv_obj_set_y(ui_settings_keyboard, keyboard_is_top ? MENU_HEIGHT : 0);
         lv_obj_clear_flag(ui_settings_keyboard, LV_OBJ_FLAG_HIDDEN);
         break;
     case LV_EVENT_DEFOCUSED:
@@ -160,6 +224,12 @@ static void ui_settings_spinbox_decrement_handler(lv_event_t *e) {
 }
 
 static void ui_settings_field_value_changed_handler(lv_event_t *e) {
+    if (!settings_loaded) {
+        // Don't handle changes if the settings
+        // are not loaded yet.
+        return;
+    }
+
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t *target = lv_event_get_target(e);
 
@@ -168,6 +238,15 @@ static void ui_settings_field_value_changed_handler(lv_event_t *e) {
             target == ui_settings_bed_steps_per_revolution_value || target == ui_settings_bed_acceleration_value ||
             target == ui_settings_bed_moving_speed_value || target == ui_settings_bed_homing_speed_value) {
             ui_settings_save_bed_settings();
+        } else if (
+            target == ui_settings_probes_v1_min_value || target == ui_settings_probes_v1_max_value ||
+            target == ui_settings_probes_v2_min_value || target == ui_settings_probes_v2_max_value ||
+            target == ui_settings_probes_v3_min_value || target == ui_settings_probes_v3_max_value ||
+            target == ui_settings_probes_cooling_flow_min_value ||
+            target == ui_settings_probes_cooling_flow_max_value ||
+            target == ui_settings_probes_cooling_temp_min_value ||
+            target == ui_settings_probes_cooling_temp_max_value) {
+            ui_settings_save_probes_settings();
         } else if (target == ui_settings_ota_login_value || target == ui_settings_ota_password_value) {
             ui_settings_save_ota_settings();
         }
@@ -176,6 +255,7 @@ static void ui_settings_field_value_changed_handler(lv_event_t *e) {
 
 static lv_obj_t *ui_settings_create_textarea_field(lv_obj_t *parent, const char *label) {
     lv_obj_t *cont = lv_menu_cont_create(parent);
+    lv_obj_set_style_pad_ver(cont, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     lv_obj_t *label_obj = lv_label_create(cont);
     lv_obj_set_width(label_obj, lv_pct(20));
@@ -192,6 +272,9 @@ static lv_obj_t *ui_settings_create_textarea_field(lv_obj_t *parent, const char 
     // Handle focus/defocused events
     lv_obj_add_event_cb(textarea, ui_settings_textarea_focused_event_handler, LV_EVENT_ALL, ui_settings_keyboard);
 
+    // Handle change events
+    lv_obj_add_event_cb(textarea, ui_settings_field_value_changed_handler, LV_EVENT_VALUE_CHANGED, NULL);
+
     return textarea;
 }
 
@@ -199,6 +282,7 @@ static lv_obj_t *ui_settings_create_spinbox_field(
     lv_obj_t *parent, const char *label, int32_t min, int32_t max, uint8_t digit_count, uint8_t separator_position) {
 
     lv_obj_t *cont = lv_menu_cont_create(parent);
+    lv_obj_set_style_pad_ver(cont, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     lv_obj_t *label_obj = lv_label_create(cont);
     lv_obj_set_width(label_obj, lv_pct(20));
@@ -228,6 +312,9 @@ static lv_obj_t *ui_settings_create_spinbox_field(
     // Center label on the vertical axis
     lv_obj_set_y(label_obj, (spinbox_height / 2) - (lv_obj_get_height(label_obj) / 2));
 
+    // Handle change events
+    lv_obj_add_event_cb(spinbox, ui_settings_field_value_changed_handler, LV_EVENT_VALUE_CHANGED, NULL);
+
     return spinbox;
 }
 
@@ -255,8 +342,17 @@ void ui_settings_init() {
     ui_settings_wifi_page = lv_menu_page_create(ui_settings_menu, "WiFi");
     ui_settings_bed_page = lv_menu_page_create(ui_settings_menu, "Bed");
     ui_settings_probes_page = lv_menu_page_create(ui_settings_menu, "Probes");
-    ui_settings_alerts_page = lv_menu_page_create(ui_settings_menu, "Alerts");
     ui_settings_ota_page = lv_menu_page_create(ui_settings_menu, "OTA updates");
+
+    // Disable scroll momentum/elasticity
+    lv_obj_clear_flag(ui_settings_wifi_page, LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    lv_obj_clear_flag(ui_settings_wifi_page, LV_OBJ_FLAG_SCROLL_ELASTIC);
+    lv_obj_clear_flag(ui_settings_bed_page, LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    lv_obj_clear_flag(ui_settings_bed_page, LV_OBJ_FLAG_SCROLL_ELASTIC);
+    lv_obj_clear_flag(ui_settings_probes_page, LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    lv_obj_clear_flag(ui_settings_probes_page, LV_OBJ_FLAG_SCROLL_ELASTIC);
+    lv_obj_clear_flag(ui_settings_ota_page, LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    lv_obj_clear_flag(ui_settings_ota_page, LV_OBJ_FLAG_SCROLL_ELASTIC);
 
     // Root page
     ui_settings_root_page = lv_menu_page_create(ui_settings_menu, NULL);
@@ -278,11 +374,6 @@ void ui_settings_init() {
     item_label = lv_label_create(item_cont);
     lv_label_set_text(item_label, "Probes");
     lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_probes_page);
-
-    item_cont = lv_menu_cont_create(ui_settings_root_page);
-    item_label = lv_label_create(item_cont);
-    lv_label_set_text(item_label, "Alerts");
-    lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_alerts_page);
 
     item_cont = lv_menu_cont_create(ui_settings_root_page);
     item_label = lv_label_create(item_cont);
@@ -325,7 +416,7 @@ void ui_settings_init() {
     lv_obj_set_width(ui_settings_wifi_passphrase_value, lv_pct(100));
     lv_obj_set_height(ui_settings_wifi_passphrase_value, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_settings_wifi_passphrase_value, 0);
-    lv_obj_set_y(ui_settings_wifi_passphrase_value, 44);
+    lv_obj_set_y(ui_settings_wifi_passphrase_value, 43);
     lv_textarea_set_placeholder_text(ui_settings_wifi_passphrase_value, "WIFI Passphrase");
     lv_textarea_set_one_line(ui_settings_wifi_passphrase_value, true);
     lv_textarea_set_password_mode(ui_settings_wifi_passphrase_value, true);
@@ -412,51 +503,37 @@ void ui_settings_init() {
     ui_settings_bed_homing_speed_value =
         ui_settings_create_spinbox_field(ui_settings_bed_page, "Homing speed", 0, 10000, 5, 5);
 
+    // Probes page
+    ui_settings_probes_v1_min_value =
+        ui_settings_create_spinbox_field(ui_settings_probes_page, "V1 min", 0, 5000, 4, 2);
+    ui_settings_probes_v1_max_value =
+        ui_settings_create_spinbox_field(ui_settings_probes_page, "V1 max", 0, 5000, 4, 2);
+    ui_settings_probes_v2_min_value =
+        ui_settings_create_spinbox_field(ui_settings_probes_page, "V2 min", 0, 5000, 4, 2);
+    ui_settings_probes_v2_max_value =
+        ui_settings_create_spinbox_field(ui_settings_probes_page, "V2 max", 0, 5000, 4, 2);
+    ui_settings_probes_v3_min_value =
+        ui_settings_create_spinbox_field(ui_settings_probes_page, "V3 min", 0, 5000, 4, 2);
+    ui_settings_probes_v3_max_value =
+        ui_settings_create_spinbox_field(ui_settings_probes_page, "V3 max", 0, 5000, 4, 2);
+    ui_settings_probes_cooling_flow_min_value =
+        ui_settings_create_spinbox_field(ui_settings_probes_page, "Cool. flow min (L/mn)", 0, 9999, 4, 2);
+    ui_settings_probes_cooling_flow_max_value =
+        ui_settings_create_spinbox_field(ui_settings_probes_page, "Cool. flow max (L/mn)", 0, 9999, 4, 2);
+    ui_settings_probes_cooling_temp_min_value =
+        ui_settings_create_spinbox_field(ui_settings_probes_page, "Cool. temp min (°C)", 0, 9999, 4, 2);
+    ui_settings_probes_cooling_temp_max_value =
+        ui_settings_create_spinbox_field(ui_settings_probes_page, "Cool. temp max (°C)", 0, 9999, 4, 2);
+
     // OTA page
     ui_settings_ota_login_value = ui_settings_create_textarea_field(ui_settings_ota_page, "Login");
     ui_settings_ota_password_value = ui_settings_create_textarea_field(ui_settings_ota_page, "Password");
 
     // Init fields with current settings
     ui_settings_load_bed_settings();
+    ui_settings_load_probes_settings();
     ui_settings_load_ota_settings();
-
-    // Add value change handlers
-    // Has to be done *after* loading the settings
-    lv_obj_add_event_cb(
-        ui_settings_bed_screw_pitch_value,
-        ui_settings_field_value_changed_handler,
-        LV_EVENT_VALUE_CHANGED,
-        NULL);
-    lv_obj_add_event_cb(
-        ui_settings_bed_microstep_multiplier_value,
-        ui_settings_field_value_changed_handler,
-        LV_EVENT_VALUE_CHANGED,
-        NULL);
-    lv_obj_add_event_cb(
-        ui_settings_bed_steps_per_revolution_value,
-        ui_settings_field_value_changed_handler,
-        LV_EVENT_VALUE_CHANGED,
-        NULL);
-    lv_obj_add_event_cb(
-        ui_settings_bed_acceleration_value,
-        ui_settings_field_value_changed_handler,
-        LV_EVENT_VALUE_CHANGED,
-        NULL);
-    lv_obj_add_event_cb(
-        ui_settings_bed_moving_speed_value,
-        ui_settings_field_value_changed_handler,
-        LV_EVENT_VALUE_CHANGED,
-        NULL);
-    lv_obj_add_event_cb(
-        ui_settings_bed_homing_speed_value,
-        ui_settings_field_value_changed_handler,
-        LV_EVENT_VALUE_CHANGED,
-        NULL);
-    lv_obj_add_event_cb(
-        ui_settings_ota_login_value,
-        ui_settings_field_value_changed_handler,
-        LV_EVENT_VALUE_CHANGED,
-        NULL);
+    settings_loaded = true;
 }
 
 void ui_settings_update() {

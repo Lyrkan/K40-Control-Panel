@@ -46,7 +46,7 @@
  *=========================*/
 
 /*1: use custom malloc/free, 0: use the built-in `lv_mem_alloc()` and `lv_mem_free()`*/
-#define LV_MEM_CUSTOM 0
+#define LV_MEM_CUSTOM 1
 #if LV_MEM_CUSTOM == 0
     /*Size of the memory available for `lv_mem_alloc()` in bytes (>= 2kB)*/
     #define LV_MEM_SIZE (48U * 1024U)          /*[bytes]*/
@@ -388,7 +388,10 @@
 /*Optionally declare custom fonts here.
  *You can use these fonts as default font too and they will be available globally.
  *E.g. #define LV_FONT_CUSTOM_DECLARE   LV_FONT_DECLARE(my_font_1) LV_FONT_DECLARE(my_font_2)*/
-#define LV_FONT_CUSTOM_DECLARE LV_FONT_DECLARE(font_default_12) LV_FONT_DECLARE(font_default_14) LV_FONT_DECLARE(font_default_16)
+#define LV_FONT_CUSTOM_DECLARE \
+    LV_FONT_DECLARE(font_default_12) \
+    LV_FONT_DECLARE(font_default_14) \
+    LV_FONT_DECLARE(font_default_16)
 
 /*Always set a default font*/
 #define LV_FONT_DEFAULT &font_default_14
@@ -396,6 +399,10 @@
 /* Custom symbols */
 #define LV_SYMBOL_NEW_LINE "\xEF\x8E\xBE" /*62398, 0xF3BE*/
 #define LV_SYMBOL_WARNING "\xEF\x81\xB1" /*61553, 0xF071*/
+#define LV_SYMBOl_GEAR "\xEF\x80\x93" /*61459, 0xF013*/
+#define LV_SYMBOL_MAGNIFYING_GLASS "\xEF\x80\x82" /*61442, 0xF002*/
+#define LV_SYMBOL_TOGGLE_OFF "\xEF\x88\x84" /*61956, 0xF204*/
+#define LV_SYMBOL_ARROW_DOWN_UP_ACROSS_LINE "\xEE\x92\xAF" /*58543, 0xE4AF*/
 
 /*Enable handling large font and/or fonts with a lot of characters.
  *The limit depends on the font size, font face and bpp.

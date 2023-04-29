@@ -1,5 +1,6 @@
 #include <Arduino.h>
 
+#include "K40/alerts.h"
 #include "K40/relays.h"
 #include "queues.h"
 
@@ -68,13 +69,16 @@ void relays_update() {
     }
 
     if (relays_current_status.laser_enabled) {
-        // Disable laser if cooling is not enabled
-        if (!relays_current_status.cooling_enabled) {
+        uint8_t alerts_status = alerts_get_current_alerts();
+
+        bool disable_laser =
+            !relays_current_status.cooling_enabled || (alerts_status & (ALERT_TYPE_COOLING | ALERT_TYPE_LIDS)) != 0;
+
+        // Disable laser if cooling is not enabled or if there is a critical alert (cooling or lid)
+        if (disable_laser) {
             relays_current_status.laser_enabled = false;
             current_status_updated = true; // Shouldn't be needed but just to be safe...
         }
-
-        // TODO Update laser pin status based on current alerts
     }
 
     // Update pins statuses and current status queue if needed

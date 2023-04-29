@@ -7,6 +7,7 @@
 #include "K40/voltage_probes.h"
 #include "UI/images.h"
 #include "UI/screens/status.h"
+#include "cpu_monitor.h"
 #include "macros.h"
 #include "queues.h"
 
@@ -39,6 +40,8 @@ static lv_obj_t *ui_status_fire_icon_warning;
 static lv_obj_t *ui_status_fire_label;
 static lv_obj_t *ui_status_fire_value;
 static lv_obj_t *ui_status_heap;
+static lv_obj_t *ui_status_cpu_0;
+static lv_obj_t *ui_status_cpu_1;
 
 void ui_status_init() {
     ui_status_screen = lv_obj_create(NULL);
@@ -241,6 +244,26 @@ void ui_status_init() {
     lv_label_set_text(ui_status_fire_value, "Unknown");
     lv_obj_set_style_text_color(ui_status_fire_value, lv_color_hex(0x777777), LV_PART_MAIN | LV_STATE_DEFAULT);
 
+    ui_status_cpu_0 = lv_label_create(ui_status_main_panel);
+    lv_obj_set_width(ui_status_cpu_0, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_status_cpu_0, LV_SIZE_CONTENT);
+    lv_obj_set_x(ui_status_cpu_0, 0);
+    lv_obj_set_y(ui_status_cpu_0, -40);
+    lv_obj_set_align(ui_status_cpu_0, LV_ALIGN_BOTTOM_RIGHT);
+    lv_label_set_text(ui_status_cpu_0, "");
+    lv_obj_set_style_text_color(ui_status_cpu_0, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_status_cpu_0, &font_default_12, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_status_cpu_1 = lv_label_create(ui_status_main_panel);
+    lv_obj_set_width(ui_status_cpu_1, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_status_cpu_1, LV_SIZE_CONTENT);
+    lv_obj_set_x(ui_status_cpu_1, 0);
+    lv_obj_set_y(ui_status_cpu_1, -20);
+    lv_obj_set_align(ui_status_cpu_1, LV_ALIGN_BOTTOM_RIGHT);
+    lv_label_set_text(ui_status_cpu_1, "");
+    lv_obj_set_style_text_color(ui_status_cpu_1, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_status_cpu_1, &font_default_12, LV_PART_MAIN | LV_STATE_DEFAULT);
+
     ui_status_heap = lv_label_create(ui_status_main_panel);
     lv_obj_set_width(ui_status_heap, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_heap, LV_SIZE_CONTENT);
@@ -336,23 +359,34 @@ void ui_status_update() {
     }
 
     // Update heap indicator
-    static unsigned long heap_status_last_update = 0;
+    static unsigned long system_status_last_update = 0;
     unsigned long current_time = millis();
-    if (heap_status_last_update == 0) {
-        heap_status_last_update = current_time;
+    if (system_status_last_update == 0) {
+        system_status_last_update = current_time;
     }
 
-    unsigned long delta_time = current_time - heap_status_last_update;
-    if (delta_time >= STATUS_HEAP_UPDATE_INTERVAL) {
+    unsigned long delta_time = current_time - system_status_last_update;
+    if (delta_time >= STATUS_SYSTEM_UPDATE_INTERVAL) {
         char heap_status[250];
+        char cpu_status_0[250];
+        char cpu_status_1[250];
+
         snprintf(
             heap_status,
             ARRAY_SIZE(heap_status),
             "Heap: %d/%dkB",
             ESP.getFreeHeap() / 1024,
             ESP.getHeapSize() / 1024);
-        lv_label_set_text(ui_status_heap, heap_status);
 
-        heap_status_last_update = current_time;
+        xSemaphoreTake(cpu_monitor_stats_mutex, portMAX_DELAY);
+        snprintf(cpu_status_0, ARRAY_SIZE(cpu_status_0), "Core #0: %.2f%%", cpu_monitor_load_0);
+        snprintf(cpu_status_1, ARRAY_SIZE(cpu_status_1), "Core #1: %.2f%%", cpu_monitor_load_1);
+        xSemaphoreGive(cpu_monitor_stats_mutex);
+
+        lv_label_set_text(ui_status_heap, heap_status);
+        lv_label_set_text(ui_status_cpu_0, cpu_status_0);
+        lv_label_set_text(ui_status_cpu_1, cpu_status_1);
+
+        system_status_last_update = current_time;
     }
 }

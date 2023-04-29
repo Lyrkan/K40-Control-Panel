@@ -18,6 +18,7 @@
 #include "UI/screens/status.h"
 #include "UI/ui.h"
 #include "api.h"
+#include "cpu_monitor.h"
 #include "settings.h"
 #include "wifi.h"
 
@@ -172,6 +173,9 @@ void setup() {
 
     /* Initialize API */
     api_init(&server);
+
+    /* Initialize CPU monitoring task */
+    cpu_monitor_init();
 
     /* Initialize ElegantOTA */
     while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)

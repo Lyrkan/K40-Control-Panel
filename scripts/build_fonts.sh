@@ -28,3 +28,19 @@ for FONT_SIZE in "${FONT_SIZES[@]}"
 do
     lv_font_conv --lcd --no-compress --bpp 4 --size ${FONT_SIZE} --font "./fonts/${DEFAULT_FONT}" -r "${RANGE_DEFAULT}" --font ./fonts/fa-regular-400.ttf -r "${RANGE_FA_REGULAR}" --font ./fonts/fa-solid-900.ttf -r "${RANGE_FA_SOLID}" --format lvgl --no-kern --lv-include "lvgl.h" -o "../src/UI/fonts/font_default_${FONT_SIZE}.c"
 done
+
+
+
+# Font Awesome glyphs:
+#
+# * 0xF06D = fa-fire
+# * 0xF2DC = fa-snowflake
+# * 0xF0E7 = fa-bolt
+# * 0xF06E = fa-eye
+ICONS_SIZES=(40)
+RANGE_ICONS_FA_SOLID="0xF06D,0xF2DC,0xF0E7,0xF06E"
+
+for FONT_SIZE in "${ICONS_SIZES[@]}"
+do
+    lv_font_conv --lcd --no-compress --bpp 4 --size ${FONT_SIZE} --font ./fonts/fa-solid-900.ttf -r "${RANGE_ICONS_FA_SOLID}" --format lvgl --no-kern --lv-include "lvgl.h" -o "../src/UI/fonts/font_icons_${FONT_SIZE}.c"
+done

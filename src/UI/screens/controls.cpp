@@ -57,7 +57,7 @@ static void ui_controls_switch_handler(lv_event_t *e) {
 
 void ui_controls_init() {
     ui_controls_screen = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(ui_controls_screen, lv_color_hex(0xF6F6F6), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_controls_screen, lv_color_hex(0xFAFAFA), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_clear_flag(ui_controls_screen, LV_OBJ_FLAG_SCROLLABLE);
 
     ui_controls_main_panel = lv_obj_create(ui_controls_screen);

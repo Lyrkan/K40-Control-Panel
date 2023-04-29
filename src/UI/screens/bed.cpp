@@ -99,7 +99,7 @@ static void ui_bed_set_origin_button_handler(lv_event_t *e) {
 
 void ui_bed_init() {
     ui_bed_screen = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(ui_bed_screen, lv_color_hex(0xF6F6F6), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_bed_screen, lv_color_hex(0xFAFAFA), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_clear_flag(ui_bed_screen, LV_OBJ_FLAG_SCROLLABLE);
 
     ui_bed_main_panel = lv_obj_create(ui_bed_screen);
@@ -274,6 +274,7 @@ void ui_bed_init() {
     lv_obj_set_width(ui_bed_keyboard, 210);
     lv_obj_set_height(ui_bed_keyboard, 120);
     lv_obj_set_align(ui_bed_keyboard, LV_ALIGN_BOTTOM_LEFT);
+    lv_obj_set_style_bg_color(ui_bed_keyboard, lv_color_hex(0xFAFAFA), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_bed_keyboard, &font_default_14, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_keyboard_set_map(ui_bed_keyboard, LV_KEYBOARD_MODE_USER_1, KEYBOARD_NUMPAD_MAP, KEYBOARD_NUMPAD_CTRL);
     lv_keyboard_set_mode(ui_bed_keyboard, LV_KEYBOARD_MODE_USER_1);

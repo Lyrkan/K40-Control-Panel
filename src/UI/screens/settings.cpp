@@ -320,7 +320,7 @@ static lv_obj_t *ui_settings_create_spinbox_field(
 
 void ui_settings_init() {
     ui_settings_screen = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(ui_settings_screen, lv_color_hex(0xF6F6F6), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_settings_screen, lv_color_hex(0xFAFAFA), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_clear_flag(ui_settings_screen, LV_OBJ_FLAG_SCROLLABLE);
 
     // Create menu
@@ -386,6 +386,7 @@ void ui_settings_init() {
     lv_obj_set_height(ui_settings_keyboard, lv_pct(40));
     lv_obj_set_align(ui_settings_keyboard, LV_ALIGN_BOTTOM_LEFT);
     lv_obj_set_pos(ui_settings_keyboard, 0, 0);
+    lv_obj_set_style_bg_color(ui_settings_keyboard, lv_color_hex(0xFAFAFA), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_settings_keyboard, &font_default_14, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_add_flag(ui_settings_keyboard, LV_OBJ_FLAG_HIDDEN);
 

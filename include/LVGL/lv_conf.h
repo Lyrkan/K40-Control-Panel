@@ -391,7 +391,8 @@
 #define LV_FONT_CUSTOM_DECLARE \
     LV_FONT_DECLARE(font_default_12) \
     LV_FONT_DECLARE(font_default_14) \
-    LV_FONT_DECLARE(font_default_16)
+    LV_FONT_DECLARE(font_default_16) \
+    LV_FONT_DECLARE(font_icons_40)
 
 /*Always set a default font*/
 #define LV_FONT_DEFAULT &font_default_14
@@ -403,6 +404,10 @@
 #define LV_SYMBOL_MAGNIFYING_GLASS "\xEF\x80\x82" /*61442, 0xF002*/
 #define LV_SYMBOL_TOGGLE_OFF "\xEF\x88\x84" /*61956, 0xF204*/
 #define LV_SYMBOL_ARROW_DOWN_UP_ACROSS_LINE "\xEE\x92\xAF" /*58543, 0xE4AF*/
+#define LV_SYMBOL_FIRE "\xEF\x81\xAD" /*61549, 0xF06D*/
+#define LV_SYMBOL_SNOWFLAKE "\xEF\x8B\x9C" /*62172, 0xF2DC*/
+#define LV_SYMBOL_BOLT "\xEF\x83\xA7" /*61671, 0xF0E7*/
+#define LV_SYMBOL_EYE "\xEF\x81\xAE" /*61550, 0xF06E*/
 
 /*Enable handling large font and/or fonts with a lot of characters.
  *The limit depends on the font size, font face and bpp.

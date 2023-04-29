@@ -3,6 +3,7 @@
 #include <freertos/queue.h>
 #include <freertos/event_groups.h>
 
+#include "K40/alerts.h"
 #include "K40/cooling.h"
 #include "K40/lids.h"
 #include "K40/voltage_probes.h"
@@ -313,6 +314,8 @@ void ui_status_update() {
     bool pending_lids_update = (pending_updates & STATUS_UPDATE_PROBE_LIDS) != 0;
     bool pending_flame_sensor_update = (pending_updates & STATUS_UPDATE_PROBE_FLAME_SENSOR) != 0;
 
+    uint8_t alerts_statuses = alerts_get_current_alerts();
+
     // Update voltage probes widgets
     if (pending_voltage_update && xQueuePeek(voltage_current_status_queue, &voltage_probes_values, 0) == pdTRUE) {
         // Probe 1
@@ -330,14 +333,7 @@ void ui_status_update() {
         lv_label_set_text(ui_status_voltages_v3_value, voltage_probe3_formatted_value);
         lv_bar_set_value(ui_status_voltages_v3_bar, (int)voltage_probes_values.probe3, LV_ANIM_ON);
 
-        updateWarningIcon(
-            ui_status_voltages_icon_warning,
-            voltage_probes_values.probe1 < VOLTAGE_PROBE_1_MIN_VALUE ||
-                voltage_probes_values.probe1 > VOLTAGE_PROBE_1_MAX_VALUE ||
-                voltage_probes_values.probe2 < VOLTAGE_PROBE_2_MIN_VALUE ||
-                voltage_probes_values.probe2 > VOLTAGE_PROBE_2_MAX_VALUE ||
-                voltage_probes_values.probe3 < VOLTAGE_PROBE_3_MIN_VALUE ||
-                voltage_probes_values.probe3 > VOLTAGE_PROBE_3_MAX_VALUE);
+        updateWarningIcon(ui_status_voltages_icon_warning, (alerts_statuses & ALERT_TYPE_VOLTAGE) != 0);
     }
 
     // Update cooling widgets
@@ -352,25 +348,21 @@ void ui_status_update() {
         lv_label_set_text(ui_status_cooling_temp_value, cooling_temp_formatted_value);
         lv_bar_set_value(ui_status_cooling_temp_bar, (int)cooling_values.temperature, LV_ANIM_ON);
 
-        updateWarningIcon(
-            ui_status_cooling_icon_warning,
-            cooling_values.flow < COOLING_FLOW_MIN_VALUE || cooling_values.flow > COOLING_FLOW_MAX_VALUE ||
-                cooling_values.temperature < COOLING_TEMP_MIN_VALUE ||
-                cooling_values.temperature > COOLING_TEMP_MAX_VALUE);
+        updateWarningIcon(ui_status_cooling_icon_warning, (alerts_statuses & ALERT_TYPE_COOLING) != 0);
     }
 
     // Update lids widgets
     if (pending_lids_update && xQueuePeek(lids_current_status_queue, &lids_states, 0) == pdTRUE) {
         lv_label_set_text(ui_status_lid_front_value, lids_states.front_opened ? "Opened" : "Closed");
         lv_label_set_text(ui_status_lid_back_value, lids_states.back_opened ? "Opened" : "Closed");
-        updateWarningIcon(ui_status_lid_icon_warning, lids_states.front_opened || lids_states.back_opened);
+        updateWarningIcon(ui_status_lid_icon_warning, (alerts_statuses & ALERT_TYPE_LIDS) != 0);
     }
 
     // Update flame sensor widgets
     if (pending_flame_sensor_update &&
         xQueuePeek(flame_sensor_current_status_queue, &flame_sensor_triggered, 0) == pdTRUE) {
         lv_label_set_text(ui_status_fire_value, flame_sensor_triggered ? "Triggered" : "OK");
-        updateWarningIcon(ui_status_fire_icon_warning, flame_sensor_triggered);
+        updateWarningIcon(ui_status_fire_icon_warning, (alerts_statuses & ALERT_TYPE_FLAME_SENSOR) != 0);
     }
 
     // Clear pending updates bits

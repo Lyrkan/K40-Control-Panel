@@ -4,9 +4,11 @@
 #include <math.h>
 #include "esp_adc_cal.h"
 
+#include "K40/alerts.h"
 #include "K40/cooling.h"
 #include "UI/screens/status.h"
 #include "queues.h"
+#include "settings.h"
 
 static CoolingValues cooling_values;
 
@@ -71,6 +73,16 @@ void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {
 
     // Send update to the queue
     if (cooling_values_updated) {
+        // Change alert state
+        bool enable_alert =
+            (cooling_values.temperature < probes_settings.cooling_temp_min ||
+             cooling_values.temperature > probes_settings.cooling_temp_max ||
+             cooling_values.flow < probes_settings.cooling_flow_min ||
+             cooling_values.flow > probes_settings.cooling_temp_max);
+
+        alerts_toggle_alert(ALERT_TYPE_COOLING, enable_alert);
+
+        // Notify UI of new values
         xQueueOverwrite(cooling_current_status_queue, &cooling_values);
         ui_status_notify_update(STATUS_UPDATE_PROBE_COOLING);
     }

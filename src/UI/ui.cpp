@@ -1,5 +1,5 @@
-#include "UI/alerts.h"
 #include "UI/menu.h"
+#include "UI/overlay.h"
 #include "UI/ui.h"
 #include "UI/screens/bed.h"
 #include "UI/screens/controls.h"
@@ -19,7 +19,7 @@ void ui_init() {
     lv_disp_set_theme(default_display, theme);
 
     // Initialize alerts overlay
-    ui_alerts_init();
+    ui_overlay_init();
 
     // Initialize screens
     ui_splashscreen_init();
@@ -33,7 +33,7 @@ void ui_init() {
 }
 
 void ui_update() {
-    ui_alerts_update();
+    ui_overlay_update();
     ui_menu_indicators_update();
     ui_status_update();
     ui_controls_update();

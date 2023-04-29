@@ -4,9 +4,11 @@
 #include <math.h>
 #include "esp_adc_cal.h"
 
+#include "K40/alerts.h"
 #include "K40/voltage_probes.h"
 #include "UI/screens/status.h"
 #include "queues.h"
+#include "settings.h"
 
 static VoltageProbesValues voltage_probes_values;
 
@@ -41,6 +43,19 @@ void voltage_probes_update_status(esp_adc_cal_characteristics_t *adc_chars) {
     voltage_probes_values.probe2 = voltage_probes_get_value(PIN_VOLTAGE_PROBE_2, adc_chars);
     voltage_probes_values.probe3 = voltage_probes_get_value(PIN_VOLTAGE_PROBE_3, adc_chars);
     xQueueOverwrite(voltage_current_status_queue, &voltage_probes_values);
+
+    // Change alert state
+    bool enable_alert =
+        (voltage_probes_values.probe1 < probes_settings.voltage_probe_v1_min ||
+         voltage_probes_values.probe1 > probes_settings.voltage_probe_v1_max ||
+         voltage_probes_values.probe1 < probes_settings.voltage_probe_v2_min ||
+         voltage_probes_values.probe1 > probes_settings.voltage_probe_v2_max ||
+         voltage_probes_values.probe2 < probes_settings.voltage_probe_v3_min ||
+         voltage_probes_values.probe2 > probes_settings.voltage_probe_v3_max);
+
+    alerts_toggle_alert(ALERT_TYPE_VOLTAGE, enable_alert);
+
+    // Notify UI of new values
     ui_status_notify_update(STATUS_UPDATE_PROBE_VOLTAGE);
 
     // Reset timer

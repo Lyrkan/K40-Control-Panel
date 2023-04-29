@@ -68,8 +68,8 @@ void relays_update() {
     }
 
     if (relays_current_status.laser_enabled) {
-        // Disable laser if air assist or cooling is not enabled
-        if (!relays_current_status.air_assist_enabled || !relays_current_status.cooling_enabled) {
+        // Disable laser if cooling is not enabled
+        if (!relays_current_status.cooling_enabled) {
             relays_current_status.laser_enabled = false;
             current_status_updated = true; // Shouldn't be needed but just to be safe...
         }

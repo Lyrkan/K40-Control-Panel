@@ -40,7 +40,8 @@ void voltage_probes_update_status(esp_adc_cal_characteristics_t *adc_chars) {
     voltage_probes_values.probe1 = voltage_probes_get_value(PIN_VOLTAGE_PROBE_1, adc_chars);
     voltage_probes_values.probe2 = voltage_probes_get_value(PIN_VOLTAGE_PROBE_2, adc_chars);
     voltage_probes_values.probe3 = voltage_probes_get_value(PIN_VOLTAGE_PROBE_3, adc_chars);
-    xQueueOverwrite(voltage_probes_status_update_queue, &voltage_probes_values);
+    xQueueOverwrite(voltage_current_status_queue, &voltage_probes_values);
+    ui_status_notify_update(STATUS_UPDATE_PROBE_VOLTAGE);
 
     // Reset timer
     last_update = current_time;

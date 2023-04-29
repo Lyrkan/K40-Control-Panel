@@ -11,10 +11,10 @@
 QueueHandle_t bed_current_status_queue = xQueueCreate(1, sizeof(BedStatus));
 QueueHandle_t bed_command_queue = xQueueCreate(1, sizeof(BedCommand));
 
-QueueHandle_t cooling_status_update_queue = xQueueCreate(1, sizeof(CoolingValues));
-QueueHandle_t flame_sensor_status_update_queue = xQueueCreate(1, sizeof(bool));
-QueueHandle_t lids_status_update_queue = xQueueCreate(1, sizeof(LidsStates));
-QueueHandle_t voltage_probes_status_update_queue = xQueueCreate(1, sizeof(VoltageProbesValues));
+QueueHandle_t cooling_current_status_queue = xQueueCreate(1, sizeof(CoolingValues));
+QueueHandle_t flame_sensor_current_status_queue = xQueueCreate(1, sizeof(bool));
+QueueHandle_t lids_current_status_queue = xQueueCreate(1, sizeof(LidsStates));
+QueueHandle_t voltage_current_status_queue = xQueueCreate(1, sizeof(VoltageProbesValues));
 
 QueueHandle_t relays_current_status_queue = xQueueCreate(1, sizeof(RelaysStatus));
 QueueHandle_t relays_command_queue = xQueueCreate(10, sizeof(RelaysCommand));

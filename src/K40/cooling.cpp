@@ -71,6 +71,7 @@ void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {
 
     // Send update to the queue
     if (cooling_values_updated) {
-        xQueueOverwrite(cooling_status_update_queue, &cooling_values);
+        xQueueOverwrite(cooling_current_status_queue, &cooling_values);
+        ui_status_notify_update(STATUS_UPDATE_PROBE_COOLING);
     }
 }

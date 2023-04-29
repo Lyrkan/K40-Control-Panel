@@ -11,8 +11,8 @@ SemaphoreHandle_t cpu_monitor_stats_mutex = xSemaphoreCreateMutex();
 float_t cpu_monitor_load_0 = 0;
 float_t cpu_monitor_load_1 = 0;
 
-static EventGroupHandle_t cpu_load_event_group = xEventGroupCreate();
-;
+static StaticEventGroup_t cpu_load_event_group_static;
+static EventGroupHandle_t cpu_load_event_group = xEventGroupCreateStatic(&cpu_load_event_group_static);
 static unsigned long idle_counter = 0;
 
 static void cpu_monitor_idle_task(void *cpu_idle_bit) {

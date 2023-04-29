@@ -16,6 +16,7 @@ void flame_sensor_update_status() {
     if (first_update || (updated_sensor_value != flame_sensor_triggered)) {
         first_update = false;
         flame_sensor_triggered = updated_sensor_value;
-        xQueueOverwrite(flame_sensor_status_update_queue, &flame_sensor_triggered);
+        xQueueOverwrite(flame_sensor_current_status_queue, &flame_sensor_triggered);
+        ui_status_notify_update(STATUS_UPDATE_PROBE_FLAME_SENSOR);
     }
 }

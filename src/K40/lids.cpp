@@ -17,6 +17,7 @@ void lids_update_status() {
         first_update = false;
         lids_states.front_opened = front_lid_opened;
         lids_states.back_opened = back_lid_opened;
-        xQueueOverwrite(lids_status_update_queue, &lids_states);
+        xQueueOverwrite(lids_current_status_queue, &lids_states);
+        ui_status_notify_update(STATUS_UPDATE_PROBE_LIDS);
     }
 }

@@ -1,6 +1,7 @@
 #include <lvgl.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+#include <freertos/event_groups.h>
 
 #include "K40/cooling.h"
 #include "K40/lids.h"
@@ -12,6 +13,9 @@
 #include "queues.h"
 
 lv_obj_t *ui_status_screen;
+
+static StaticEventGroup_t ui_status_event_group_static;
+static EventGroupHandle_t ui_status_event_group = xEventGroupCreateStatic(&ui_status_event_group_static);
 
 static lv_obj_t *ui_status_main_panel;
 static lv_obj_t *ui_status_voltages_icon;
@@ -299,8 +303,18 @@ void ui_status_update() {
     static char voltage_probe2_formatted_value[10];
     static char voltage_probe3_formatted_value[10];
 
+    static char heap_status[250];
+    static char cpu_status_0[250];
+    static char cpu_status_1[250];
+
+    uint8_t pending_updates = xEventGroupGetBits(ui_status_event_group);
+    bool pending_voltage_update = (pending_updates & STATUS_UPDATE_PROBE_VOLTAGE) != 0;
+    bool pending_cooling_update = (pending_updates & STATUS_UPDATE_PROBE_COOLING) != 0;
+    bool pending_lids_update = (pending_updates & STATUS_UPDATE_PROBE_LIDS) != 0;
+    bool pending_flame_sensor_update = (pending_updates & STATUS_UPDATE_PROBE_FLAME_SENSOR) != 0;
+
     // Update voltage probes widgets
-    if (xQueueReceive(voltage_probes_status_update_queue, &voltage_probes_values, 0) == pdTRUE) {
+    if (pending_voltage_update && xQueuePeek(voltage_current_status_queue, &voltage_probes_values, 0) == pdTRUE) {
         // Probe 1
         sprintf(voltage_probe1_formatted_value, "%2.1fV", voltage_probes_values.probe1);
         lv_label_set_text(ui_status_voltages_v1_value, voltage_probe1_formatted_value);
@@ -327,7 +341,7 @@ void ui_status_update() {
     }
 
     // Update cooling widgets
-    if (xQueueReceive(cooling_status_update_queue, &cooling_values, 0) == pdTRUE) {
+    if (pending_cooling_update && xQueuePeek(cooling_current_status_queue, &cooling_values, 0) == pdTRUE) {
         // Cooling flow
         sprintf(cooling_flow_formatted_value, "%2.2fL/mn", cooling_values.flow);
         lv_label_set_text(ui_status_cooling_flow_value, cooling_flow_formatted_value);
@@ -346,17 +360,24 @@ void ui_status_update() {
     }
 
     // Update lids widgets
-    if (xQueueReceive(lids_status_update_queue, &lids_states, 0) == pdTRUE) {
+    if (pending_lids_update && xQueuePeek(lids_current_status_queue, &lids_states, 0) == pdTRUE) {
         lv_label_set_text(ui_status_lid_front_value, lids_states.front_opened ? "Opened" : "Closed");
         lv_label_set_text(ui_status_lid_back_value, lids_states.back_opened ? "Opened" : "Closed");
         updateWarningIcon(ui_status_lid_icon_warning, lids_states.front_opened || lids_states.back_opened);
     }
 
     // Update flame sensor widgets
-    if (xQueueReceive(flame_sensor_status_update_queue, &flame_sensor_triggered, 0) == pdTRUE) {
+    if (pending_flame_sensor_update &&
+        xQueuePeek(flame_sensor_current_status_queue, &flame_sensor_triggered, 0) == pdTRUE) {
         lv_label_set_text(ui_status_fire_value, flame_sensor_triggered ? "Triggered" : "OK");
         updateWarningIcon(ui_status_fire_icon_warning, flame_sensor_triggered);
     }
+
+    // Clear pending updates bits
+    xEventGroupClearBits(
+        ui_status_event_group,
+        (STATUS_UPDATE_PROBE_VOLTAGE | STATUS_UPDATE_PROBE_COOLING | STATUS_UPDATE_PROBE_LIDS |
+         STATUS_UPDATE_PROBE_FLAME_SENSOR));
 
     // Update heap indicator
     static unsigned long system_status_last_update = 0;
@@ -367,10 +388,6 @@ void ui_status_update() {
 
     unsigned long delta_time = current_time - system_status_last_update;
     if (delta_time >= STATUS_SYSTEM_UPDATE_INTERVAL) {
-        char heap_status[250];
-        char cpu_status_0[250];
-        char cpu_status_1[250];
-
         snprintf(
             heap_status,
             ARRAY_SIZE(heap_status),
@@ -390,3 +407,5 @@ void ui_status_update() {
         system_status_last_update = current_time;
     }
 }
+
+void ui_status_notify_update(uint8_t update_types) { xEventGroupSetBits(ui_status_event_group, update_types); }

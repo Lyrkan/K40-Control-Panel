@@ -339,10 +339,15 @@ void ui_settings_init() {
     lv_label_set_text(ui_settings_menu_back_button_label, "Back");
 
     // Create menu pages
-    ui_settings_wifi_page = lv_menu_page_create(ui_settings_menu, "WiFi");
-    ui_settings_bed_page = lv_menu_page_create(ui_settings_menu, "Bed");
-    ui_settings_probes_page = lv_menu_page_create(ui_settings_menu, "Probes");
-    ui_settings_ota_page = lv_menu_page_create(ui_settings_menu, "OTA updates");
+    char wifi_page_name[] = "WiFi";
+    char bed_page_name[] = "Bed";
+    char probes_page_name[] = "Probes";
+    char ota_page_name[] = "OTA_updates";
+
+    ui_settings_wifi_page = lv_menu_page_create(ui_settings_menu, wifi_page_name);
+    ui_settings_bed_page = lv_menu_page_create(ui_settings_menu, bed_page_name);
+    ui_settings_probes_page = lv_menu_page_create(ui_settings_menu, probes_page_name);
+    ui_settings_ota_page = lv_menu_page_create(ui_settings_menu, ota_page_name);
 
     // Disable scroll momentum/elasticity
     lv_obj_clear_flag(ui_settings_wifi_page, LV_OBJ_FLAG_SCROLL_MOMENTUM);

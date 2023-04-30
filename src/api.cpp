@@ -1,5 +1,8 @@
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
+#include <lvgl.h>
 #include <math.h>
 
 #include "K40/alerts.h"
@@ -7,9 +10,15 @@
 #include "K40/lids.h"
 #include "K40/voltage_probes.h"
 #include "K40/relays.h"
+#include "UI/display.h"
 #include "api.h"
 #include "cpu_monitor.h"
+#include "macros.h"
 #include "queues.h"
+
+#ifdef DEBUG
+SemaphoreHandle_t api_snapshot_mutex = xSemaphoreCreateMutex();
+#endif
 
 void api_init(AsyncWebServer *server) {
     server->on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -100,4 +109,73 @@ void api_init(AsyncWebServer *server) {
         serializeJsonPretty(state, serializedState);
         request->send(200, "application/json", serializedState);
     });
+
+#ifdef DEBUG
+    // Usage:
+    // $ wget http://<YOUR_PANEL_IP>/screenshot
+    // $ convert -size 480x320 -depth 8 -separate -swap 0,2 -combine rgba:screenshot screenshot.jpg
+    server->on("/screenshot", HTTP_GET, [](AsyncWebServerRequest *request) {
+        lv_obj_t *current_screen = lv_scr_act();
+
+        request->sendChunked(
+            "application/octet-stream",
+            [current_screen](uint8_t *buffer, size_t max_len, size_t index) -> size_t {
+                uint8_t bytes_per_pixel = 4;
+                unsigned int current_pixel_index = index / bytes_per_pixel;
+                if (current_pixel_index >= DISPLAY_SCREEN_HEIGHT * DISPLAY_SCREEN_WIDTH) {
+                    return 0;
+                }
+
+                unsigned int row = current_pixel_index / DISPLAY_SCREEN_WIDTH;
+                unsigned int column = (current_pixel_index % DISPLAY_SCREEN_WIDTH);
+                unsigned int remaining_columns = DISPLAY_SCREEN_WIDTH - column;
+                unsigned int max_pixels = min(max_len / bytes_per_pixel, remaining_columns);
+
+                lv_area_t snapshot_area = {
+                    .x1 = (lv_coord_t)column,
+                    .y1 = (lv_coord_t)row,
+                    .x2 = (lv_coord_t)(column + max_pixels - 1),
+                    .y2 = (lv_coord_t)row,
+                };
+
+                lv_disp_t *obj_disp = lv_obj_get_disp(current_screen);
+                lv_disp_drv_t driver;
+                lv_disp_drv_init(&driver);
+
+                driver.hor_res = lv_disp_get_hor_res(obj_disp);
+                driver.ver_res = lv_disp_get_hor_res(obj_disp);
+                lv_disp_drv_use_generic_set_px_cb(&driver, LV_IMG_CF_TRUE_COLOR_ALPHA);
+
+                lv_disp_t fake_disp;
+                lv_memset_00(&fake_disp, sizeof(lv_disp_t));
+                fake_disp.driver = &driver;
+
+                lv_draw_ctx_t *draw_ctx = (lv_draw_ctx_t *)lv_mem_alloc(obj_disp->driver->draw_ctx_size);
+                if (draw_ctx == NULL)
+                    return 0;
+
+                obj_disp->driver->draw_ctx_init(fake_disp.driver, draw_ctx);
+                fake_disp.driver->draw_ctx = draw_ctx;
+                draw_ctx->clip_area = &snapshot_area;
+                draw_ctx->buf_area = &snapshot_area;
+                draw_ctx->buf = (void *)buffer;
+                driver.draw_ctx = draw_ctx;
+
+                xSemaphoreTake(api_snapshot_mutex, portMAX_DELAY);
+                lv_disp_t *refr_ori = _lv_refr_get_disp_refreshing();
+                _lv_refr_set_disp_refreshing(&fake_disp);
+
+                lv_obj_redraw(draw_ctx, current_screen);
+                lv_obj_redraw(draw_ctx, lv_layer_top());
+                lv_obj_redraw(draw_ctx, lv_layer_sys());
+
+                _lv_refr_set_disp_refreshing(refr_ori);
+                obj_disp->driver->draw_ctx_deinit(fake_disp.driver, draw_ctx);
+                lv_mem_free(draw_ctx);
+                xSemaphoreGive(api_snapshot_mutex);
+
+                return max_pixels * bytes_per_pixel;
+            });
+    });
+#endif
 }

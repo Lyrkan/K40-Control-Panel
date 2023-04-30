@@ -6,7 +6,17 @@
 
 <p align="center"><i>Control Panel for K40 laser cutters/engravers</i></p>
 
-[![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/Lyrkan/K40-Control-Panel/blob/master/LICENSE) ![Build status](https://github.com/Lyrkan/K40-Control-Panel/actions/workflows/build-main.yml/badge.svg) [![GitHub release](https://img.shields.io/github/release/Lyrkan/K40-Control-Panel.svg)](https://github.com/Lyrkan/K40-Control-Panel/releases/)
+<p align="center">
+    <img width="240" height="160" src="images/screenshot-status.jpg">
+    <img width="240" height="160" src="images/screenshot-controls.jpg">
+    <img width="240" height="160" src="images/screenshot-bed.jpg">
+</p>
+
+<p align="center">
+    <a title="License" href="https://github.com/Lyrkan/K40-Control-Panel/blob/master/LICENSE"><img src="https://img.shields.io/github/license/Lyrkan/K40-Control-Panel.svg"></a>
+    <img alt="Build status" src="https://github.com/Lyrkan/K40-Control-Panel/actions/workflows/build-main.yml/badge.svg">
+    <a title="Last release"><img src="https://img.shields.io/github/release/Lyrkan/K40-Control-Panel.svg"></a>
+</p>
 
 ## Overview
 
@@ -74,6 +84,74 @@ OTA updates are available using the `OTA` target. In order to use it copy the `.
 
 You can also take a `.bin` file and upload it through the ElegantOTA interface available at `http://<YOUR_PANEL_IP>/update`.
 
+## PCB
+
+Coming soon™
+
 ## Wiring
 
 Coming soon™
+
+## Status API
+
+A status API is available at `http://<YOUR_PANEL_IP>/status`.
+
+It should return a JSON object similar to the following snippet:
+
+```json
+{
+  "firmware": {
+    "version": "9da28a82",
+    "build_date": "Apr 30 2023 18:31:43"
+  },
+  "sensors": {
+    "voltages": {
+      "v1": 4.900000095,
+      "v2": 12.10000038,
+      "v3": 18
+    },
+    "cooling": {
+      "flow": 5.619999886,
+      "temp": 18.89999962
+    },
+    "lids": {
+      "front": "opened",
+      "back": "closed"
+    },
+    "flame_sensor": {
+      "triggered": false
+    }
+  },
+  "alerts": {
+    "voltages": true,
+    "cooling": false,
+    "lids": true,
+    "flame_sensor": false
+  },
+  "relays": {
+    "laser": false,
+    "air_assist": true,
+    "cooling": true,
+    "alarm": false,
+    "lights": true,
+    "beam_preview": true
+  },
+  "system": {
+    "chip": {
+      "model": "ESP32-D0WDQ5",
+      "revision": 1
+    },
+    "heap": {
+      "free": 80268,
+      "total": 257148
+    },
+    "cpu": {
+      "freq_mhz": 240,
+      "load_percent": {
+        "core_0": 0,
+        "core_1": 0.100000001
+      }
+    }
+  }
+}
+```

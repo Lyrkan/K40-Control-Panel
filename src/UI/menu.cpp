@@ -84,7 +84,7 @@ void ui_menu_button_event_handler(lv_event_t *e) {
 
 void ui_menu_init() {
     ui_menu_panel = lv_obj_create(lv_layer_top());
-    lv_obj_set_width(ui_menu_panel, 480);
+    lv_obj_set_width(ui_menu_panel, lv_pct(100));
     lv_obj_set_height(ui_menu_panel, MENU_HEIGHT);
     lv_obj_set_style_radius(ui_menu_panel, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_width(ui_menu_panel, 0, LV_PART_MAIN | LV_STATE_DEFAULT);

@@ -4,6 +4,8 @@
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>
 
+#include "UI/display.h"
+
 class LGFX : public lgfx::LGFX_Device {
 
     lgfx::Panel_ILI9488 _panel_instance;
@@ -37,8 +39,8 @@ class LGFX : public lgfx::LGFX_Device {
             cfg.pin_cs = 15;
             cfg.pin_rst = -1;
             cfg.pin_busy = -1;
-            cfg.panel_width = 320;
-            cfg.panel_height = 480;
+            cfg.panel_width = DISPLAY_SCREEN_HEIGHT;
+            cfg.panel_height = DISPLAY_SCREEN_WIDTH;
             cfg.offset_x = 0;
             cfg.offset_y = 0;
             cfg.offset_rotation = 0;
@@ -56,9 +58,9 @@ class LGFX : public lgfx::LGFX_Device {
             auto cfg = _touch_instance.config();
 
             cfg.x_min = 0;
-            cfg.x_max = 319;
+            cfg.x_max = DISPLAY_SCREEN_HEIGHT - 1;
             cfg.y_min = 0;
-            cfg.y_max = 479;
+            cfg.y_max = DISPLAY_SCREEN_WIDTH - 1;
             cfg.pin_int = -1;
             cfg.bus_shared = true;
             cfg.offset_rotation = 0;

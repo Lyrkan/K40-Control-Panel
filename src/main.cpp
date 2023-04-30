@@ -16,14 +16,12 @@
 #include "K40/relays.h"
 #include "K40/voltage_probes.h"
 #include "UI/screens/status.h"
+#include "UI/display.h"
 #include "UI/ui.h"
 #include "api.h"
 #include "cpu_monitor.h"
 #include "settings.h"
 #include "wifi.h"
-
-#define SCREEN_WIDTH 480
-#define SCREEN_HEIGHT 320
 
 static AsyncWebServer server(80);
 static LGFX tft;
@@ -112,7 +110,7 @@ void setup() {
     Serial.begin(115200);
 
     static lv_disp_draw_buf_t draw_buf;
-    static lv_color_t buf[SCREEN_WIDTH * 10];
+    static lv_color_t buf[DISPLAY_SCREEN_WIDTH * 10];
     static lv_disp_drv_t disp_drv;
     static lv_indev_drv_t indev_drv;
 
@@ -126,10 +124,10 @@ void setup() {
     tft.setColorDepth(24);
 
     lv_init();
-    lv_disp_draw_buf_init(&draw_buf, buf, NULL, SCREEN_WIDTH * 10);
+    lv_disp_draw_buf_init(&draw_buf, buf, NULL, DISPLAY_SCREEN_WIDTH * 10);
     lv_disp_drv_init(&disp_drv);
-    disp_drv.hor_res = SCREEN_WIDTH;
-    disp_drv.ver_res = SCREEN_HEIGHT;
+    disp_drv.hor_res = DISPLAY_SCREEN_WIDTH;
+    disp_drv.ver_res = DISPLAY_SCREEN_HEIGHT;
     disp_drv.flush_cb = display_flush_cb;
     disp_drv.draw_buf = &draw_buf;
     lv_disp_drv_register(&disp_drv);
@@ -211,7 +209,16 @@ void setup() {
  * UI update loop
  */
 void loop() {
+#ifdef DEBUG
+    xSemaphoreTake(api_snapshot_mutex, portMAX_DELAY);
+#endif
+
     ui_update();
     lv_timer_handler();
+
+#ifdef DEBUG
+    xSemaphoreGive(api_snapshot_mutex);
+#endif
+
     delay(5);
 }

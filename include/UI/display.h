@@ -1,0 +1,7 @@
+#ifndef UI_DISPLAY_H
+#define UI_DISPLAY_H
+
+#define DISPLAY_SCREEN_WIDTH 480
+#define DISPLAY_SCREEN_HEIGHT 320
+
+#endif

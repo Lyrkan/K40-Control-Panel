@@ -43,3 +43,4 @@ jobs:
                   fail_on_unmatched_files: true
                   files: |
                       .pio/build/nodemcu-32s/firmware.bin
+                      gerber/Gerber_K40-Control-Panel.zip

@@ -86,7 +86,11 @@ You can also take a `.bin` file and upload it through the ElegantOTA interface a
 
 ## PCB
 
-Coming soon™
+![PCB](/images/pcb-3d.png)
+
+Production files can be found in the [gerber](/gerber) folder of this repository.
+
+The design fits on a 100x100mm PCB, so you should be able to get it built really cheap by online suppliers.
 
 ## Wiring
 

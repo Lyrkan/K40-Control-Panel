@@ -391,7 +391,6 @@
 #define LV_FONT_CUSTOM_DECLARE \
     LV_FONT_DECLARE(font_default_12) \
     LV_FONT_DECLARE(font_default_14) \
-    LV_FONT_DECLARE(font_default_16) \
     LV_FONT_DECLARE(font_icons_40)
 
 /*Always set a default font*/

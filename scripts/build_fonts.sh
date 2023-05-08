@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FONT_SIZES=(12 14 16)
+FONT_SIZES=(12 14)
 DEFAULT_FONT="Roboto-Regular.ttf"
 RANGE_DEFAULT="0x20-0x7F,0xB0,0x2022"
 

@@ -22,10 +22,30 @@ jobs:
             - uses: actions/setup-python@v4
               with:
                   python-version: "3.9"
+            - uses: actions/setup-node@v3
+              with:
+                  node-version-file: '.nvmrc'
+                  cache: 'yarn'
+            - name: Install ClangFormat
+              run: sudo apt-get install -y clang-format
             - name: Install PlatformIO Core
               run: pip install --upgrade platformio
+            - name: Install main Node.js dependencies
+              run: yarn install --frozen-lockfile
+            - name: Install WebUI Node.js dependencies
+              working-directory: './webui'
+              run: yarn install --frozen-lockfile
+            - name: Prettier checks
+              run: npx prettier --check ./webui
+            - name: ClangFormat check
+              run: find ./src ./include -regex '.*\.\(cpp\|hpp\|cu\|c\|h\)' -exec clang-format --dry-run -Werror -style=file -i {} \;
             - name: Build PlatformIO Project
               run: pio run
+            - name: Build WebUI
+              working-directory: './webui'
+              run: yarn build
+            - name: Build FS image
+              run: pio run --target buildfs
             - name: "Update experimental tag"
               uses: rickstaa/action-create-tag@v1
               with:
@@ -42,5 +62,6 @@ jobs:
                   draft: false
                   fail_on_unmatched_files: true
                   files: |
+                      .pio/build/nodemcu-32s/spiffs.bin
                       .pio/build/nodemcu-32s/firmware.bin
                       gerber/Gerber_K40-Control-Panel.zip

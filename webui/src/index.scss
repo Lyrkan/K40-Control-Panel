@@ -1,0 +1,62 @@
+html,
+body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    background: #fafafa;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 100%;
+}
+
+header {
+    display: flex;
+    flex-direction: row;
+    gap: 40px;
+    background: #ffffff;
+    border-bottom: 1px solid #d5d5d5;
+
+    .logo {
+        height: 36px;
+        margin-top: 5px;
+        margin-bottom: 5px;
+    }
+
+    nav {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-items: center;
+
+        a {
+            position: relative;
+            display: flex;
+            height: 100%;
+            align-items: center;
+            padding-left: 10px;
+            padding-right: 10px;
+            color: #7a7a7a;
+
+            &.active {
+                color: #1a1a1a;
+
+                &:after {
+                    display: block;
+                    content: "";
+                    position: absolute;
+                    bottom: 0px;
+                    left: 0px;
+                    right: 0px;
+                    height: 2px;
+                    background: #c8c8f0;
+                }
+            }
+        }
+    }
+}

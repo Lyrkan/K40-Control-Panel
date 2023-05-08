@@ -5,6 +5,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncElegantOTA.h>
+#include <SPIFFS.h>
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
 
@@ -180,6 +181,12 @@ void setup() {
         ;
     AsyncElegantOTA.begin(&server, ota_settings.login, ota_settings.password);
     xSemaphoreGive(ota_settings_mutex);
+
+    /* Serve static files if SPIFFS is available */
+    if (SPIFFS.begin()) {
+        server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
+    }
+
     server.begin();
 
     /* Start state update loop */

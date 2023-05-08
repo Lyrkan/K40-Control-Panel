@@ -7,7 +7,6 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Node
 node_modules
 dist
 dist-ssr
@@ -23,13 +22,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-# PIO/VSCode
-.pio
-.vscode
-include/README
-lib/README
-test/README
-
-# Others
-.env

@@ -1,0 +1,14 @@
+{
+  "devDependencies": {
+    "husky": "^8.0.3",
+    "lint-staged": "^13.2.2",
+    "prettier": "2.8.8"
+  },
+  "scripts": {
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "webui/**/*": "prettier --write --ignore-unknown",
+    "**/*.(cpp|hpp|cu|c|h)": "clang-format -style=file -i"
+  }
+}

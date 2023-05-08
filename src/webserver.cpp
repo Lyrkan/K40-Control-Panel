@@ -21,6 +21,8 @@
 #include "settings.h"
 #include "webserver.h"
 
+SemaphoreHandle_t webserver_mutex = xSemaphoreCreateRecursiveMutex();
+
 static AsyncWebServer server(80);
 
 static String getContentType(String path) {
@@ -48,6 +50,9 @@ static String getContentType(String path) {
 }
 
 static void handleStatusRequest(AsyncWebServerRequest *request) {
+    while (xSemaphoreTakeRecursive(webserver_mutex, portMAX_DELAY) != pdTRUE)
+        ;
+
     DynamicJsonDocument state(1024);
     String serializedState;
 
@@ -134,6 +139,8 @@ static void handleStatusRequest(AsyncWebServerRequest *request) {
     // Serialize JSON data and send it to the client
     serializeJsonPretty(state, serializedState);
     request->send(200, "application/json", serializedState);
+
+    xSemaphoreGiveRecursive(webserver_mutex);
 }
 
 static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
@@ -159,7 +166,10 @@ static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
             getContentType(path),
             file.size(),
             [file](uint8_t *buffer, size_t maxLen, size_t total) mutable -> size_t {
+                xSemaphoreTakeRecursive(webserver_mutex, portMAX_DELAY);
                 int bytes = file.read(buffer, maxLen);
+                xSemaphoreGiveRecursive(webserver_mutex);
+
                 if (bytes + total == file.size())
                     file.close();
 
@@ -178,8 +188,6 @@ static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
     return false;
 }
 
-#ifdef DEBUG
-SemaphoreHandle_t webserver_screenshot_mutex = xSemaphoreCreateMutex();
 static void handleScreenshotRequest(AsyncWebServerRequest *request) {
     lv_obj_t *current_screen = lv_scr_act();
 
@@ -227,7 +235,9 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
             draw_ctx->buf = (void *)buffer;
             driver.draw_ctx = draw_ctx;
 
-            xSemaphoreTake(webserver_screenshot_mutex, portMAX_DELAY);
+            while (xSemaphoreTakeRecursive(webserver_mutex, portMAX_DELAY) != pdTRUE)
+                ;
+
             lv_disp_t *refr_ori = _lv_refr_get_disp_refreshing();
             _lv_refr_set_disp_refreshing(&fake_disp);
 
@@ -238,24 +248,21 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
             _lv_refr_set_disp_refreshing(refr_ori);
             obj_disp->driver->draw_ctx_deinit(fake_disp.driver, draw_ctx);
             lv_mem_free(draw_ctx);
-            xSemaphoreGive(webserver_screenshot_mutex);
+            xSemaphoreGiveRecursive(webserver_mutex);
 
             return max_pixels * bytes_per_pixel;
         });
 }
-#endif
 
 void webserver_init() {
     // APIs
     server.on("/api/status", HTTP_GET, handleStatusRequest);
 
-#ifdef DEBUG
     // Screenshot utility
     // Usage:
     // $ wget http://<YOUR_PANEL_IP>/screenshot
     // $ convert -size 480x320 -depth 8 -separate -swap 0,2 -combine rgba:screenshot screenshot.jpg
     server.on("/screenshot", HTTP_GET, handleScreenshotRequest);
-#endif
 
     // Static files
     if (SPIFFS.begin()) {
@@ -269,7 +276,7 @@ void webserver_init() {
     }
 
     /* Initialize ElegantOTA */
-    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
+    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdTRUE)
         ;
     AsyncElegantOTA.begin(&server, ota_settings.login, ota_settings.password);
     xSemaphoreGive(ota_settings_mutex);

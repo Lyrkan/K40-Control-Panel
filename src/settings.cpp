@@ -79,7 +79,7 @@ static void settings_save_task_func(void *params) {
             Serial.println("Bed settings have changed, saving new values...");
 
             // Acquire bed settings lock
-            while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdPASS)
+            while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdTRUE)
                 ;
 
             preferences.begin(PREFERENCES_NAMESPACE_BED, false);
@@ -102,7 +102,7 @@ static void settings_save_task_func(void *params) {
             Serial.println("Probes settings have changed, saving new values...");
 
             // Acquire probes settings lock
-            while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdPASS)
+            while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdTRUE)
                 ;
 
             preferences.begin(PREFERENCES_NAMESPACE_PROBES, false);
@@ -126,7 +126,7 @@ static void settings_save_task_func(void *params) {
             Serial.println("OTA settings have changed, saving new values...");
 
             // Acquire OTA settings lock
-            while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
+            while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdTRUE)
                 ;
 
             preferences.begin(PREFERENCES_NAMESPACE_OTA, false);
@@ -145,7 +145,7 @@ static void settings_save_task_func(void *params) {
 
 void settings_init() {
     // Acquire bed settings lock
-    while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdPASS)
+    while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdTRUE)
         ;
 
     Serial.println("Loading bed settings... ");
@@ -172,7 +172,7 @@ void settings_init() {
     xSemaphoreGive(bed_settings_mutex);
 
     // Acquire probes settings lock
-    while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdPASS)
+    while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdTRUE)
         ;
     Serial.println("Loading probes settings... ");
     preferences.begin(PREFERENCES_NAMESPACE_PROBES, true);
@@ -198,7 +198,7 @@ void settings_init() {
     xSemaphoreGive(probes_settings_mutex);
 
     // Acquire OTA settings lock
-    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
+    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdTRUE)
         ;
     Serial.println("Loading OTA settings... ");
     preferences.begin(PREFERENCES_NAMESPACE_OTA, true);

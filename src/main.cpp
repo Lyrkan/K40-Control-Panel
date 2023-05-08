@@ -61,7 +61,7 @@ void state_update_task_func(void *params) {
 
     while (true) {
         // Take probes settings mutex
-        while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdPASS)
+        while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdTRUE)
             ;
 
         // Update sensors
@@ -86,7 +86,7 @@ void bed_update_task_func(void *params) {
 
     while (true) {
         // Take bed settings mutex
-        while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdPASS)
+        while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdTRUE)
             ;
 
         // Update the bed and get its new status
@@ -198,16 +198,14 @@ void setup() {
  * UI update loop
  */
 void loop() {
-#ifdef DEBUG
-    xSemaphoreTake(webserver_screenshot_mutex, portMAX_DELAY);
-#endif
+    // Avoid updating the screen when the webserver is handling requests
+    while (xSemaphoreTakeRecursive(webserver_mutex, portMAX_DELAY) != pdTRUE)
+        ;
 
     ui_update();
     lv_timer_handler();
 
-#ifdef DEBUG
-    xSemaphoreGive(webserver_screenshot_mutex);
-#endif
+    xSemaphoreGiveRecursive(webserver_mutex);
 
     delay(5);
 }

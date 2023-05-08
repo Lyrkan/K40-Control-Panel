@@ -54,15 +54,29 @@ static lv_obj_t *ui_settings_ota_password_value;
 
 static void ui_settings_load_bed_settings() {
     // Acquire bed settings mutex
-    while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdPASS)
+    while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdTRUE)
         ;
 
-    lv_spinbox_set_value(ui_settings_bed_screw_pitch_value, (int)(bed_settings.screw_pitch * 1000));
-    lv_spinbox_set_value(ui_settings_bed_microstep_multiplier_value, (int)(bed_settings.microstep_multiplier));
-    lv_spinbox_set_value(ui_settings_bed_steps_per_revolution_value, (int)(bed_settings.steps_per_revolution));
-    lv_spinbox_set_value(ui_settings_bed_acceleration_value, (int)(bed_settings.acceleration));
-    lv_spinbox_set_value(ui_settings_bed_moving_speed_value, (int)(bed_settings.moving_speed));
-    lv_spinbox_set_value(ui_settings_bed_homing_speed_value, (int)(bed_settings.homing_speed));
+    static char screw_pitch_text[10];
+    static char microstep_multiplier_text[10];
+    static char steps_per_revolution_text[10];
+    static char acceleration_text[10];
+    static char moving_speed_text[10];
+    static char homing_speed_text[10];
+
+    snprintf(screw_pitch_text, ARRAY_SIZE(screw_pitch_text), "%.2f", bed_settings.screw_pitch);
+    snprintf(microstep_multiplier_text, ARRAY_SIZE(microstep_multiplier_text), "%d", bed_settings.microstep_multiplier);
+    snprintf(steps_per_revolution_text, ARRAY_SIZE(steps_per_revolution_text), "%d", bed_settings.steps_per_revolution);
+    snprintf(acceleration_text, ARRAY_SIZE(acceleration_text), "%d", bed_settings.acceleration);
+    snprintf(moving_speed_text, ARRAY_SIZE(moving_speed_text), "%d", bed_settings.moving_speed);
+    snprintf(homing_speed_text, ARRAY_SIZE(homing_speed_text), "%d", bed_settings.homing_speed);
+
+    lv_textarea_set_text(ui_settings_bed_screw_pitch_value, screw_pitch_text);
+    lv_textarea_set_text(ui_settings_bed_microstep_multiplier_value, microstep_multiplier_text);
+    lv_textarea_set_text(ui_settings_bed_steps_per_revolution_value, steps_per_revolution_text);
+    lv_textarea_set_text(ui_settings_bed_acceleration_value, acceleration_text);
+    lv_textarea_set_text(ui_settings_bed_moving_speed_value, moving_speed_text);
+    lv_textarea_set_text(ui_settings_bed_homing_speed_value, homing_speed_text);
 
     // Release bed settings mutex
     xSemaphoreGive(bed_settings_mutex);
@@ -70,15 +84,17 @@ static void ui_settings_load_bed_settings() {
 
 static void ui_settings_save_bed_settings() {
     // Acquire bed settings mutex
-    while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdPASS)
+    while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdTRUE)
         ;
 
-    bed_settings.screw_pitch = (float_t)lv_spinbox_get_value(ui_settings_bed_screw_pitch_value) / 1000;
-    bed_settings.microstep_multiplier = lv_spinbox_get_value(ui_settings_bed_microstep_multiplier_value);
-    bed_settings.steps_per_revolution = lv_spinbox_get_value(ui_settings_bed_steps_per_revolution_value);
-    bed_settings.acceleration = lv_spinbox_get_value(ui_settings_bed_acceleration_value);
-    bed_settings.moving_speed = lv_spinbox_get_value(ui_settings_bed_moving_speed_value);
-    bed_settings.homing_speed = lv_spinbox_get_value(ui_settings_bed_homing_speed_value);
+    bed_settings.screw_pitch = static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_bed_screw_pitch_value)));
+    bed_settings.microstep_multiplier =
+        static_cast<uint32_t>(atoi(lv_textarea_get_text(ui_settings_bed_microstep_multiplier_value)));
+    bed_settings.steps_per_revolution =
+        static_cast<uint32_t>(atoi(lv_textarea_get_text(ui_settings_bed_steps_per_revolution_value)));
+    bed_settings.acceleration = static_cast<uint32_t>(atoi(lv_textarea_get_text(ui_settings_bed_acceleration_value)));
+    bed_settings.moving_speed = static_cast<uint32_t>(atoi(lv_textarea_get_text(ui_settings_bed_moving_speed_value)));
+    bed_settings.homing_speed = static_cast<uint32_t>(atoi(lv_textarea_get_text(ui_settings_bed_homing_speed_value)));
     settings_schedule_save(SETTINGS_TYPE_BED);
 
     // Release bed settings mutex
@@ -87,19 +103,41 @@ static void ui_settings_save_bed_settings() {
 
 static void ui_settings_load_probes_settings() {
     // Acquire probes settings mutex
-    while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdPASS)
+    while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdTRUE)
         ;
 
-    lv_spinbox_set_value(ui_settings_probes_v1_min_value, (int)(probes_settings.voltage_probe_v1_min * 100));
-    lv_spinbox_set_value(ui_settings_probes_v1_max_value, (int)(probes_settings.voltage_probe_v1_max * 100));
-    lv_spinbox_set_value(ui_settings_probes_v2_min_value, (int)(probes_settings.voltage_probe_v2_min * 100));
-    lv_spinbox_set_value(ui_settings_probes_v2_max_value, (int)(probes_settings.voltage_probe_v2_max * 100));
-    lv_spinbox_set_value(ui_settings_probes_v3_min_value, (int)(probes_settings.voltage_probe_v3_min * 100));
-    lv_spinbox_set_value(ui_settings_probes_v3_max_value, (int)(probes_settings.voltage_probe_v3_max * 100));
-    lv_spinbox_set_value(ui_settings_probes_cooling_flow_min_value, (int)(probes_settings.cooling_flow_min * 100));
-    lv_spinbox_set_value(ui_settings_probes_cooling_flow_max_value, (int)(probes_settings.cooling_flow_max * 100));
-    lv_spinbox_set_value(ui_settings_probes_cooling_temp_min_value, (int)(probes_settings.cooling_temp_min * 100));
-    lv_spinbox_set_value(ui_settings_probes_cooling_temp_max_value, (int)(probes_settings.cooling_temp_max * 100));
+    static char v1_min_text[10];
+    static char v1_max_text[10];
+    static char v2_min_text[10];
+    static char v2_max_text[10];
+    static char v3_min_text[10];
+    static char v3_max_text[10];
+    static char cooling_flow_min_text[10];
+    static char cooling_flow_max_text[10];
+    static char cooling_temp_min_text[10];
+    static char cooling_temp_max_text[10];
+
+    snprintf(v1_min_text, ARRAY_SIZE(v1_min_text), "%.2f", probes_settings.voltage_probe_v1_min);
+    snprintf(v1_max_text, ARRAY_SIZE(v1_max_text), "%.2f", probes_settings.voltage_probe_v1_max);
+    snprintf(v2_min_text, ARRAY_SIZE(v2_min_text), "%.2f", probes_settings.voltage_probe_v2_min);
+    snprintf(v2_max_text, ARRAY_SIZE(v2_max_text), "%.2f", probes_settings.voltage_probe_v2_max);
+    snprintf(v3_min_text, ARRAY_SIZE(v3_min_text), "%.2f", probes_settings.voltage_probe_v3_min);
+    snprintf(v3_max_text, ARRAY_SIZE(v3_max_text), "%.2f", probes_settings.voltage_probe_v3_max);
+    snprintf(cooling_flow_min_text, ARRAY_SIZE(cooling_flow_min_text), "%.2f", probes_settings.cooling_flow_min);
+    snprintf(cooling_flow_max_text, ARRAY_SIZE(cooling_flow_max_text), "%.2f", probes_settings.cooling_flow_max);
+    snprintf(cooling_temp_min_text, ARRAY_SIZE(cooling_temp_min_text), "%.2f", probes_settings.cooling_temp_min);
+    snprintf(cooling_temp_max_text, ARRAY_SIZE(cooling_temp_max_text), "%.2f", probes_settings.cooling_temp_max);
+
+    lv_textarea_set_text(ui_settings_probes_v1_min_value, v1_min_text);
+    lv_textarea_set_text(ui_settings_probes_v1_max_value, v1_max_text);
+    lv_textarea_set_text(ui_settings_probes_v2_min_value, v2_min_text);
+    lv_textarea_set_text(ui_settings_probes_v2_max_value, v2_max_text);
+    lv_textarea_set_text(ui_settings_probes_v3_min_value, v3_min_text);
+    lv_textarea_set_text(ui_settings_probes_v3_max_value, v3_max_text);
+    lv_textarea_set_text(ui_settings_probes_cooling_flow_min_value, cooling_flow_min_text);
+    lv_textarea_set_text(ui_settings_probes_cooling_flow_max_value, cooling_flow_max_text);
+    lv_textarea_set_text(ui_settings_probes_cooling_temp_min_value, cooling_temp_min_text);
+    lv_textarea_set_text(ui_settings_probes_cooling_temp_max_value, cooling_temp_max_text);
 
     // Release probes settings mutex
     xSemaphoreGive(probes_settings_mutex);
@@ -107,19 +145,29 @@ static void ui_settings_load_probes_settings() {
 
 static void ui_settings_save_probes_settings() {
     // Acquire probes settings mutex
-    while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdPASS)
+    while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdTRUE)
         ;
 
-    probes_settings.voltage_probe_v1_min = (float_t)lv_spinbox_get_value(ui_settings_probes_v1_min_value) / 100;
-    probes_settings.voltage_probe_v1_max = (float_t)lv_spinbox_get_value(ui_settings_probes_v1_max_value) / 100;
-    probes_settings.voltage_probe_v2_min = (float_t)lv_spinbox_get_value(ui_settings_probes_v2_min_value) / 100;
-    probes_settings.voltage_probe_v2_max = (float_t)lv_spinbox_get_value(ui_settings_probes_v2_max_value) / 100;
-    probes_settings.voltage_probe_v3_min = (float_t)lv_spinbox_get_value(ui_settings_probes_v3_min_value) / 100;
-    probes_settings.voltage_probe_v3_max = (float_t)lv_spinbox_get_value(ui_settings_probes_v3_max_value) / 100;
-    probes_settings.cooling_flow_min = (float_t)lv_spinbox_get_value(ui_settings_probes_cooling_flow_min_value) / 100;
-    probes_settings.cooling_flow_max = (float_t)lv_spinbox_get_value(ui_settings_probes_cooling_flow_max_value) / 100;
-    probes_settings.cooling_temp_min = (float_t)lv_spinbox_get_value(ui_settings_probes_cooling_temp_min_value) / 100;
-    probes_settings.cooling_temp_max = (float_t)lv_spinbox_get_value(ui_settings_probes_cooling_temp_max_value) / 100;
+    probes_settings.voltage_probe_v1_min =
+        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_v1_min_value)));
+    probes_settings.voltage_probe_v1_max =
+        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_v1_max_value)));
+    probes_settings.voltage_probe_v2_min =
+        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_v2_min_value)));
+    probes_settings.voltage_probe_v2_max =
+        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_v2_max_value)));
+    probes_settings.voltage_probe_v3_min =
+        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_v3_min_value)));
+    probes_settings.voltage_probe_v3_max =
+        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_v3_max_value)));
+    probes_settings.cooling_flow_min =
+        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_cooling_flow_min_value)));
+    probes_settings.cooling_flow_max =
+        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_cooling_flow_max_value)));
+    probes_settings.cooling_temp_min =
+        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_cooling_temp_min_value)));
+    probes_settings.cooling_temp_max =
+        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_cooling_temp_max_value)));
     settings_schedule_save(SETTINGS_TYPE_PROBES);
 
     // Release bed settings mutex
@@ -128,7 +176,7 @@ static void ui_settings_save_probes_settings() {
 
 static void ui_settings_load_ota_settings() {
     // Acquire OTA settings mutex
-    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
+    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdTRUE)
         ;
 
     lv_textarea_set_text(ui_settings_ota_login_value, ota_settings.login);
@@ -140,7 +188,7 @@ static void ui_settings_load_ota_settings() {
 
 static void ui_settings_save_ota_settings() {
     // Acquire OTA settings mutex
-    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
+    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdTRUE)
         ;
 
     strncpy(ota_settings.login, lv_textarea_get_text(ui_settings_ota_login_value), ARRAY_SIZE(ota_settings.login));
@@ -203,22 +251,6 @@ static void ui_settings_textarea_focused_event_handler(lv_event_t *e) {
     }
 }
 
-static void ui_settings_spinbox_increment_handler(lv_event_t *e) {
-    lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *spinbox = (lv_obj_t *)lv_event_get_user_data(e);
-    if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
-        lv_spinbox_increment(spinbox);
-    }
-}
-
-static void ui_settings_spinbox_decrement_handler(lv_event_t *e) {
-    lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *spinbox = (lv_obj_t *)lv_event_get_user_data(e);
-    if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
-        lv_spinbox_decrement(spinbox);
-    }
-}
-
 static void ui_settings_field_value_changed_handler(lv_event_t *e) {
     if (!settings_loaded) {
         // Don't handle changes if the settings
@@ -272,46 +304,6 @@ static lv_obj_t *ui_settings_create_textarea_field(lv_obj_t *parent, const char 
     lv_obj_add_event_cb(textarea, ui_settings_field_value_changed_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
     return textarea;
-}
-
-static lv_obj_t *ui_settings_create_spinbox_field(
-    lv_obj_t *parent, const char *label, int32_t min, int32_t max, uint8_t digit_count, uint8_t separator_position) {
-
-    lv_obj_t *cont = lv_menu_cont_create(parent);
-    lv_obj_set_style_pad_ver(cont, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-
-    lv_obj_t *label_obj = lv_label_create(cont);
-    lv_obj_set_width(label_obj, lv_pct(20));
-    lv_obj_set_height(label_obj, LV_SIZE_CONTENT);
-    lv_label_set_text(label_obj, label);
-
-    lv_obj_t *spinbox = lv_spinbox_create(cont);
-    lv_spinbox_set_range(spinbox, min, max);
-    lv_spinbox_set_digit_format(spinbox, digit_count, separator_position);
-    lv_obj_set_width(spinbox, 100);
-
-    lv_coord_t spinbox_height = lv_obj_get_height(spinbox);
-
-    lv_obj_t *btn_decrement = lv_btn_create(cont);
-    lv_obj_set_size(btn_decrement, spinbox_height, spinbox_height);
-    lv_obj_set_style_bg_img_src(btn_decrement, LV_SYMBOL_MINUS, 0);
-    lv_obj_add_event_cb(btn_decrement, ui_settings_spinbox_decrement_handler, LV_EVENT_ALL, spinbox);
-
-    lv_obj_t *btn_increment = lv_btn_create(cont);
-    lv_obj_set_size(btn_increment, spinbox_height, spinbox_height);
-    lv_obj_set_style_bg_img_src(btn_increment, LV_SYMBOL_PLUS, 0);
-    lv_obj_add_event_cb(btn_increment, ui_settings_spinbox_increment_handler, LV_EVENT_ALL, spinbox);
-
-    // Move decrement button before the spinbox
-    lv_obj_swap(spinbox, btn_decrement);
-
-    // Center label on the vertical axis
-    lv_obj_set_y(label_obj, (spinbox_height / 2) - (lv_obj_get_height(label_obj) / 2));
-
-    // Handle change events
-    lv_obj_add_event_cb(spinbox, ui_settings_field_value_changed_handler, LV_EVENT_VALUE_CHANGED, NULL);
-
-    return spinbox;
 }
 
 void ui_settings_init() {
@@ -487,45 +479,30 @@ void ui_settings_init() {
         LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Bed page
-    ui_settings_bed_screw_pitch_value =
-        ui_settings_create_spinbox_field(ui_settings_bed_page, "Screw pitch (mm)", 0, 10000, 5, 2);
-
+    ui_settings_bed_screw_pitch_value = ui_settings_create_textarea_field(ui_settings_bed_page, "Screw pitch (mm)");
     ui_settings_bed_microstep_multiplier_value =
-        ui_settings_create_spinbox_field(ui_settings_bed_page, "Microsteps multiplier", 0, 128, 3, 3);
-
+        ui_settings_create_textarea_field(ui_settings_bed_page, "Microsteps multiplier");
     ui_settings_bed_steps_per_revolution_value =
-        ui_settings_create_spinbox_field(ui_settings_bed_page, "Steps per revolution", 0, 10000, 5, 5);
-
-    ui_settings_bed_acceleration_value =
-        ui_settings_create_spinbox_field(ui_settings_bed_page, "Acceleration", 0, 10000, 5, 5);
-
-    ui_settings_bed_moving_speed_value =
-        ui_settings_create_spinbox_field(ui_settings_bed_page, "Moving speed", 0, 10000, 5, 5);
-
-    ui_settings_bed_homing_speed_value =
-        ui_settings_create_spinbox_field(ui_settings_bed_page, "Homing speed", 0, 10000, 5, 5);
+        ui_settings_create_textarea_field(ui_settings_bed_page, "Steps per revolution");
+    ui_settings_bed_acceleration_value = ui_settings_create_textarea_field(ui_settings_bed_page, "Acceleration");
+    ui_settings_bed_moving_speed_value = ui_settings_create_textarea_field(ui_settings_bed_page, "Moving speed");
+    ui_settings_bed_homing_speed_value = ui_settings_create_textarea_field(ui_settings_bed_page, "Homing speed");
 
     // Probes page
-    ui_settings_probes_v1_min_value =
-        ui_settings_create_spinbox_field(ui_settings_probes_page, "V1 min", 0, 5000, 4, 2);
-    ui_settings_probes_v1_max_value =
-        ui_settings_create_spinbox_field(ui_settings_probes_page, "V1 max", 0, 5000, 4, 2);
-    ui_settings_probes_v2_min_value =
-        ui_settings_create_spinbox_field(ui_settings_probes_page, "V2 min", 0, 5000, 4, 2);
-    ui_settings_probes_v2_max_value =
-        ui_settings_create_spinbox_field(ui_settings_probes_page, "V2 max", 0, 5000, 4, 2);
-    ui_settings_probes_v3_min_value =
-        ui_settings_create_spinbox_field(ui_settings_probes_page, "V3 min", 0, 5000, 4, 2);
-    ui_settings_probes_v3_max_value =
-        ui_settings_create_spinbox_field(ui_settings_probes_page, "V3 max", 0, 5000, 4, 2);
+    ui_settings_probes_v1_min_value = ui_settings_create_textarea_field(ui_settings_probes_page, "V1 min");
+    ui_settings_probes_v1_max_value = ui_settings_create_textarea_field(ui_settings_probes_page, "V1 max");
+    ui_settings_probes_v2_min_value = ui_settings_create_textarea_field(ui_settings_probes_page, "V2 min");
+    ui_settings_probes_v2_max_value = ui_settings_create_textarea_field(ui_settings_probes_page, "V2 max");
+    ui_settings_probes_v3_min_value = ui_settings_create_textarea_field(ui_settings_probes_page, "V3 min");
+    ui_settings_probes_v3_max_value = ui_settings_create_textarea_field(ui_settings_probes_page, "V3 max");
     ui_settings_probes_cooling_flow_min_value =
-        ui_settings_create_spinbox_field(ui_settings_probes_page, "Cool. flow min (L/mn)", 0, 9999, 4, 2);
+        ui_settings_create_textarea_field(ui_settings_probes_page, "Cool. flow min (L/mn)");
     ui_settings_probes_cooling_flow_max_value =
-        ui_settings_create_spinbox_field(ui_settings_probes_page, "Cool. flow max (L/mn)", 0, 9999, 4, 2);
+        ui_settings_create_textarea_field(ui_settings_probes_page, "Cool. flow max (L/mn)");
     ui_settings_probes_cooling_temp_min_value =
-        ui_settings_create_spinbox_field(ui_settings_probes_page, "Cool. temp min (°C)", 0, 9999, 4, 2);
+        ui_settings_create_textarea_field(ui_settings_probes_page, "Cool. temp min (°C)");
     ui_settings_probes_cooling_temp_max_value =
-        ui_settings_create_spinbox_field(ui_settings_probes_page, "Cool. temp max (°C)", 0, 9999, 4, 2);
+        ui_settings_create_textarea_field(ui_settings_probes_page, "Cool. temp max (°C)");
 
     // OTA page
     ui_settings_ota_login_value = ui_settings_create_textarea_field(ui_settings_ota_page, "Login");

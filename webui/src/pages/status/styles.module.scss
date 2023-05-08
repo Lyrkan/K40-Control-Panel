@@ -20,20 +20,56 @@
             width: 6px;
         }
 
-        &.voltage:before {
-            background: #fbdf07;
+        h3 {
+            .icon {
+                font-size: 3rem;
+                margin-right: 10px;
+            }
+            margin-bottom: 5px;
         }
 
-        &.cooling:before {
-            background: #89cffd;
+        .values {
+            padding-left: 20px;
         }
 
-        &.lids:before {
-            background: #f94892;
+        &.voltage {
+            .icon {
+                color: #fbdf07;
+            }
+
+            &:before {
+                background: #fbdf07;
+            }
         }
 
-        &.fire:before {
-            background: #ff7f3f;
+        &.cooling {
+            .icon {
+                color: #89cffd;
+            }
+
+            &:before {
+                background: #89cffd;
+            }
+        }
+
+        &.lids {
+            .icon {
+                color: #f94892;
+            }
+
+            &:before {
+                background: #f94892;
+            }
+        }
+
+        &.fire {
+            .icon {
+                color: #ff7f3f;
+            }
+
+            &:before {
+                background: #ff7f3f;
+            }
         }
     }
 }

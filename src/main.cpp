@@ -2,10 +2,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <lvgl.h>
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <AsyncElegantOTA.h>
-#include <SPIFFS.h>
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
 
@@ -19,12 +15,11 @@
 #include "UI/screens/status.h"
 #include "UI/display.h"
 #include "UI/ui.h"
-#include "api.h"
+#include "webserver.h"
 #include "cpu_monitor.h"
 #include "settings.h"
 #include "wifi.h"
 
-static AsyncWebServer server(80);
 static LGFX tft;
 static uint16_t touch_calibration_data[] = {274, 3922, 312, 255, 3845, 3918, 3814, 242};
 
@@ -170,24 +165,11 @@ void setup() {
     /* Initialize WiFi */
     wifi_init();
 
-    /* Initialize API */
-    api_init(&server);
-
     /* Initialize CPU monitoring task */
     cpu_monitor_init();
 
-    /* Initialize ElegantOTA */
-    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
-        ;
-    AsyncElegantOTA.begin(&server, ota_settings.login, ota_settings.password);
-    xSemaphoreGive(ota_settings_mutex);
-
-    /* Serve static files if SPIFFS is available */
-    if (SPIFFS.begin()) {
-        server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
-    }
-
-    server.begin();
+    /* Initialize Webserver */
+    webserver_init();
 
     /* Start state update loop */
     xTaskCreatePinnedToCore(
@@ -217,14 +199,14 @@ void setup() {
  */
 void loop() {
 #ifdef DEBUG
-    xSemaphoreTake(api_snapshot_mutex, portMAX_DELAY);
+    xSemaphoreTake(webserver_screenshot_mutex, portMAX_DELAY);
 #endif
 
     ui_update();
     lv_timer_handler();
 
 #ifdef DEBUG
-    xSemaphoreGive(api_snapshot_mutex);
+    xSemaphoreGive(webserver_screenshot_mutex);
 #endif
 
     delay(5);

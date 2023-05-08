@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { lazy, Suspense } from "preact/compat";
-import { createHashRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import Root from "./root.tsx";
 import Status from "./pages/status/index.tsx";
@@ -14,7 +14,7 @@ const lazyElement = (component: any) => (
     <Suspense fallback={<div>Loading...</div>}>{component}</Suspense>
 );
 
-const router = createHashRouter([
+const router = createBrowserRouter([
     {
         path: "/",
         element: <Root />,

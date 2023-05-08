@@ -18,8 +18,6 @@ lv_obj_t *ui_settings_wifi_connect_button;
 static bool settings_loaded = false;
 
 static lv_obj_t *ui_settings_menu;
-static lv_obj_t *ui_settings_menu_back_button;
-static lv_obj_t *ui_settings_menu_back_button_label;
 static lv_obj_t *ui_settings_root_page;
 static lv_obj_t *ui_settings_wifi_page;
 static lv_obj_t *ui_settings_bed_page;
@@ -30,9 +28,7 @@ static lv_obj_t *ui_settings_keyboard;
 
 static lv_obj_t *ui_settings_wifi_page_panel;
 static lv_obj_t *ui_settings_wifi_passphrase_value;
-static lv_obj_t *ui_settings_wifi_connect_button_label;
 static lv_obj_t *ui_settings_wifi_disconnect_button;
-static lv_obj_t *ui_settings_wifi_disconnect_button_label;
 static lv_obj_t *ui_settings_wifi_current_ip_label;
 
 static lv_obj_t *ui_settings_bed_screw_pitch_value;
@@ -446,7 +442,7 @@ void ui_settings_init() {
         LV_EVENT_CLICKED,
         NULL);
 
-    ui_settings_wifi_connect_button_label = lv_label_create(ui_settings_wifi_connect_button);
+    lv_obj_t *ui_settings_wifi_connect_button_label = lv_label_create(ui_settings_wifi_connect_button);
     lv_obj_set_width(ui_settings_wifi_connect_button_label, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_settings_wifi_connect_button_label, LV_SIZE_CONTENT);
     lv_obj_set_align(ui_settings_wifi_connect_button_label, LV_ALIGN_CENTER);
@@ -471,7 +467,7 @@ void ui_settings_init() {
         LV_EVENT_CLICKED,
         NULL);
 
-    ui_settings_wifi_disconnect_button_label = lv_label_create(ui_settings_wifi_disconnect_button);
+    lv_obj_t *ui_settings_wifi_disconnect_button_label = lv_label_create(ui_settings_wifi_disconnect_button);
     lv_obj_set_width(ui_settings_wifi_disconnect_button_label, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_settings_wifi_disconnect_button_label, LV_SIZE_CONTENT);
     lv_obj_set_align(ui_settings_wifi_disconnect_button_label, LV_ALIGN_CENTER);

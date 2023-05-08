@@ -1,12 +1,18 @@
 import { render } from "preact";
+import { lazy, Suspense } from "preact/compat";
 import { createHashRouter, RouterProvider } from "react-router-dom";
 
 import Root from "./root.tsx";
 import Status from "./pages/status/index.tsx";
-import Controls from "./pages/controls/index.tsx";
-import Bed from "./pages/bed/index.tsx";
-import Settings from "./pages/settings/index.tsx";
-import NotFound from "./pages/404/index.tsx";
+
+const Controls = lazy(() => import("./pages/controls/index.tsx"));
+const Bed = lazy(() => import("./pages/bed/index.tsx"));
+const Settings = lazy(() => import("./pages/settings/index.tsx"));
+const NotFound = lazy(() => import("./pages/404/index.tsx"));
+
+const lazyElement = (component: any) => (
+    <Suspense fallback={<div>Loading...</div>}>{component}</Suspense>
+);
 
 const router = createHashRouter([
     {
@@ -20,15 +26,15 @@ const router = createHashRouter([
             },
             {
                 path: "controls",
-                element: <Controls />,
+                element: lazyElement(<Controls />),
             },
             {
                 path: "bed",
-                element: <Bed />,
+                element: lazyElement(<Bed />),
             },
             {
                 path: "settings",
-                element: <Settings />,
+                element: lazyElement(<Settings />),
             },
         ],
     },

@@ -34,8 +34,8 @@ What it **CAN** do:
     -   Positioning laser diodes activation
     -   Alarm activation
 -   Control a motorized bed (based on [this design](https://civade.com/post/2020/08/23/D%c3%a9coupe-laser-CO2-K40-:-R%c3%a9alisation-d-un-lit-motoris%c3%a9), but it should work with other ones as long as the stepper can be controled using a DRV8825 driver)
--   Expose sensors/state data through an API
--   Do all of those things through a web interface
+-   Expose sensors/state data through an API **(unstable)**
+-   Do all of those things through a web interface **(unstable)**
 
 What it **CANNOT** do:
 

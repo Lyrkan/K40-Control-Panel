@@ -7,10 +7,6 @@
 
 lv_obj_t *ui_splashscreen_screen;
 
-static lv_obj_t *ui_splashscreen_logo;
-static lv_obj_t *ui_splashscreen_title;
-static lv_obj_t *ui_splashscreen_build_date;
-
 static void ui_splashscreen_event_handler(lv_event_t *e) {
     lv_event_code_t event_code = lv_event_get_code(e);
     lv_obj_t *target = lv_event_get_target(e);
@@ -20,6 +16,8 @@ static void ui_splashscreen_event_handler(lv_event_t *e) {
         break;
     case LV_EVENT_SCREEN_UNLOADED:
         ui_menu_init();
+        lv_obj_del(ui_splashscreen_screen); // Free resources
+        ui_splashscreen_screen = NULL;
         break;
     }
 }
@@ -31,7 +29,7 @@ void ui_splashscreen_init() {
     lv_obj_clear_flag(ui_splashscreen_screen, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(ui_splashscreen_screen, ui_splashscreen_event_handler, LV_EVENT_ALL, NULL);
 
-    ui_splashscreen_logo = lv_img_create(ui_splashscreen_screen);
+    lv_obj_t *ui_splashscreen_logo = lv_img_create(ui_splashscreen_screen);
     lv_img_set_src(ui_splashscreen_logo, &image_splashscreen);
     lv_obj_set_width(ui_splashscreen_logo, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_splashscreen_logo, LV_SIZE_CONTENT);
@@ -39,7 +37,7 @@ void ui_splashscreen_init() {
     lv_obj_set_y(ui_splashscreen_logo, 115);
     lv_obj_set_align(ui_splashscreen_logo, LV_ALIGN_TOP_LEFT);
 
-    ui_splashscreen_build_date = lv_label_create(ui_splashscreen_screen);
+    lv_obj_t *ui_splashscreen_build_date = lv_label_create(ui_splashscreen_screen);
     lv_obj_set_width(ui_splashscreen_build_date, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_splashscreen_build_date, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_splashscreen_build_date, 50);

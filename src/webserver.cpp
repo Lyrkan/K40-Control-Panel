@@ -123,7 +123,9 @@ static void handleStatusRequest(AsyncWebServerRequest *request) {
     }
 
     // Retrieve system data
-    xSemaphoreTake(cpu_monitor_stats_mutex, portMAX_DELAY);
+    while (xSemaphoreTake(cpu_monitor_stats_mutex, portMAX_DELAY) != pdTRUE)
+        ;
+
     float_t core_usage_percentage_0 = cpu_monitor_load_0;
     float_t core_usage_percentage_1 = cpu_monitor_load_1;
     xSemaphoreGive(cpu_monitor_stats_mutex);
@@ -137,10 +139,21 @@ static void handleStatusRequest(AsyncWebServerRequest *request) {
     state["system"]["cpu"]["load_percent"]["core_1"] = core_usage_percentage_1;
 
     // Serialize JSON data and send it to the client
-    serializeJsonPretty(state, serializedState);
-    request->send(200, "application/json", serializedState);
+    serializeJson(state, serializedState);
+    request->sendChunked(
+        "application/json",
+        [serializedState](uint8_t *buffer, size_t max_len, size_t index) -> size_t {
+            size_t bytes = min(serializedState.length() - index, max_len);
+            for (int i = 0; i < bytes; i++) {
+                buffer[i] = serializedState.charAt(index + i);
+            }
 
-    xSemaphoreGiveRecursive(webserver_mutex);
+            if (bytes <= 0) {
+                xSemaphoreGiveRecursive(webserver_mutex);
+            }
+
+            return max((size_t)0, bytes);
+        });
 }
 
 static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
@@ -156,6 +169,9 @@ static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
     }
 
     if (SPIFFS.exists(pathWithGz) || SPIFFS.exists(path)) {
+        while (xSemaphoreTakeRecursive(webserver_mutex, portMAX_DELAY) != pdTRUE)
+            ;
+
         bool gzipped = false;
         if (SPIFFS.exists(pathWithGz)) {
             gzipped = true;
@@ -166,14 +182,13 @@ static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
             getContentType(path),
             file.size(),
             [file](uint8_t *buffer, size_t maxLen, size_t total) mutable -> size_t {
-                xSemaphoreTakeRecursive(webserver_mutex, portMAX_DELAY);
-                int bytes = file.read(buffer, maxLen);
-                xSemaphoreGiveRecursive(webserver_mutex);
-
-                if (bytes + total == file.size())
+                size_t bytes = file.read(buffer, maxLen);
+                if (bytes <= 0 || bytes + total == file.size()) {
+                    xSemaphoreGiveRecursive(webserver_mutex);
                     file.close();
+                }
 
-                return max(0, bytes);
+                return max((size_t)0, bytes);
             });
 
         if (gzipped) {
@@ -181,7 +196,6 @@ static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
         }
 
         request->send(response);
-
         return true;
     }
 
@@ -191,12 +205,16 @@ static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
 static void handleScreenshotRequest(AsyncWebServerRequest *request) {
     lv_obj_t *current_screen = lv_scr_act();
 
+    while (xSemaphoreTakeRecursive(webserver_mutex, portMAX_DELAY) != pdTRUE)
+        ;
+
     request->sendChunked(
         "application/octet-stream",
         [current_screen](uint8_t *buffer, size_t max_len, size_t index) -> size_t {
             uint8_t bytes_per_pixel = 4;
             unsigned int current_pixel_index = index / bytes_per_pixel;
             if (current_pixel_index >= DISPLAY_SCREEN_HEIGHT * DISPLAY_SCREEN_WIDTH) {
+                xSemaphoreGiveRecursive(webserver_mutex);
                 return 0;
             }
 
@@ -204,6 +222,11 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
             unsigned int column = (current_pixel_index % DISPLAY_SCREEN_WIDTH);
             unsigned int remaining_columns = DISPLAY_SCREEN_WIDTH - column;
             unsigned int max_pixels = min(max_len / bytes_per_pixel, remaining_columns);
+
+            if (max_pixels == 0) {
+                xSemaphoreGiveRecursive(webserver_mutex);
+                return 0;
+            }
 
             lv_area_t snapshot_area = {
                 .x1 = (lv_coord_t)column,
@@ -225,8 +248,10 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
             fake_disp.driver = &driver;
 
             lv_draw_ctx_t *draw_ctx = (lv_draw_ctx_t *)lv_mem_alloc(obj_disp->driver->draw_ctx_size);
-            if (draw_ctx == NULL)
+            if (draw_ctx == NULL) {
+                xSemaphoreGiveRecursive(webserver_mutex);
                 return 0;
+            }
 
             obj_disp->driver->draw_ctx_init(fake_disp.driver, draw_ctx);
             fake_disp.driver->draw_ctx = draw_ctx;
@@ -234,9 +259,6 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
             draw_ctx->buf_area = &snapshot_area;
             draw_ctx->buf = (void *)buffer;
             driver.draw_ctx = draw_ctx;
-
-            while (xSemaphoreTakeRecursive(webserver_mutex, portMAX_DELAY) != pdTRUE)
-                ;
 
             lv_disp_t *refr_ori = _lv_refr_get_disp_refreshing();
             _lv_refr_set_disp_refreshing(&fake_disp);
@@ -248,7 +270,6 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
             _lv_refr_set_disp_refreshing(refr_ori);
             obj_disp->driver->draw_ctx_deinit(fake_disp.driver, draw_ctx);
             lv_mem_free(draw_ctx);
-            xSemaphoreGiveRecursive(webserver_mutex);
 
             return max_pixels * bytes_per_pixel;
         });

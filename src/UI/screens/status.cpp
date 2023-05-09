@@ -387,10 +387,10 @@ void ui_status_update() {
             ESP.getFreeHeap() / 1024,
             ESP.getHeapSize() / 1024);
 
-        xSemaphoreTake(cpu_monitor_stats_mutex, portMAX_DELAY);
+        TAKE_MUTEX(cpu_monitor_stats_mutex)
         snprintf(cpu_status_0, ARRAY_SIZE(cpu_status_0), "Core #0: %.2f%%", cpu_monitor_load_0);
         snprintf(cpu_status_1, ARRAY_SIZE(cpu_status_1), "Core #1: %.2f%%", cpu_monitor_load_1);
-        xSemaphoreGive(cpu_monitor_stats_mutex);
+        RELEASE_MUTEX(cpu_monitor_stats_mutex)
 
         lv_label_set_text(ui_status_heap, heap_status);
         lv_label_set_text(ui_status_cpu_0, cpu_status_0);

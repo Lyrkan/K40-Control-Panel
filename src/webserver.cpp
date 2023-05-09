@@ -50,8 +50,8 @@ static String getContentType(String path) {
 }
 
 static void handleStatusRequest(AsyncWebServerRequest *request) {
-    while (xSemaphoreTakeRecursive(webserver_mutex, portMAX_DELAY) != pdTRUE)
-        ;
+    // Prevent UI updates to avoid heap issues
+    TAKE_RECURSIVE_MUTEX(webserver_mutex)
 
     DynamicJsonDocument state(1024);
     String serializedState;
@@ -123,12 +123,12 @@ static void handleStatusRequest(AsyncWebServerRequest *request) {
     }
 
     // Retrieve system data
-    while (xSemaphoreTake(cpu_monitor_stats_mutex, portMAX_DELAY) != pdTRUE)
-        ;
+    TAKE_MUTEX(cpu_monitor_stats_mutex)
 
     float_t core_usage_percentage_0 = cpu_monitor_load_0;
     float_t core_usage_percentage_1 = cpu_monitor_load_1;
-    xSemaphoreGive(cpu_monitor_stats_mutex);
+
+    RELEASE_MUTEX(cpu_monitor_stats_mutex)
 
     state["system"]["chip"]["model"] = ESP.getChipModel();
     state["system"]["chip"]["revision"] = ESP.getChipRevision();
@@ -149,7 +149,7 @@ static void handleStatusRequest(AsyncWebServerRequest *request) {
             }
 
             if (bytes <= 0) {
-                xSemaphoreGiveRecursive(webserver_mutex);
+                RELEASE_RECURSIVE_MUTEX(webserver_mutex)
             }
 
             return max((size_t)0, bytes);
@@ -169,8 +169,8 @@ static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
     }
 
     if (SPIFFS.exists(pathWithGz) || SPIFFS.exists(path)) {
-        while (xSemaphoreTakeRecursive(webserver_mutex, portMAX_DELAY) != pdTRUE)
-            ;
+        // Prevent UI updates to avoid heap issues
+        TAKE_RECURSIVE_MUTEX(webserver_mutex)
 
         bool gzipped = false;
         if (SPIFFS.exists(pathWithGz)) {
@@ -184,7 +184,7 @@ static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
             [file](uint8_t *buffer, size_t maxLen, size_t total) mutable -> size_t {
                 size_t bytes = file.read(buffer, maxLen);
                 if (bytes <= 0 || bytes + total == file.size()) {
-                    xSemaphoreGiveRecursive(webserver_mutex);
+                    RELEASE_RECURSIVE_MUTEX(webserver_mutex)
                     file.close();
                 }
 
@@ -203,10 +203,10 @@ static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
 }
 
 static void handleScreenshotRequest(AsyncWebServerRequest *request) {
-    lv_obj_t *current_screen = lv_scr_act();
+    // Prevent UI updates
+    TAKE_RECURSIVE_MUTEX(webserver_mutex)
 
-    while (xSemaphoreTakeRecursive(webserver_mutex, portMAX_DELAY) != pdTRUE)
-        ;
+    lv_obj_t *current_screen = lv_scr_act();
 
     request->sendChunked(
         "application/octet-stream",
@@ -214,7 +214,7 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
             uint8_t bytes_per_pixel = 4;
             unsigned int current_pixel_index = index / bytes_per_pixel;
             if (current_pixel_index >= DISPLAY_SCREEN_HEIGHT * DISPLAY_SCREEN_WIDTH) {
-                xSemaphoreGiveRecursive(webserver_mutex);
+                RELEASE_RECURSIVE_MUTEX(webserver_mutex)
                 return 0;
             }
 
@@ -224,7 +224,7 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
             unsigned int max_pixels = min(max_len / bytes_per_pixel, remaining_columns);
 
             if (max_pixels == 0) {
-                xSemaphoreGiveRecursive(webserver_mutex);
+                RELEASE_RECURSIVE_MUTEX(webserver_mutex)
                 return 0;
             }
 
@@ -249,7 +249,7 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
 
             lv_draw_ctx_t *draw_ctx = (lv_draw_ctx_t *)lv_mem_alloc(obj_disp->driver->draw_ctx_size);
             if (draw_ctx == NULL) {
-                xSemaphoreGiveRecursive(webserver_mutex);
+                RELEASE_RECURSIVE_MUTEX(webserver_mutex);
                 return 0;
             }
 
@@ -297,10 +297,9 @@ void webserver_init() {
     }
 
     /* Initialize ElegantOTA */
-    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdTRUE)
-        ;
+    TAKE_MUTEX(ota_settings_mutex)
     AsyncElegantOTA.begin(&server, ota_settings.login, ota_settings.password);
-    xSemaphoreGive(ota_settings_mutex);
+    RELEASE_MUTEX(ota_settings_mutex)
 
     // Start server
     server.begin();

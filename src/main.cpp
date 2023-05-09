@@ -15,9 +15,10 @@
 #include "UI/screens/status.h"
 #include "UI/display.h"
 #include "UI/ui.h"
-#include "webserver.h"
 #include "cpu_monitor.h"
+#include "macros.h"
 #include "settings.h"
+#include "webserver.h"
 #include "wifi.h"
 
 static LGFX tft;
@@ -61,8 +62,7 @@ void state_update_task_func(void *params) {
 
     while (true) {
         // Take probes settings mutex
-        while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdTRUE)
-            ;
+        TAKE_MUTEX(probes_settings_mutex)
 
         // Update sensors
         voltage_probes_update_status(&adc_chars);
@@ -74,7 +74,7 @@ void state_update_task_func(void *params) {
         relays_update();
 
         // Release probes settings mutex
-        xSemaphoreGive(probes_settings_mutex);
+        RELEASE_MUTEX(probes_settings_mutex)
     }
 }
 
@@ -86,14 +86,13 @@ void bed_update_task_func(void *params) {
 
     while (true) {
         // Take bed settings mutex
-        while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdTRUE)
-            ;
+        TAKE_MUTEX(bed_settings_mutex)
 
         // Update the bed and get its new status
         BedState new_state = bed_update();
 
         // Release bed settings mutex
-        xSemaphoreGive(bed_settings_mutex);
+        RELEASE_MUTEX(bed_settings_mutex)
 
         // If the bed is idling don't update it for a while
         if (new_state == BED_STATE_IDLE) {
@@ -199,13 +198,10 @@ void setup() {
  */
 void loop() {
     // Avoid updating the screen when the webserver is handling requests
-    while (xSemaphoreTakeRecursive(webserver_mutex, portMAX_DELAY) != pdTRUE)
-        ;
-
+    TAKE_RECURSIVE_MUTEX(webserver_mutex)
     ui_update();
     lv_timer_handler();
-
-    xSemaphoreGiveRecursive(webserver_mutex);
+    RELEASE_RECURSIVE_MUTEX(webserver_mutex)
 
     delay(5);
 }

@@ -54,8 +54,7 @@ static lv_obj_t *ui_settings_ota_password_value;
 
 static void ui_settings_load_bed_settings() {
     // Acquire bed settings mutex
-    while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdTRUE)
-        ;
+    TAKE_MUTEX(bed_settings_mutex)
 
     static char screw_pitch_text[10];
     static char microstep_multiplier_text[10];
@@ -79,13 +78,12 @@ static void ui_settings_load_bed_settings() {
     lv_textarea_set_text(ui_settings_bed_homing_speed_value, homing_speed_text);
 
     // Release bed settings mutex
-    xSemaphoreGive(bed_settings_mutex);
+    RELEASE_MUTEX(bed_settings_mutex)
 }
 
 static void ui_settings_save_bed_settings() {
     // Acquire bed settings mutex
-    while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdTRUE)
-        ;
+    TAKE_MUTEX(bed_settings_mutex)
 
     bed_settings.screw_pitch = static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_bed_screw_pitch_value)));
     bed_settings.microstep_multiplier =
@@ -98,13 +96,12 @@ static void ui_settings_save_bed_settings() {
     settings_schedule_save(SETTINGS_TYPE_BED);
 
     // Release bed settings mutex
-    xSemaphoreGive(bed_settings_mutex);
+    RELEASE_MUTEX(bed_settings_mutex)
 }
 
 static void ui_settings_load_probes_settings() {
     // Acquire probes settings mutex
-    while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdTRUE)
-        ;
+    TAKE_MUTEX(probes_settings_mutex)
 
     static char v1_min_text[10];
     static char v1_max_text[10];
@@ -140,13 +137,12 @@ static void ui_settings_load_probes_settings() {
     lv_textarea_set_text(ui_settings_probes_cooling_temp_max_value, cooling_temp_max_text);
 
     // Release probes settings mutex
-    xSemaphoreGive(probes_settings_mutex);
+    RELEASE_MUTEX(probes_settings_mutex)
 }
 
 static void ui_settings_save_probes_settings() {
     // Acquire probes settings mutex
-    while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdTRUE)
-        ;
+    TAKE_MUTEX(probes_settings_mutex)
 
     probes_settings.voltage_probe_v1_min =
         static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_v1_min_value)));
@@ -171,25 +167,23 @@ static void ui_settings_save_probes_settings() {
     settings_schedule_save(SETTINGS_TYPE_PROBES);
 
     // Release bed settings mutex
-    xSemaphoreGive(probes_settings_mutex);
+    RELEASE_MUTEX(probes_settings_mutex)
 }
 
 static void ui_settings_load_ota_settings() {
     // Acquire OTA settings mutex
-    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdTRUE)
-        ;
+    TAKE_MUTEX(ota_settings_mutex)
 
     lv_textarea_set_text(ui_settings_ota_login_value, ota_settings.login);
     lv_textarea_set_text(ui_settings_ota_password_value, ota_settings.password);
 
     // Release OTA settings mutex
-    xSemaphoreGive(ota_settings_mutex);
+    RELEASE_MUTEX(ota_settings_mutex)
 }
 
 static void ui_settings_save_ota_settings() {
     // Acquire OTA settings mutex
-    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdTRUE)
-        ;
+    TAKE_MUTEX(ota_settings_mutex)
 
     strncpy(ota_settings.login, lv_textarea_get_text(ui_settings_ota_login_value), ARRAY_SIZE(ota_settings.login));
     strncpy(
@@ -199,7 +193,7 @@ static void ui_settings_save_ota_settings() {
     settings_schedule_save(SETTINGS_TYPE_OTA);
 
     // Release bed settings mutex
-    xSemaphoreGive(ota_settings_mutex);
+    RELEASE_MUTEX(ota_settings_mutex)
 }
 
 static void ui_settings_wifi_connect_button_handler(lv_event_t *e) {

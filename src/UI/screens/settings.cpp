@@ -322,7 +322,7 @@ static void ui_settings_init_screen_content() {
     char wifi_page_name[] = "WiFi";
     char bed_page_name[] = "Bed";
     char probes_page_name[] = "Probes";
-    char ota_page_name[] = "OTA_updates";
+    char ota_page_name[] = "OTA Updates";
 
     ui_settings_wifi_page = lv_menu_page_create(ui_settings_menu, wifi_page_name);
     ui_settings_bed_page = lv_menu_page_create(ui_settings_menu, bed_page_name);

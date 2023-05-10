@@ -21,7 +21,7 @@
 #include "settings.h"
 #include "webserver.h"
 
-SemaphoreHandle_t webserver_mutex = xSemaphoreCreateRecursiveMutex();
+SemaphoreHandle_t webserver_screenshot_mutex = xSemaphoreCreateRecursiveMutex();
 
 static AsyncWebServer server(80);
 
@@ -50,11 +50,8 @@ static String getContentType(String path) {
 }
 
 static void handleStatusRequest(AsyncWebServerRequest *request) {
-    // Prevent UI updates to avoid heap issues
-    TAKE_RECURSIVE_MUTEX(webserver_mutex)
-
     DynamicJsonDocument state(1024);
-    String serializedState;
+    String serialized_state;
 
     state["firmware"]["version"] = GIT_CURRENT_REF;
     state["firmware"]["build_date"] = __DATE__ " " __TIME__;
@@ -129,21 +126,8 @@ static void handleStatusRequest(AsyncWebServerRequest *request) {
     state["system"]["cpu"]["load_percent"]["core_1"] = core_usage_percentage_1;
 
     // Serialize JSON data and send it to the client
-    serializeJson(state, serializedState);
-    request->sendChunked(
-        "application/json",
-        [serializedState](uint8_t *buffer, size_t max_len, size_t index) -> size_t {
-            size_t bytes = min(serializedState.length() - index, max_len);
-            for (int i = 0; i < bytes; i++) {
-                buffer[i] = serializedState.charAt(index + i);
-            }
-
-            if (bytes <= 0) {
-                RELEASE_RECURSIVE_MUTEX(webserver_mutex)
-            }
-
-            return max((size_t)0, bytes);
-        });
+    serializeJson(state, serialized_state);
+    request->send(200, "application/json", serialized_state);
 }
 
 static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
@@ -159,9 +143,6 @@ static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
     }
 
     if (SPIFFS.exists(pathWithGz) || SPIFFS.exists(path)) {
-        // Prevent UI updates to avoid heap issues
-        TAKE_RECURSIVE_MUTEX(webserver_mutex)
-
         bool gzipped = false;
         if (SPIFFS.exists(pathWithGz)) {
             gzipped = true;
@@ -174,7 +155,6 @@ static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
             [file](uint8_t *buffer, size_t maxLen, size_t total) mutable -> size_t {
                 size_t bytes = file.read(buffer, maxLen);
                 if (bytes <= 0 || bytes + total == file.size()) {
-                    RELEASE_RECURSIVE_MUTEX(webserver_mutex)
                     file.close();
                 }
 
@@ -194,7 +174,7 @@ static bool handleStaticFileRequest(AsyncWebServerRequest *request) {
 
 static void handleScreenshotRequest(AsyncWebServerRequest *request) {
     // Prevent UI updates
-    TAKE_RECURSIVE_MUTEX(webserver_mutex)
+    TAKE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
 
     lv_obj_t *current_screen = lv_scr_act();
 
@@ -204,7 +184,7 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
             uint8_t bytes_per_pixel = 4;
             unsigned int current_pixel_index = index / bytes_per_pixel;
             if (current_pixel_index >= DISPLAY_SCREEN_HEIGHT * DISPLAY_SCREEN_WIDTH) {
-                RELEASE_RECURSIVE_MUTEX(webserver_mutex)
+                RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
                 return 0;
             }
 
@@ -214,7 +194,7 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
             unsigned int max_pixels = min(max_len / bytes_per_pixel, remaining_columns);
 
             if (max_pixels == 0) {
-                RELEASE_RECURSIVE_MUTEX(webserver_mutex)
+                RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
                 return 0;
             }
 
@@ -239,7 +219,7 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
 
             lv_draw_ctx_t *draw_ctx = (lv_draw_ctx_t *)lv_mem_alloc(obj_disp->driver->draw_ctx_size);
             if (draw_ctx == NULL) {
-                RELEASE_RECURSIVE_MUTEX(webserver_mutex);
+                RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex);
                 return 0;
             }
 

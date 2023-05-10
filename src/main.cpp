@@ -194,11 +194,11 @@ void setup() {
  * UI update loop
  */
 void loop() {
-    // Avoid updating the screen when the webserver is handling requests
-    TAKE_RECURSIVE_MUTEX(webserver_mutex)
+    // Avoid updating the screen when the webserver is taking a screenshot
+    TAKE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
     ui_update();
     lv_timer_handler();
-    RELEASE_RECURSIVE_MUTEX(webserver_mutex)
+    RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
 
     delay(5);
 }

@@ -12,8 +12,6 @@
 #include "wifi.h"
 
 lv_obj_t *ui_settings_screen;
-lv_obj_t *ui_settings_wifi_ssid_value;
-lv_obj_t *ui_settings_wifi_connect_button;
 
 static bool settings_loaded = false;
 
@@ -30,6 +28,8 @@ static lv_obj_t *ui_settings_wifi_page_panel;
 static lv_obj_t *ui_settings_wifi_passphrase_value;
 static lv_obj_t *ui_settings_wifi_disconnect_button;
 static lv_obj_t *ui_settings_wifi_current_ip_label;
+static lv_obj_t *ui_settings_wifi_ssid_value;
+static lv_obj_t *ui_settings_wifi_connect_button;
 
 static lv_obj_t *ui_settings_bed_screw_pitch_value;
 static lv_obj_t *ui_settings_bed_microstep_multiplier_value;
@@ -196,24 +196,23 @@ static void ui_settings_save_ota_settings() {
     RELEASE_MUTEX(ota_settings_mutex)
 }
 
-static void ui_settings_wifi_connect_button_handler(lv_event_t *e) {
+static void ui_settings_wifi_buttons_handler(lv_event_t *e) {
     lv_event_code_t event_code = lv_event_get_code(e);
     if (event_code != LV_EVENT_CLICKED) {
         return;
     }
 
-    wifi_connect(
-        lv_textarea_get_text(ui_settings_wifi_ssid_value),
-        lv_textarea_get_text(ui_settings_wifi_passphrase_value));
-}
-
-static void ui_settings_wifi_disconnect_button_handler(lv_event_t *e) {
-    lv_event_code_t event_code = lv_event_get_code(e);
-    if (event_code != LV_EVENT_CLICKED) {
-        return;
+    lv_obj_t *event_target = lv_event_get_target(e);
+    if (event_target == ui_settings_wifi_connect_button) {
+        const char *ssid = lv_textarea_get_text(ui_settings_wifi_ssid_value);
+        const char *passphrase = lv_textarea_get_text(ui_settings_wifi_passphrase_value);
+        if (strlen(ssid) > 0 && strlen(passphrase) > 0) {
+            lv_obj_add_state(ui_settings_wifi_connect_button, LV_STATE_DISABLED);
+            wifi_connect(ssid, passphrase);
+        }
+    } else if (event_target == ui_settings_wifi_disconnect_button) {
+        wifi_disconnect();
     }
-
-    wifi_disconnect();
 }
 
 static void ui_settings_textarea_focused_event_handler(lv_event_t *e) {
@@ -300,11 +299,7 @@ static lv_obj_t *ui_settings_create_textarea_field(lv_obj_t *parent, const char 
     return textarea;
 }
 
-void ui_settings_init() {
-    ui_settings_screen = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(ui_settings_screen, lv_color_hex(0xFAFAFA), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_clear_flag(ui_settings_screen, LV_OBJ_FLAG_SCROLLABLE);
-
+static void ui_settings_init_screen_content() {
     // Create menu
     ui_settings_menu = lv_menu_create(ui_settings_screen);
     lv_obj_set_width(ui_settings_menu, 460);
@@ -394,6 +389,7 @@ void ui_settings_init() {
     lv_obj_set_y(ui_settings_wifi_ssid_value, 0);
     lv_textarea_set_placeholder_text(ui_settings_wifi_ssid_value, "WIFI SSID");
     lv_textarea_set_one_line(ui_settings_wifi_ssid_value, true);
+    lv_textarea_set_text(ui_settings_wifi_ssid_value, WiFi.SSID().c_str());
     lv_obj_add_event_cb(
         ui_settings_wifi_ssid_value,
         ui_settings_textarea_focused_event_handler,
@@ -422,11 +418,7 @@ void ui_settings_init() {
     lv_obj_set_align(ui_settings_wifi_connect_button, LV_ALIGN_TOP_RIGHT);
     lv_obj_add_flag(ui_settings_wifi_connect_button, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
     lv_obj_clear_flag(ui_settings_wifi_connect_button, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_event_cb(
-        ui_settings_wifi_connect_button,
-        ui_settings_wifi_connect_button_handler,
-        LV_EVENT_CLICKED,
-        NULL);
+    lv_obj_add_event_cb(ui_settings_wifi_connect_button, ui_settings_wifi_buttons_handler, LV_EVENT_CLICKED, NULL);
 
     lv_obj_t *ui_settings_wifi_connect_button_label = lv_label_create(ui_settings_wifi_connect_button);
     lv_obj_set_width(ui_settings_wifi_connect_button_label, LV_SIZE_CONTENT);
@@ -447,11 +439,7 @@ void ui_settings_init() {
         ui_settings_wifi_disconnect_button,
         lv_color_hex(0xE80C0C),
         LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_add_event_cb(
-        ui_settings_wifi_disconnect_button,
-        ui_settings_wifi_disconnect_button_handler,
-        LV_EVENT_CLICKED,
-        NULL);
+    lv_obj_add_event_cb(ui_settings_wifi_disconnect_button, ui_settings_wifi_buttons_handler, LV_EVENT_CLICKED, NULL);
 
     lv_obj_t *ui_settings_wifi_disconnect_button_label = lv_label_create(ui_settings_wifi_disconnect_button);
     lv_obj_set_width(ui_settings_wifi_disconnect_button_label, LV_SIZE_CONTENT);
@@ -507,9 +495,38 @@ void ui_settings_init() {
     ui_settings_load_probes_settings();
     ui_settings_load_ota_settings();
     settings_loaded = true;
+
+    // Force the first update
+    ui_settings_update();
+}
+
+void ui_settings_init() {
+    ui_settings_screen = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(ui_settings_screen, lv_color_hex(0xFAFAFA), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_clear_flag(ui_settings_screen, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(
+        ui_settings_screen,
+        [](lv_event_t *e) -> void {
+            lv_event_code_t event_code = lv_event_get_code(e);
+            switch (event_code) {
+            case LV_EVENT_SCREEN_LOAD_START:
+                ui_settings_init_screen_content();
+                break;
+            case LV_EVENT_SCREEN_UNLOADED:
+                lv_obj_clean(ui_settings_screen);
+                settings_loaded = false;
+                break;
+            }
+        },
+        LV_EVENT_ALL,
+        NULL);
 }
 
 void ui_settings_update() {
+    if (lv_scr_act() != ui_settings_screen) {
+        return;
+    }
+
     static unsigned long last_update = 0;
     unsigned long current_time = millis();
 

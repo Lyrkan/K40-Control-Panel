@@ -7,27 +7,11 @@
 
 lv_obj_t *ui_splashscreen_screen;
 
-static void ui_splashscreen_event_handler(lv_event_t *e) {
-    lv_event_code_t event_code = lv_event_get_code(e);
-    lv_obj_t *target = lv_event_get_target(e);
-    switch (event_code) {
-    case LV_EVENT_SCREEN_LOADED:
-        lv_scr_load_anim(ui_status_screen, LV_SCR_LOAD_ANIM_FADE_ON, 500, 3000, false);
-        break;
-    case LV_EVENT_SCREEN_UNLOADED:
-        ui_menu_init();
-        lv_obj_del(ui_splashscreen_screen); // Free resources
-        ui_splashscreen_screen = NULL;
-        break;
-    }
-}
-
 void ui_splashscreen_init() {
     ui_splashscreen_screen = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(ui_splashscreen_screen, lv_color_hex(0x442E76), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_splashscreen_screen, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_clear_flag(ui_splashscreen_screen, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_event_cb(ui_splashscreen_screen, ui_splashscreen_event_handler, LV_EVENT_ALL, NULL);
 
     lv_obj_t *ui_splashscreen_logo = lv_img_create(ui_splashscreen_screen);
     lv_img_set_src(ui_splashscreen_logo, &image_splashscreen);
@@ -45,4 +29,22 @@ void ui_splashscreen_init() {
     lv_obj_set_align(ui_splashscreen_logo, LV_ALIGN_TOP_LEFT);
     lv_obj_set_style_text_color(ui_splashscreen_build_date, lv_color_white(), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_label_set_text(ui_splashscreen_build_date, "Build: " __DATE__ " " __TIME__ " (" GIT_CURRENT_REF ")");
+
+    lv_obj_add_event_cb(
+        ui_splashscreen_screen,
+        [](lv_event_t *e) -> void {
+            lv_event_code_t event_code = lv_event_get_code(e);
+            switch (event_code) {
+            case LV_EVENT_SCREEN_LOADED:
+                lv_scr_load_anim(ui_status_screen, LV_SCR_LOAD_ANIM_FADE_ON, 500, 3000, false);
+                break;
+            case LV_EVENT_SCREEN_UNLOADED:
+                ui_menu_init();
+                lv_obj_del(ui_splashscreen_screen); // Free resources
+                ui_splashscreen_screen = NULL;
+                break;
+            }
+        },
+        LV_EVENT_ALL,
+        NULL);
 }

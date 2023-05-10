@@ -105,22 +105,12 @@ static void handleStatusRequest(AsyncWebServerRequest *request) {
     state["alerts"]["flame_sensor"] = (alerts_status & ALERT_TYPE_FLAME_SENSOR) != 0;
 
     // Retrieve relays state from the queue object
-    RelaysStatus current_relays_status;
-    if (xQueuePeek(relays_current_status_queue, &current_relays_status, 0) == pdTRUE) {
-        state["relays"]["laser"] = current_relays_status.laser_enabled;
-        state["relays"]["air_assist"] = current_relays_status.air_assist_enabled;
-        state["relays"]["cooling"] = current_relays_status.cooling_enabled;
-        state["relays"]["alarm"] = current_relays_status.alarm_enabled;
-        state["relays"]["lights"] = current_relays_status.lights_enabled;
-        state["relays"]["beam_preview"] = current_relays_status.beam_preview_enabled;
-    } else {
-        state["relays"]["laser"] = nullptr;
-        state["relays"]["air_assist"] = nullptr;
-        state["relays"]["cooling"] = nullptr;
-        state["relays"]["alarm"] = nullptr;
-        state["relays"]["lights"] = nullptr;
-        state["relays"]["beam_preview"] = nullptr;
-    }
+    state["relays"]["laser"] = digitalRead(PIN_RELAY_LASER) == RELAY_PIN_STATE_ENABLED;
+    state["relays"]["air_assist"] = digitalRead(PIN_RELAY_AIR_ASSIST) == RELAY_PIN_STATE_ENABLED;
+    state["relays"]["cooling"] = digitalRead(PIN_RELAY_COOLING) == RELAY_PIN_STATE_ENABLED;
+    state["relays"]["alarm"] = digitalRead(PIN_RELAY_ALARM) == RELAY_PIN_STATE_ENABLED;
+    state["relays"]["lights"] = digitalRead(PIN_RELAY_LIGHTS) == RELAY_PIN_STATE_ENABLED;
+    state["relays"]["beam_preview"] = digitalRead(PIN_RELAY_BEAM_PREVIEW) == RELAY_PIN_STATE_ENABLED;
 
     // Retrieve system data
     TAKE_MUTEX(cpu_monitor_stats_mutex)

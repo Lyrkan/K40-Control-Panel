@@ -300,6 +300,9 @@ static lv_obj_t *ui_settings_create_textarea_field(lv_obj_t *parent, const char 
 }
 
 static void ui_settings_init_screen_content() {
+    // Make sure the screen is empty
+    lv_obj_clean(ui_settings_screen);
+
     // Create menu
     ui_settings_menu = lv_menu_create(ui_settings_screen);
     lv_obj_set_width(ui_settings_menu, 460);
@@ -497,7 +500,7 @@ static void ui_settings_init_screen_content() {
     settings_loaded = true;
 
     // Force the first update
-    ui_settings_update();
+    ui_settings_update(true);
 }
 
 void ui_settings_init() {
@@ -522,15 +525,20 @@ void ui_settings_init() {
         NULL);
 }
 
-void ui_settings_update() {
-    if (lv_scr_act() != ui_settings_screen) {
+void ui_settings_update(bool initialize) {
+    if (!initialize && (lv_scr_act() != ui_settings_screen)) {
         return;
     }
 
     static unsigned long last_update = 0;
     unsigned long current_time = millis();
+    if (last_update == 0) {
+        last_update = current_time;
+    }
 
-    if (current_time - last_update > SETTINGS_STATE_UPDATE_INTERVAL) {
+    unsigned long delta_time = current_time - last_update;
+
+    if (initialize || (delta_time > SETTINGS_STATE_UPDATE_INTERVAL)) {
         // Update WiFi indicators
         switch (WiFi.status()) {
         case WL_CONNECTED:

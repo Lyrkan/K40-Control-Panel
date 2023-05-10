@@ -155,9 +155,6 @@ void setup() {
     /* Setup interrupts */
     attachInterrupt(PIN_COOLING_FLOW, cooling_flow_probe_interrupt, FALLING);
 
-    /* Initialize relays state/pins */
-    relays_init();
-
     /* Initialize UI */
     ui_init();
 

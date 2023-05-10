@@ -13,16 +13,6 @@ enum RelayPin {
     PIN_RELAY_BEAM_PREVIEW = 26
 };
 
-typedef struct RelaysStatus RelaysStatus;
-struct RelaysStatus {
-    bool laser_enabled;
-    bool air_assist_enabled;
-    bool cooling_enabled;
-    bool alarm_enabled;
-    bool lights_enabled;
-    bool beam_preview_enabled;
-};
-
 typedef struct RelaysCommand RelaysCommand;
 struct RelaysCommand {
     RelayPin pin;

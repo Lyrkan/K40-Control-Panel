@@ -8,6 +8,6 @@
 extern lv_obj_t *ui_settings_screen;
 
 void ui_settings_init();
-void ui_settings_update();
+void ui_settings_update(bool initialize = false);
 
 #endif

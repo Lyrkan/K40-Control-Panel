@@ -4,40 +4,7 @@
 #include "K40/relays.h"
 #include "queues.h"
 
-static RelaysStatus relays_current_status = {
-    .laser_enabled = false,
-    .air_assist_enabled = true,
-    .cooling_enabled = true,
-    .alarm_enabled = false,
-    .lights_enabled = true,
-    .beam_preview_enabled = true,
-};
-
-static void relays_update_pins() {
-    digitalWrite(
-        PIN_RELAY_LASER,
-        relays_current_status.laser_enabled ? RELAY_PIN_STATE_ENABLED : RELAY_PIN_STATE_DISABLED);
-    digitalWrite(
-        PIN_RELAY_AIR_ASSIST,
-        relays_current_status.air_assist_enabled ? RELAY_PIN_STATE_ENABLED : RELAY_PIN_STATE_DISABLED);
-    digitalWrite(
-        PIN_RELAY_COOLING,
-        relays_current_status.cooling_enabled ? RELAY_PIN_STATE_ENABLED : RELAY_PIN_STATE_DISABLED);
-    digitalWrite(
-        PIN_RELAY_ALARM,
-        relays_current_status.alarm_enabled ? RELAY_PIN_STATE_ENABLED : RELAY_PIN_STATE_DISABLED);
-    digitalWrite(
-        PIN_RELAY_LIGHTS,
-        relays_current_status.lights_enabled ? RELAY_PIN_STATE_ENABLED : RELAY_PIN_STATE_DISABLED);
-    digitalWrite(
-        PIN_RELAY_BEAM_PREVIEW,
-        relays_current_status.beam_preview_enabled ? RELAY_PIN_STATE_ENABLED : RELAY_PIN_STATE_DISABLED);
-}
-
-void relays_init() {
-    relays_update_pins();
-    xQueueOverwrite(relays_current_status_queue, &relays_current_status);
-}
+void relays_init() {}
 
 void relays_update() {
     // Process new command if there is one
@@ -45,45 +12,16 @@ void relays_update() {
     bool current_status_updated = false;
 
     while (xQueueReceive(relays_command_queue, &relays_command, 0) == pdTRUE) {
-        current_status_updated = true;
-        switch (relays_command.pin) {
-        case PIN_RELAY_LASER:
-            relays_current_status.laser_enabled = relays_command.enable;
-            break;
-        case PIN_RELAY_AIR_ASSIST:
-            relays_current_status.air_assist_enabled = relays_command.enable;
-            break;
-        case PIN_RELAY_COOLING:
-            relays_current_status.cooling_enabled = relays_command.enable;
-            break;
-        case PIN_RELAY_ALARM:
-            relays_current_status.alarm_enabled = relays_command.enable;
-            break;
-        case PIN_RELAY_LIGHTS:
-            relays_current_status.lights_enabled = relays_command.enable;
-            break;
-        case PIN_RELAY_BEAM_PREVIEW:
-            relays_current_status.beam_preview_enabled = relays_command.enable;
-            break;
-        }
+        digitalWrite(relays_command.pin, relays_command.enable ? RELAY_PIN_STATE_ENABLED : RELAY_PIN_STATE_DISABLED);
     }
 
-    if (relays_current_status.laser_enabled) {
+    if (digitalRead(PIN_RELAY_LASER) == RELAY_PIN_STATE_ENABLED) {
         uint8_t alerts_status = alerts_get_current_alerts();
-
-        bool disable_laser =
-            !relays_current_status.cooling_enabled || (alerts_status & (ALERT_TYPE_COOLING | ALERT_TYPE_LIDS)) != 0;
+        bool disable_laser = (alerts_status & (ALERT_TYPE_COOLING | ALERT_TYPE_LIDS)) != 0;
 
         // Disable laser if cooling is not enabled or if there is a critical alert (cooling or lid)
         if (disable_laser) {
-            relays_current_status.laser_enabled = false;
-            current_status_updated = true; // Shouldn't be needed but just to be safe...
+            digitalWrite(PIN_RELAY_LASER, RELAY_PIN_STATE_DISABLED);
         }
-    }
-
-    // Update pins statuses and current status queue if needed
-    if (current_status_updated) {
-        relays_update_pins();
-        xQueueOverwrite(relays_current_status_queue, &relays_current_status);
     }
 }

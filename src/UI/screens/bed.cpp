@@ -54,6 +54,9 @@ static void ui_bed_button_handler(lv_event_t *e) {
 }
 
 static void ui_bed_init_screen_content() {
+    // Make sure the screen is empty
+    lv_obj_clean(ui_bed_screen);
+
     lv_obj_t *ui_bed_main_panel = lv_obj_create(ui_bed_screen);
     lv_obj_set_width(ui_bed_main_panel, 460);
     lv_obj_set_height(ui_bed_main_panel, 255);
@@ -233,7 +236,7 @@ static void ui_bed_init_screen_content() {
     lv_keyboard_set_textarea(ui_bed_keyboard, ui_bed_textarea);
 
     // Force the first update
-    ui_bed_update();
+    ui_bed_update(true);
 }
 
 void ui_bed_init() {
@@ -257,15 +260,20 @@ void ui_bed_init() {
         NULL);
 }
 
-void ui_bed_update() {
-    if (lv_scr_act() != ui_bed_screen) {
+void ui_bed_update(bool initialize) {
+    if (!initialize && (lv_scr_act() != ui_bed_screen)) {
         return;
     }
 
     static unsigned long last_update = 0;
     unsigned long current_time = millis();
+    if (last_update == 0) {
+        last_update = current_time;
+    }
 
-    if (current_time - last_update > BED_STATE_UPDATE_INTERVAL) {
+    unsigned long delta_time = current_time - last_update;
+
+    if (initialize || (delta_time > BED_STATE_UPDATE_INTERVAL)) {
         static BedStatus current_bed_status;
 
         // Retrieve bed state from the queue object

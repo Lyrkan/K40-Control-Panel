@@ -8,6 +8,6 @@
 extern lv_obj_t *ui_bed_screen;
 
 void ui_bed_init();
-void ui_bed_update();
+void ui_bed_update(bool initialize = false);
 
 #endif

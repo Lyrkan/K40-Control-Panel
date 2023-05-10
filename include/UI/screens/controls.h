@@ -8,6 +8,6 @@
 extern lv_obj_t *ui_controls_screen;
 
 void ui_controls_init();
-void ui_controls_update();
+void ui_controls_update(bool initialize = false);
 
 #endif

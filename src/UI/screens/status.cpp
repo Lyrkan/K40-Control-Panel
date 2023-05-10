@@ -15,8 +15,6 @@
 
 lv_obj_t *ui_status_screen;
 
-static bool statuses_loaded = false;
-
 static StaticEventGroup_t ui_status_event_group_static;
 static EventGroupHandle_t ui_status_event_group = xEventGroupCreateStatic(&ui_status_event_group_static);
 
@@ -51,6 +49,9 @@ static lv_obj_t *ui_status_cpu_0;
 static lv_obj_t *ui_status_cpu_1;
 
 static void ui_status_init_screen_content() {
+    // Make sure the screen is empty
+    lv_obj_clean(ui_status_screen);
+
     ui_status_main_panel = lv_obj_create(ui_status_screen);
     lv_obj_set_width(ui_status_main_panel, 460);
     lv_obj_set_height(ui_status_main_panel, 255);
@@ -278,7 +279,7 @@ static void ui_status_init_screen_content() {
     lv_obj_set_style_text_font(ui_status_heap, &font_default_12, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Force the first update
-    ui_status_update();
+    ui_status_update(true);
 };
 
 void ui_status_init() {
@@ -295,7 +296,6 @@ void ui_status_init() {
                 break;
             case LV_EVENT_SCREEN_UNLOADED:
                 lv_obj_clean(ui_status_screen);
-                statuses_loaded = false;
                 break;
             }
         },
@@ -315,8 +315,8 @@ static void updateWarningIcon(lv_obj_t *warning_icon, bool show) {
     }
 }
 
-void ui_status_update() {
-    if (lv_scr_act() != ui_status_screen) {
+void ui_status_update(bool initialize) {
+    if (!initialize && (lv_scr_act() != ui_status_screen)) {
         return;
     }
 
@@ -336,10 +336,10 @@ void ui_status_update() {
     static char cpu_status_1[250];
 
     uint8_t pending_updates = xEventGroupGetBits(ui_status_event_group);
-    bool pending_voltage_update = !statuses_loaded || ((pending_updates & STATUS_UPDATE_PROBE_VOLTAGE) != 0);
-    bool pending_cooling_update = !statuses_loaded || ((pending_updates & STATUS_UPDATE_PROBE_COOLING) != 0);
-    bool pending_lids_update = !statuses_loaded || ((pending_updates & STATUS_UPDATE_PROBE_LIDS) != 0);
-    bool pending_flame_sensor_update = !statuses_loaded || ((pending_updates & STATUS_UPDATE_PROBE_FLAME_SENSOR) != 0);
+    bool pending_voltage_update = initialize || ((pending_updates & STATUS_UPDATE_PROBE_VOLTAGE) != 0);
+    bool pending_cooling_update = initialize || ((pending_updates & STATUS_UPDATE_PROBE_COOLING) != 0);
+    bool pending_lids_update = initialize || ((pending_updates & STATUS_UPDATE_PROBE_LIDS) != 0);
+    bool pending_flame_sensor_update = initialize || ((pending_updates & STATUS_UPDATE_PROBE_FLAME_SENSOR) != 0);
 
     uint8_t alerts_status = alerts_get_current_alerts();
 
@@ -398,10 +398,6 @@ void ui_status_update() {
         (STATUS_UPDATE_PROBE_VOLTAGE | STATUS_UPDATE_PROBE_COOLING | STATUS_UPDATE_PROBE_LIDS |
          STATUS_UPDATE_PROBE_FLAME_SENSOR));
 
-    if (!statuses_loaded) {
-        statuses_loaded = true;
-    }
-
     // Update heap indicator
     static unsigned long system_status_last_update = 0;
     unsigned long current_time = millis();
@@ -410,7 +406,7 @@ void ui_status_update() {
     }
 
     unsigned long delta_time = current_time - system_status_last_update;
-    if (delta_time >= STATUS_SYSTEM_UPDATE_INTERVAL) {
+    if (initialize || (delta_time >= STATUS_SYSTEM_UPDATE_INTERVAL)) {
         snprintf(
             heap_status,
             ARRAY_SIZE(heap_status),

@@ -1,0 +1,12 @@
+.container {
+    table {
+        margin-bottom: 0;
+
+        tr:last-child {
+            td,
+            th {
+                border-bottom: none;
+            }
+        }
+    }
+}

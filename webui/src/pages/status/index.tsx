@@ -10,11 +10,11 @@ import styles from "./styles.module.scss";
 export default function Status() {
     return (
         <div className={styles.container}>
-            <div className={`row ${styles.voltage}`}>
+            <div className={`row card ${styles.voltage}`}>
                 <div className="column column-25">
                     <h3>
                         <FontAwesomeIcon
-                            className={styles.icon}
+                            className="icon"
                             icon={faBolt}
                         ></FontAwesomeIcon>
                         Voltages
@@ -29,11 +29,11 @@ export default function Status() {
                 </div>
                 <div className="column column-75">Graph</div>
             </div>
-            <div className={`row ${styles.cooling}`}>
+            <div className={`row card ${styles.cooling}`}>
                 <div className="column column-25">
                     <h3>
                         <FontAwesomeIcon
-                            className={styles.icon}
+                            className="icon"
                             icon={faSnowflake}
                         ></FontAwesomeIcon>
                         Cooling
@@ -46,11 +46,11 @@ export default function Status() {
                 </div>
                 <div className="column column-75">Graph</div>
             </div>
-            <div className={`row ${styles.lids}`}>
+            <div className={`row card ${styles.lids}`}>
                 <div className="column">
                     <h3>
                         <FontAwesomeIcon
-                            className={styles.icon}
+                            className="icon"
                             icon={faEye}
                         ></FontAwesomeIcon>
                         Lids
@@ -62,11 +62,11 @@ export default function Status() {
                     </div>
                 </div>
             </div>
-            <div className={`row ${styles.fire}`}>
+            <div className={`row card ${styles.fire}`}>
                 <div className="column">
                     <h3>
                         <FontAwesomeIcon
-                            className={styles.icon}
+                            className="icon"
                             icon={faFire}
                         ></FontAwesomeIcon>
                         Flame sensor

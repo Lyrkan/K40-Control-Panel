@@ -1,4 +1,11 @@
 import { Outlet, NavLink } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+    faToggleOff,
+    faMagnifyingGlass,
+    faArrowDownUpAcrossLine,
+    faGear,
+} from "@fortawesome/free-solid-svg-icons";
 
 import "milligram/dist/milligram.css";
 import "./index.scss";
@@ -9,13 +16,39 @@ const Root = () => {
     return (
         <>
             <header>
-                <img className="logo" src={Logo}></img>
-                <nav>
-                    <NavLink to="/">Status</NavLink>
-                    <NavLink to="/controls">Controls</NavLink>
-                    <NavLink to="/bed">Bed</NavLink>
-                    <NavLink to="/settings">Settings</NavLink>
-                </nav>
+                <div className="container">
+                    <img className="logo" src={Logo}></img>
+                    <nav>
+                        <NavLink to="/">
+                            <FontAwesomeIcon
+                                className="icon"
+                                icon={faMagnifyingGlass}
+                            ></FontAwesomeIcon>
+                            Status
+                        </NavLink>
+                        <NavLink to="/controls">
+                            <FontAwesomeIcon
+                                className="icon"
+                                icon={faToggleOff}
+                            ></FontAwesomeIcon>
+                            Controls
+                        </NavLink>
+                        <NavLink to="/bed">
+                            <FontAwesomeIcon
+                                className="icon"
+                                icon={faArrowDownUpAcrossLine}
+                            ></FontAwesomeIcon>
+                            Bed
+                        </NavLink>
+                        <NavLink to="/settings">
+                            <FontAwesomeIcon
+                                className="icon"
+                                icon={faGear}
+                            ></FontAwesomeIcon>
+                            Settings
+                        </NavLink>
+                    </nav>
+                </div>
             </header>
             <div className="container">
                 <Outlet />

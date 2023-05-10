@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <AsyncTCP.h>
+#include <AsyncJson.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncElegantOTA.h>
 #include <lvgl.h>
@@ -50,8 +51,8 @@ static String getContentType(String path) {
 }
 
 static void handleStatusRequest(AsyncWebServerRequest *request) {
-    DynamicJsonDocument state(1024);
-    String serialized_state;
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &state = response->getRoot();
 
     state["firmware"]["version"] = GIT_CURRENT_REF;
     state["firmware"]["build_date"] = __DATE__ " " __TIME__;
@@ -111,10 +112,8 @@ static void handleStatusRequest(AsyncWebServerRequest *request) {
 
     // Retrieve system data
     TAKE_MUTEX(cpu_monitor_stats_mutex)
-
     float_t core_usage_percentage_0 = cpu_monitor_load_0;
     float_t core_usage_percentage_1 = cpu_monitor_load_1;
-
     RELEASE_MUTEX(cpu_monitor_stats_mutex)
 
     state["system"]["chip"]["model"] = ESP.getChipModel();
@@ -126,8 +125,8 @@ static void handleStatusRequest(AsyncWebServerRequest *request) {
     state["system"]["cpu"]["load_percent"]["core_1"] = core_usage_percentage_1;
 
     // Serialize JSON data and send it to the client
-    serializeJson(state, serialized_state);
-    request->send(200, "application/json", serialized_state);
+    response->setLength();
+    request->send(response);
 }
 
 static bool handleStaticFileRequest(AsyncWebServerRequest *request) {

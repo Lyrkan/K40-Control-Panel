@@ -1,17 +1,19 @@
 import { render } from "preact";
 import { lazy, Suspense } from "preact/compat";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import StatusService from "./services/status.ts";
 
 import Root from "./root.tsx";
-import Status from "./pages/status/index.tsx";
+import Loading from "./pages/loading/index.tsx";
 
+const Status = lazy(() => import("./pages/status/index.tsx"));
 const Controls = lazy(() => import("./pages/controls/index.tsx"));
 const Bed = lazy(() => import("./pages/bed/index.tsx"));
 const Settings = lazy(() => import("./pages/settings/index.tsx"));
 const NotFound = lazy(() => import("./pages/404/index.tsx"));
 
 const lazyElement = (component: any) => (
-    <Suspense fallback={<div>Loading...</div>}>{component}</Suspense>
+    <Suspense fallback={<Loading />}>{component}</Suspense>
 );
 
 const router = createBrowserRouter([
@@ -22,7 +24,10 @@ const router = createBrowserRouter([
         children: [
             {
                 index: true,
-                element: <Status />,
+                loader: () => {
+                    return StatusService.updateStatus();
+                },
+                element: lazyElement(<Status />),
             },
             {
                 path: "controls",

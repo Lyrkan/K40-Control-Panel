@@ -1,9 +1,10 @@
 import { defineConfig } from "vite";
 import preact from "@preact/preset-vite";
+import { viteMockServe } from "vite-plugin-mock";
 
 // https://vitejs.dev/config/
-export default defineConfig({
-    plugins: [preact()],
+export default defineConfig(({ command }) => ({
+    plugins: [preact(), viteMockServe({ mockPath: "mocks" })],
     build: {
         rollupOptions: {
             output: {
@@ -19,4 +20,4 @@ export default defineConfig({
             "react-dom": "preact/compat",
         },
     },
-});
+}));

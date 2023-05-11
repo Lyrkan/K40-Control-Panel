@@ -1,3 +1,6 @@
+import { useStore } from "@nanostores/preact";
+import { statusStore, Status as StatusType } from "../../stores/status.js";
+import StatusService from "../../services/status.ts";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faBolt,
@@ -5,9 +8,18 @@ import {
     faFire,
     faSnowflake,
 } from "@fortawesome/free-solid-svg-icons";
+
 import styles from "./styles.module.scss";
+import { useInterval } from "usehooks-ts";
+import { formatNumber } from "../../utils/strings.ts";
 
 export default function Status() {
+    const status = useStore(statusStore) as StatusType;
+
+    useInterval(() => {
+        StatusService.updateStatus();
+    }, 2500);
+
     return (
         <div className={styles.container}>
             <div className={`row card ${styles.voltage}`}>
@@ -20,11 +32,26 @@ export default function Status() {
                         Voltages
                     </h3>
                     <div className={styles.values}>
-                        <strong>V1:</strong> 4.2V
+                        <strong>V1:</strong>{" "}
+                        {formatNumber(status.sensors.voltages.v1, {
+                            fractionDigits: 2,
+                            fallback: "Unknown",
+                            unit: "V",
+                        })}
                         <br />
-                        <strong>V2:</strong> 12.1V
+                        <strong>V2:</strong>{" "}
+                        {formatNumber(status.sensors.voltages.v2, {
+                            fractionDigits: 2,
+                            fallback: "Unknown",
+                            unit: "V",
+                        })}
                         <br />
-                        <strong>V3:</strong> 23.9V
+                        <strong>V3:</strong>{" "}
+                        {formatNumber(status.sensors.voltages.v3, {
+                            fractionDigits: 2,
+                            fallback: "Unknown",
+                            unit: "V",
+                        })}
                     </div>
                 </div>
                 <div className="column column-75">Graph</div>
@@ -39,9 +66,19 @@ export default function Status() {
                         Cooling
                     </h3>
                     <div className={styles.values}>
-                        <strong>Flow:</strong> 1.5L/mn
+                        <strong>Flow:</strong>{" "}
+                        {formatNumber(status.sensors.cooling.flow, {
+                            fractionDigits: 2,
+                            fallback: "Unknown",
+                            unit: "L/mn",
+                        })}
                         <br />
-                        <strong>Temperature:</strong> 19.4°C
+                        <strong>Temperature:</strong>{" "}
+                        {formatNumber(status.sensors.cooling.temp, {
+                            fractionDigits: 2,
+                            fallback: "Unknown",
+                            unit: "°C",
+                        })}
                     </div>
                 </div>
                 <div className="column column-75">Graph</div>
@@ -56,9 +93,11 @@ export default function Status() {
                         Lids
                     </h3>
                     <div className={styles.values}>
-                        <strong>Front:</strong> Opened
+                        <strong>Front:</strong>{" "}
+                        {status.sensors.lids.front ?? "Unknown"}
                         <br />
-                        <strong>Back:</strong> Opened
+                        <strong>Back:</strong>{" "}
+                        {status.sensors.lids.back ?? "Unknown"}
                     </div>
                 </div>
             </div>
@@ -72,7 +111,10 @@ export default function Status() {
                         Flame sensor
                     </h3>
                     <div className={styles.values}>
-                        <strong>Status:</strong> OK
+                        <strong>Status:</strong>{" "}
+                        {status.sensors.flame_sensor.triggered
+                            ? "Triggered"
+                            : "OK"}
                     </div>
                 </div>
             </div>

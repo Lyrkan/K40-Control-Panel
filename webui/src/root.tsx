@@ -8,6 +8,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import "milligram/dist/milligram.css";
+import "rc-switch/assets/index.css";
 import "./index.scss";
 
 import Logo from "./assets/logo-transparent.png";

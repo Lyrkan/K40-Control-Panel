@@ -8,9 +8,9 @@ import {
 } from "../stores/status.js";
 
 class StatusService {
-    async updateStatus() {
+    async updateSensors() {
         const response = await fetch(
-            `${window.location.protocol}//${window.location.host}/api/status`
+            `${window.location.protocol}//${window.location.host}/api/sensors`
         );
         const decodedResponse = await response.json();
 
@@ -18,9 +18,27 @@ class StatusService {
             updatesSensorsStatus(decodedResponse.sensors as SensorsStatus);
         }
 
+        return decodedResponse;
+    }
+
+    async updateAlerts() {
+        const response = await fetch(
+            `${window.location.protocol}//${window.location.host}/api/alerts`
+        );
+        const decodedResponse = await response.json();
+
         if (decodedResponse.alerts) {
             updatesAlertsStatus(decodedResponse.alerts as AlertsStatus);
         }
+
+        return decodedResponse;
+    }
+
+    async updateRelays() {
+        const response = await fetch(
+            `${window.location.protocol}//${window.location.host}/api/relays`
+        );
+        const decodedResponse = await response.json();
 
         if (decodedResponse.relays) {
             updatesRelaysStatus(decodedResponse.relays as RelaysStatus);

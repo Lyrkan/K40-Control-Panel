@@ -50,12 +50,35 @@ static String getContentType(String path) {
     return String("application/octet-stream");
 }
 
-static void handleStatusRequest(AsyncWebServerRequest *request) {
+static void handleApiInfoRequest(AsyncWebServerRequest *request) {
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &state = response->getRoot();
 
     state["firmware"]["version"] = GIT_CURRENT_REF;
     state["firmware"]["build_date"] = __DATE__ " " __TIME__;
+
+    // Retrieve system data
+    TAKE_MUTEX(cpu_monitor_stats_mutex)
+    float_t core_usage_percentage_0 = cpu_monitor_load_0;
+    float_t core_usage_percentage_1 = cpu_monitor_load_1;
+    RELEASE_MUTEX(cpu_monitor_stats_mutex)
+
+    state["system"]["chip"]["model"] = ESP.getChipModel();
+    state["system"]["chip"]["revision"] = ESP.getChipRevision();
+    state["system"]["heap"]["free"] = ESP.getFreeHeap();
+    state["system"]["heap"]["total"] = ESP.getHeapSize();
+    state["system"]["cpu"]["freq_mhz"] = ESP.getCpuFreqMHz();
+    state["system"]["cpu"]["load_percent"]["core_0"] = core_usage_percentage_0;
+    state["system"]["cpu"]["load_percent"]["core_1"] = core_usage_percentage_1;
+
+    // Serialize JSON data and send it to the client
+    response->setLength();
+    request->send(response);
+}
+
+static void handleApiSensorsRequest(AsyncWebServerRequest *request) {
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &state = response->getRoot();
 
     // Retrieve sensors values
     VoltageProbesValues voltage_probes_values;
@@ -95,12 +118,30 @@ static void handleStatusRequest(AsyncWebServerRequest *request) {
         state["sensors"]["flame_sensor"]["triggered"] = nullptr;
     }
 
+    // Serialize JSON data and send it to the client
+    response->setLength();
+    request->send(response);
+}
+
+static void handleApiAlertsRequest(AsyncWebServerRequest *request) {
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &state = response->getRoot();
+
     // Retrieve alerts
     uint8_t alerts_status = alerts_get_current_alerts();
     state["alerts"]["voltages"] = (alerts_status & ALERT_TYPE_VOLTAGE) != 0;
     state["alerts"]["cooling"] = (alerts_status & ALERT_TYPE_COOLING) != 0;
     state["alerts"]["lids"] = (alerts_status & ALERT_TYPE_LIDS) != 0;
     state["alerts"]["flame_sensor"] = (alerts_status & ALERT_TYPE_FLAME_SENSOR) != 0;
+
+    // Serialize JSON data and send it to the client
+    response->setLength();
+    request->send(response);
+}
+
+static void handleApiRelaysRequest(AsyncWebServerRequest *request) {
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &state = response->getRoot();
 
     // Retrieve relays state from the queue object
     state["relays"]["laser"] = digitalRead(PIN_RELAY_LASER) == RELAY_PIN_STATE_ENABLED;
@@ -109,20 +150,6 @@ static void handleStatusRequest(AsyncWebServerRequest *request) {
     state["relays"]["alarm"] = digitalRead(PIN_RELAY_ALARM) == RELAY_PIN_STATE_ENABLED;
     state["relays"]["lights"] = digitalRead(PIN_RELAY_LIGHTS) == RELAY_PIN_STATE_ENABLED;
     state["relays"]["beam_preview"] = digitalRead(PIN_RELAY_BEAM_PREVIEW) == RELAY_PIN_STATE_ENABLED;
-
-    // Retrieve system data
-    TAKE_MUTEX(cpu_monitor_stats_mutex)
-    float_t core_usage_percentage_0 = cpu_monitor_load_0;
-    float_t core_usage_percentage_1 = cpu_monitor_load_1;
-    RELEASE_MUTEX(cpu_monitor_stats_mutex)
-
-    state["system"]["chip"]["model"] = ESP.getChipModel();
-    state["system"]["chip"]["revision"] = ESP.getChipRevision();
-    state["system"]["heap"]["free"] = ESP.getFreeHeap();
-    state["system"]["heap"]["total"] = ESP.getHeapSize();
-    state["system"]["cpu"]["freq_mhz"] = ESP.getCpuFreqMHz();
-    state["system"]["cpu"]["load_percent"]["core_0"] = core_usage_percentage_0;
-    state["system"]["cpu"]["load_percent"]["core_1"] = core_usage_percentage_1;
 
     // Serialize JSON data and send it to the client
     response->setLength();
@@ -246,7 +273,10 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
 
 void webserver_init() {
     // APIs
-    server.on("/api/status", HTTP_GET, handleStatusRequest);
+    server.on("/api/info", HTTP_GET, handleApiInfoRequest);
+    server.on("/api/sensors", HTTP_GET, handleApiSensorsRequest);
+    server.on("/api/alerts", HTTP_GET, handleApiAlertsRequest);
+    server.on("/api/relays", HTTP_GET, handleApiRelaysRequest);
 
     // Screenshot utility
     // Usage:

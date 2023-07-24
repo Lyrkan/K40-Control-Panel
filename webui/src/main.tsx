@@ -24,14 +24,20 @@ const router = createBrowserRouter([
         children: [
             {
                 index: true,
-                loader: () => {
-                    return StatusService.updateStatus();
-                },
                 element: lazyElement(<Status />),
+                loader: async () => {
+                    return {
+                        ...(await StatusService.updateSensors()),
+                        ...(await StatusService.updateAlerts()),
+                    };
+                },
             },
             {
                 path: "controls",
                 element: lazyElement(<Controls />),
+                loader: async () => {
+                    return StatusService.updateRelays();
+                },
             },
             {
                 path: "bed",

@@ -1,6 +1,8 @@
 import { useStore } from "@nanostores/preact";
 import { statusStore, Status as StatusType } from "../../stores/status.js";
 import StatusService from "../../services/status.ts";
+import { useInterval } from "usehooks-ts";
+import { formatNumber } from "../../utils/strings.ts";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
     faBolt,
@@ -10,14 +12,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 
 import styles from "./styles.module.scss";
-import { useInterval } from "usehooks-ts";
-import { formatNumber } from "../../utils/strings.ts";
 
 export default function Status() {
     const status = useStore(statusStore) as StatusType;
 
-    useInterval(() => {
-        StatusService.updateStatus();
+    useInterval(async () => {
+        await StatusService.updateSensors();
+        await StatusService.updateAlerts();
     }, 2500);
 
     return (

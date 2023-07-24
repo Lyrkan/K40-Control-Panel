@@ -94,7 +94,7 @@ void ui_controls_init_screen_content() {
     lv_obj_set_x(ui_controls_preview_switch_label, 0);
     lv_obj_set_y(ui_controls_preview_switch_label, 80);
     lv_obj_set_align(ui_controls_preview_switch_label, LV_ALIGN_LEFT_MID);
-    lv_label_set_text(ui_controls_preview_switch_label, "Diodes");
+    lv_label_set_text(ui_controls_preview_switch_label, "Beam preview");
 
     ui_controls_laser_switch = lv_switch_create(ui_controls_main_panel);
     lv_obj_set_width(ui_controls_laser_switch, 50);
@@ -205,7 +205,7 @@ void ui_controls_init_screen_content() {
     lv_obj_set_x(ui_controls_preview_switch_explanation, 140);
     lv_obj_set_y(ui_controls_preview_switch_explanation, 80);
     lv_obj_set_align(ui_controls_preview_switch_explanation, LV_ALIGN_LEFT_MID);
-    lv_label_set_text(ui_controls_preview_switch_explanation, "Enable positioning laser diodes");
+    lv_label_set_text(ui_controls_preview_switch_explanation, "Enable beam preview laser diodes");
     lv_obj_set_style_text_color(
         ui_controls_preview_switch_explanation,
         lv_color_hex(0x808080),

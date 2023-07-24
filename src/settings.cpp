@@ -44,8 +44,8 @@ BedSettings bed_settings = {
     .screw_pitch = 0.8,
     .microstep_multiplier = 8,
     .steps_per_revolution = 200,
-    .acceleration = 700,
-    .moving_speed = 2500,
+    .acceleration = 500,
+    .moving_speed = 1500,
     .homing_speed = 1000,
     .origin = {.is_set = false, .position = 0}};
 

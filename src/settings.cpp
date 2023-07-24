@@ -44,8 +44,8 @@ BedSettings bed_settings = {
     .screw_pitch = 0.8,
     .microstep_multiplier = 8,
     .steps_per_revolution = 200,
-    .acceleration = 700,
-    .moving_speed = 2500,
+    .acceleration = 500,
+    .moving_speed = 1500,
     .homing_speed = 1000,
     .origin = {.is_set = false, .position = 0}};
 
@@ -79,8 +79,7 @@ static void settings_save_task_func(void *params) {
             Serial.println("Bed settings have changed, saving new values...");
 
             // Acquire bed settings lock
-            while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdPASS)
-                ;
+            TAKE_MUTEX(bed_settings_mutex)
 
             preferences.begin(PREFERENCES_NAMESPACE_BED, false);
             preferences.putFloat(PREFERENCES_KEY_BED_SCREW_PITCH, bed_settings.screw_pitch);
@@ -95,15 +94,14 @@ static void settings_save_task_func(void *params) {
             preferences.end();
 
             // Release bed settings lock
-            xSemaphoreGive(bed_settings_mutex);
+            RELEASE_MUTEX(bed_settings_mutex)
         }
 
         if ((settings_types & SETTINGS_TYPE_PROBES) != 0) {
             Serial.println("Probes settings have changed, saving new values...");
 
             // Acquire probes settings lock
-            while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdPASS)
-                ;
+            TAKE_MUTEX(probes_settings_mutex)
 
             preferences.begin(PREFERENCES_NAMESPACE_PROBES, false);
             preferences.putFloat(PREFERENCES_KEY_PROBES_V1_MIN, probes_settings.voltage_probe_v1_min);
@@ -119,15 +117,14 @@ static void settings_save_task_func(void *params) {
             preferences.end();
 
             // Release probes settings lock
-            xSemaphoreGive(probes_settings_mutex);
+            RELEASE_MUTEX(probes_settings_mutex)
         }
 
         if ((settings_types & SETTINGS_TYPE_OTA) != 0) {
             Serial.println("OTA settings have changed, saving new values...");
 
             // Acquire OTA settings lock
-            while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
-                ;
+            TAKE_MUTEX(ota_settings_mutex)
 
             preferences.begin(PREFERENCES_NAMESPACE_OTA, false);
             preferences.putString(PREFERENCES_KEY_OTA_LOGIN, ota_settings.login);
@@ -135,7 +132,7 @@ static void settings_save_task_func(void *params) {
             preferences.end();
 
             // Release OTA settings lock
-            xSemaphoreGive(ota_settings_mutex);
+            RELEASE_MUTEX(ota_settings_mutex)
         }
 
         // Wait a little bit before the next check
@@ -145,8 +142,7 @@ static void settings_save_task_func(void *params) {
 
 void settings_init() {
     // Acquire bed settings lock
-    while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdPASS)
-        ;
+    TAKE_MUTEX(bed_settings_mutex)
 
     Serial.println("Loading bed settings... ");
     preferences.begin(PREFERENCES_NAMESPACE_BED, true);
@@ -169,11 +165,10 @@ void settings_init() {
     preferences.end();
 
     // Release bed settings lock
-    xSemaphoreGive(bed_settings_mutex);
+    RELEASE_MUTEX(bed_settings_mutex)
 
     // Acquire probes settings lock
-    while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdPASS)
-        ;
+    TAKE_MUTEX(probes_settings_mutex)
     Serial.println("Loading probes settings... ");
     preferences.begin(PREFERENCES_NAMESPACE_PROBES, true);
 
@@ -195,11 +190,10 @@ void settings_init() {
     preferences.end();
 
     // Release probes settings lock
-    xSemaphoreGive(probes_settings_mutex);
+    RELEASE_MUTEX(probes_settings_mutex)
 
     // Acquire OTA settings lock
-    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
-        ;
+    TAKE_MUTEX(ota_settings_mutex)
     Serial.println("Loading OTA settings... ");
     preferences.begin(PREFERENCES_NAMESPACE_OTA, true);
 
@@ -215,7 +209,7 @@ void settings_init() {
     preferences.end();
 
     // Release probes settings lock
-    xSemaphoreGive(ota_settings_mutex);
+    RELEASE_MUTEX(ota_settings_mutex)
 
     // Start saving task
     xTaskCreatePinnedToCore(

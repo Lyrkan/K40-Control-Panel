@@ -2,9 +2,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <lvgl.h>
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <AsyncElegantOTA.h>
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
 
@@ -18,12 +15,12 @@
 #include "UI/screens/status.h"
 #include "UI/display.h"
 #include "UI/ui.h"
-#include "api.h"
 #include "cpu_monitor.h"
+#include "macros.h"
 #include "settings.h"
+#include "webserver.h"
 #include "wifi.h"
 
-static AsyncWebServer server(80);
 static LGFX tft;
 static uint16_t touch_calibration_data[] = {274, 3922, 312, 255, 3845, 3918, 3814, 242};
 
@@ -65,8 +62,7 @@ void state_update_task_func(void *params) {
 
     while (true) {
         // Take probes settings mutex
-        while (xSemaphoreTake(probes_settings_mutex, portMAX_DELAY) != pdPASS)
-            ;
+        TAKE_MUTEX(probes_settings_mutex)
 
         // Update sensors
         voltage_probes_update_status(&adc_chars);
@@ -78,7 +74,7 @@ void state_update_task_func(void *params) {
         relays_update();
 
         // Release probes settings mutex
-        xSemaphoreGive(probes_settings_mutex);
+        RELEASE_MUTEX(probes_settings_mutex)
     }
 }
 
@@ -90,14 +86,13 @@ void bed_update_task_func(void *params) {
 
     while (true) {
         // Take bed settings mutex
-        while (xSemaphoreTake(bed_settings_mutex, portMAX_DELAY) != pdPASS)
-            ;
+        TAKE_MUTEX(bed_settings_mutex)
 
         // Update the bed and get its new status
         BedState new_state = bed_update();
 
         // Release bed settings mutex
-        xSemaphoreGive(bed_settings_mutex);
+        RELEASE_MUTEX(bed_settings_mutex)
 
         // If the bed is idling don't update it for a while
         if (new_state == BED_STATE_IDLE) {
@@ -160,27 +155,17 @@ void setup() {
     /* Setup interrupts */
     attachInterrupt(PIN_COOLING_FLOW, cooling_flow_probe_interrupt, FALLING);
 
-    /* Initialize relays state/pins */
-    relays_init();
-
     /* Initialize UI */
     ui_init();
 
     /* Initialize WiFi */
     wifi_init();
 
-    /* Initialize API */
-    api_init(&server);
-
     /* Initialize CPU monitoring task */
     cpu_monitor_init();
 
-    /* Initialize ElegantOTA */
-    while (xSemaphoreTake(ota_settings_mutex, portMAX_DELAY) != pdPASS)
-        ;
-    AsyncElegantOTA.begin(&server, ota_settings.login, ota_settings.password);
-    xSemaphoreGive(ota_settings_mutex);
-    server.begin();
+    /* Initialize Webserver */
+    webserver_init();
 
     /* Start state update loop */
     xTaskCreatePinnedToCore(
@@ -209,16 +194,11 @@ void setup() {
  * UI update loop
  */
 void loop() {
-#ifdef DEBUG
-    xSemaphoreTake(api_snapshot_mutex, portMAX_DELAY);
-#endif
-
+    // Avoid updating the screen when the webserver is taking a screenshot
+    TAKE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
     ui_update();
     lv_timer_handler();
-
-#ifdef DEBUG
-    xSemaphoreGive(api_snapshot_mutex);
-#endif
+    RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
 
     delay(5);
 }

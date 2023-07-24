@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include "cpu_monitor.h"
+#include "macros.h"
 
 SemaphoreHandle_t cpu_monitor_stats_mutex = xSemaphoreCreateMutex();
 float_t cpu_monitor_load_0 = 0;
@@ -61,9 +62,9 @@ static void cpu_monitor_task(void *param) {
         xEventGroupClearBits(cpu_load_event_group, 0x01);
         vTaskDelay(1 / portTICK_RATE_MS);
 
-        xSemaphoreTake(cpu_monitor_stats_mutex, portMAX_DELAY);
+        TAKE_MUTEX(cpu_monitor_stats_mutex)
         cpu_monitor_load_0 = max(0., 100 - idle_counter / 10.);
-        xSemaphoreGive(cpu_monitor_stats_mutex);
+        RELEASE_MUTEX(cpu_monitor_stats_mutex)
 
         // CPU1
         idle_counter = 0;
@@ -72,9 +73,9 @@ static void cpu_monitor_task(void *param) {
         xEventGroupClearBits(cpu_load_event_group, 0x02);
         vTaskDelay(1 / portTICK_RATE_MS);
 
-        xSemaphoreTake(cpu_monitor_stats_mutex, portMAX_DELAY);
+        TAKE_MUTEX(cpu_monitor_stats_mutex)
         cpu_monitor_load_1 = max(0., 100 - idle_counter / 10.);
-        xSemaphoreGive(cpu_monitor_stats_mutex);
+        RELEASE_MUTEX(cpu_monitor_stats_mutex)
 
         // Wait 10s for the next measurement
         vTaskDelay(1000 / portTICK_RATE_MS);

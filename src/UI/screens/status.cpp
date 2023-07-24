@@ -48,10 +48,9 @@ static lv_obj_t *ui_status_heap;
 static lv_obj_t *ui_status_cpu_0;
 static lv_obj_t *ui_status_cpu_1;
 
-void ui_status_init() {
-    ui_status_screen = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(ui_status_screen, lv_color_hex(0xFAFAFA), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_clear_flag(ui_status_screen, LV_OBJ_FLAG_SCROLLABLE);
+static void ui_status_init_screen_content() {
+    // Make sure the screen is empty
+    lv_obj_clean(ui_status_screen);
 
     ui_status_main_panel = lv_obj_create(ui_status_screen);
     lv_obj_set_width(ui_status_main_panel, 460);
@@ -278,6 +277,30 @@ void ui_status_init() {
     lv_label_set_text(ui_status_heap, "");
     lv_obj_set_style_text_color(ui_status_heap, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_status_heap, &font_default_12, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    // Force the first update
+    ui_status_update(true);
+};
+
+void ui_status_init() {
+    ui_status_screen = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(ui_status_screen, lv_color_hex(0xFAFAFA), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_clear_flag(ui_status_screen, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(
+        ui_status_screen,
+        [](lv_event_t *e) -> void {
+            lv_event_code_t event_code = lv_event_get_code(e);
+            switch (event_code) {
+            case LV_EVENT_SCREEN_LOAD_START:
+                ui_status_init_screen_content();
+                break;
+            case LV_EVENT_SCREEN_UNLOADED:
+                lv_obj_clean(ui_status_screen);
+                break;
+            }
+        },
+        LV_EVENT_ALL,
+        NULL);
 }
 
 static void updateWarningIcon(lv_obj_t *warning_icon, bool show) {
@@ -292,7 +315,11 @@ static void updateWarningIcon(lv_obj_t *warning_icon, bool show) {
     }
 }
 
-void ui_status_update() {
+void ui_status_update(bool initialize) {
+    if (!initialize && (lv_scr_act() != ui_status_screen)) {
+        return;
+    }
+
     static VoltageProbesValues voltage_probes_values;
     static CoolingValues cooling_values;
     static LidsStates lids_states;
@@ -309,10 +336,10 @@ void ui_status_update() {
     static char cpu_status_1[250];
 
     uint8_t pending_updates = xEventGroupGetBits(ui_status_event_group);
-    bool pending_voltage_update = (pending_updates & STATUS_UPDATE_PROBE_VOLTAGE) != 0;
-    bool pending_cooling_update = (pending_updates & STATUS_UPDATE_PROBE_COOLING) != 0;
-    bool pending_lids_update = (pending_updates & STATUS_UPDATE_PROBE_LIDS) != 0;
-    bool pending_flame_sensor_update = (pending_updates & STATUS_UPDATE_PROBE_FLAME_SENSOR) != 0;
+    bool pending_voltage_update = initialize || ((pending_updates & STATUS_UPDATE_PROBE_VOLTAGE) != 0);
+    bool pending_cooling_update = initialize || ((pending_updates & STATUS_UPDATE_PROBE_COOLING) != 0);
+    bool pending_lids_update = initialize || ((pending_updates & STATUS_UPDATE_PROBE_LIDS) != 0);
+    bool pending_flame_sensor_update = initialize || ((pending_updates & STATUS_UPDATE_PROBE_FLAME_SENSOR) != 0);
 
     uint8_t alerts_status = alerts_get_current_alerts();
 
@@ -379,7 +406,7 @@ void ui_status_update() {
     }
 
     unsigned long delta_time = current_time - system_status_last_update;
-    if (delta_time >= STATUS_SYSTEM_UPDATE_INTERVAL) {
+    if (initialize || (delta_time >= STATUS_SYSTEM_UPDATE_INTERVAL)) {
         snprintf(
             heap_status,
             ARRAY_SIZE(heap_status),
@@ -387,10 +414,10 @@ void ui_status_update() {
             ESP.getFreeHeap() / 1024,
             ESP.getHeapSize() / 1024);
 
-        xSemaphoreTake(cpu_monitor_stats_mutex, portMAX_DELAY);
+        TAKE_MUTEX(cpu_monitor_stats_mutex)
         snprintf(cpu_status_0, ARRAY_SIZE(cpu_status_0), "Core #0: %.2f%%", cpu_monitor_load_0);
         snprintf(cpu_status_1, ARRAY_SIZE(cpu_status_1), "Core #1: %.2f%%", cpu_monitor_load_1);
-        xSemaphoreGive(cpu_monitor_stats_mutex);
+        RELEASE_MUTEX(cpu_monitor_stats_mutex)
 
         lv_label_set_text(ui_status_heap, heap_status);
         lv_label_set_text(ui_status_cpu_0, cpu_status_0);

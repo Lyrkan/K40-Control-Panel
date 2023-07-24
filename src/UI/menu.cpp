@@ -36,13 +36,13 @@ void ui_menu_button_event_handler(lv_event_t *e) {
     }
 
     // Switch screen
-    if (target == ui_menu_status_button) {
+    if ((target == ui_menu_status_button) && (lv_scr_act() != ui_status_screen)) {
         lv_scr_load(ui_status_screen);
-    } else if (target == ui_menu_controls_button) {
+    } else if ((target == ui_menu_controls_button) && (lv_scr_act() != ui_controls_screen)) {
         lv_scr_load(ui_controls_screen);
-    } else if (target == ui_menu_bed_button) {
+    } else if ((target == ui_menu_bed_button) && (lv_scr_act() != ui_bed_screen)) {
         lv_scr_load(ui_bed_screen);
-    } else if (target == ui_menu_settings_button) {
+    } else if ((target == ui_menu_settings_button) && (lv_scr_act() != ui_settings_screen)) {
         lv_scr_load(ui_settings_screen);
     }
 

@@ -6,10 +6,8 @@
 #define SETTINGS_STATE_UPDATE_INTERVAL 500 // ms
 
 extern lv_obj_t *ui_settings_screen;
-extern lv_obj_t *ui_settings_wifi_ssid_value;
-extern lv_obj_t *ui_settings_wifi_connect_button;
 
 void ui_settings_init();
-void ui_settings_update();
+void ui_settings_update(bool initialize = false);
 
 #endif

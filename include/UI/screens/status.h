@@ -15,7 +15,7 @@ enum StatusUpdateType {
 extern lv_obj_t *ui_status_screen;
 
 void ui_status_init();
-void ui_status_update();
+void ui_status_update(bool initialize = false);
 void ui_status_notify_update(uint8_t update_types);
 
 #endif

@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <lvgl.h>
 
+#include "K40/relays.h"
 #include "UI/images.h"
 #include "UI/overlay.h"
 #include "UI/screens/controls.h"
@@ -37,7 +38,8 @@ void ui_overlay_init() {
 }
 
 void ui_overlay_update() {
-    if (lv_obj_has_state(ui_controls_laser_switch, LV_STATE_CHECKED)) {
+    const bool laserPinEnabled = digitalRead(PIN_RELAY_LASER) == RELAY_PIN_STATE_ENABLED;
+    if (laserPinEnabled) {
         if (lv_obj_has_flag(ui_overlay_laser_enabled_label, LV_OBJ_FLAG_HIDDEN)) {
             lv_obj_clear_flag(ui_overlay_laser_enabled_label, LV_OBJ_FLAG_HIDDEN);
         }

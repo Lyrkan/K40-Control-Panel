@@ -2,14 +2,14 @@
 #include <freertos/semphr.h>
 
 #include "K40/alerts.h"
+#include "macros.h"
 #include "queues.h"
 
 static uint8_t alerts_status = 0;
 static SemaphoreHandle_t alerts_status_mutex = xSemaphoreCreateMutex();
 
 void alerts_toggle_alert(AlertType type, bool enable) {
-    while (xSemaphoreTake(alerts_status_mutex, portMAX_DELAY) != pdPASS)
-        ;
+    TAKE_MUTEX(alerts_status_mutex)
 
     if (enable) {
         alerts_status |= type;
@@ -17,15 +17,14 @@ void alerts_toggle_alert(AlertType type, bool enable) {
         alerts_status &= ~type;
     }
 
-    xSemaphoreGive(alerts_status_mutex);
+    RELEASE_MUTEX(alerts_status_mutex)
 }
 
 uint8_t alerts_get_current_alerts() {
-    while (xSemaphoreTake(alerts_status_mutex, portMAX_DELAY) != pdPASS)
-        ;
+    TAKE_MUTEX(alerts_status_mutex)
 
     uint8_t result = alerts_status;
-    xSemaphoreGive(alerts_status_mutex);
+    RELEASE_MUTEX(alerts_status_mutex)
 
     return result;
 }

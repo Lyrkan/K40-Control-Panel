@@ -26,6 +26,7 @@ def upload_cb(source, target, env):
         env.Execute("$PYTHONEXE -m pip install python-dotenv")
         from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
         from tqdm import tqdm
+        from dotenv import load_dotenv
 
     load_dotenv()
 

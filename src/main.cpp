@@ -75,6 +75,9 @@ void state_update_task_func(void *params) {
 
         // Release probes settings mutex
         RELEASE_MUTEX(probes_settings_mutex)
+
+        // Let other tasks do their thing
+        yield();
     }
 }
 
@@ -94,9 +97,12 @@ void bed_update_task_func(void *params) {
         // Release bed settings mutex
         RELEASE_MUTEX(bed_settings_mutex)
 
-        // If the bed is idling don't update it for a while
         if (new_state == BED_STATE_IDLE) {
-            delay(BED_IDLE_UPDATE_INTERVAL);
+            // If the bed is idling don't update it for a while
+            vTaskDelay(pdMS_TO_TICKS(BED_IDLE_UPDATE_INTERVAL));
+        } else {
+            // Let other tasks do their thing
+            yield();
         }
     }
 }
@@ -200,5 +206,5 @@ void loop() {
     lv_timer_handler();
     RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
 
-    delay(5);
+    vTaskDelay(pdMS_TO_TICKS(5));
 }

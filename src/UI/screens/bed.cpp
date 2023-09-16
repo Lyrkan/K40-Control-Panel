@@ -46,8 +46,8 @@ static void ui_bed_button_handler(lv_event_t *e) {
     } else if (event_target == ui_bed_go_down_button || event_target == ui_bed_go_up_button) {
         const BedCommand bed_command = {
             .type = BED_COMMAND_MOVE_RELATIVE,
-            .value = (event_target == ui_bed_go_down_button ? -1 : 1) *
-                     static_cast<float_t>(atof(lv_textarea_get_text(ui_bed_textarea))),
+            .value_nm = (event_target == ui_bed_go_down_button ? -1 : 1) * 1000000 *
+                        static_cast<float_t>(atof(lv_textarea_get_text(ui_bed_textarea))),
         };
         xQueueOverwrite(bed_command_queue, &bed_command);
     }
@@ -337,20 +337,20 @@ void ui_bed_update(bool initialize) {
                     formatted_current_position,
                     ARRAY_SIZE(formatted_current_position),
                     "%.2fmm",
-                    current_bed_status.current.position);
+                    current_bed_status.current.position_nm / 1000000);
                 lv_label_set_text(ui_bed_current_position_value, formatted_current_position);
             } else {
                 lv_label_set_text(ui_bed_current_position_value, "-");
             }
 
             // Update target position
-            if (current_bed_status.target.is_set) {
+            if (current_bed_status.current.is_set && current_bed_status.target.is_set) {
                 char formatted_target_position[10];
                 snprintf(
                     formatted_target_position,
                     ARRAY_SIZE(formatted_target_position),
                     "%.2fmm",
-                    current_bed_status.target.position);
+                    current_bed_status.target.position_nm / 1000000);
                 lv_label_set_text(ui_bed_target_position_value, formatted_target_position);
             } else {
                 lv_label_set_text(ui_bed_target_position_value, "-");

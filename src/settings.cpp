@@ -12,10 +12,9 @@ static const char PREFERENCES_NAMESPACE_BED[] = "bed-settings";
 static const char PREFERENCES_NAMESPACE_PROBES[] = "probes-settings";
 static const char PREFERENCES_NAMESPACE_OTA[] = "ota-settings";
 
-static const char PREFERENCES_KEY_BED_SCREW_PITCH[] = "screw-pitch";
+static const char PREFERENCES_KEY_BED_SCREW_PITCH[] = "screw-pitch-um";
 static const char PREFERENCES_KEY_BED_MICROSTEP_MULTIPLIER[] = "microstep-mul";
 static const char PREFERENCES_KEY_BED_STEPS_PER_REVOLUTION[] = "steps-per-rev";
-static const char PREFERENCES_KEY_BED_ACCELERATION[] = "acceleration";
 static const char PREFERENCES_KEY_BED_MOVE_SPEED[] = "move-speed";
 static const char PREFERENCES_KEY_BED_HOMING_SPEED[] = "homing-speed";
 static const char PREFERENCES_KEY_BED_ORIGIN[] = "origin";
@@ -41,13 +40,12 @@ SemaphoreHandle_t probes_settings_mutex = xSemaphoreCreateMutex();
 SemaphoreHandle_t ota_settings_mutex = xSemaphoreCreateMutex();
 
 BedSettings bed_settings = {
-    .screw_pitch = 0.8,
+    .screw_pitch_um = 800,
     .microstep_multiplier = 8,
     .steps_per_revolution = 200,
-    .acceleration = 500,
-    .moving_speed = 1500,
-    .homing_speed = 1000,
-    .origin = {.is_set = false, .position = 0}};
+    .moving_speed = 4500,
+    .homing_speed = 3000,
+    .origin = {.is_set = false, .position_nm = 0}};
 
 ProbesSettings probes_settings = {
     .voltage_probe_v1_min = 4.0,
@@ -82,14 +80,13 @@ static void settings_save_task_func(void *params) {
             TAKE_MUTEX(bed_settings_mutex)
 
             preferences.begin(PREFERENCES_NAMESPACE_BED, false);
-            preferences.putFloat(PREFERENCES_KEY_BED_SCREW_PITCH, bed_settings.screw_pitch);
+            preferences.putUInt(PREFERENCES_KEY_BED_SCREW_PITCH, bed_settings.screw_pitch_um);
             preferences.putUInt(PREFERENCES_KEY_BED_MICROSTEP_MULTIPLIER, bed_settings.microstep_multiplier);
             preferences.putUInt(PREFERENCES_KEY_BED_STEPS_PER_REVOLUTION, bed_settings.steps_per_revolution);
-            preferences.putUInt(PREFERENCES_KEY_BED_ACCELERATION, bed_settings.acceleration);
             preferences.putUInt(PREFERENCES_KEY_BED_MOVE_SPEED, bed_settings.moving_speed);
             preferences.putUInt(PREFERENCES_KEY_BED_HOMING_SPEED, bed_settings.homing_speed);
             if (bed_settings.origin.is_set) {
-                preferences.putFloat(PREFERENCES_KEY_BED_ORIGIN, bed_settings.origin.position);
+                preferences.putInt(PREFERENCES_KEY_BED_ORIGIN, bed_settings.origin.position_nm);
             }
             preferences.end();
 
@@ -136,7 +133,7 @@ static void settings_save_task_func(void *params) {
         }
 
         // Wait a little bit before the next check
-        delay(SETTINGS_UPDATE_INTERVAL);
+        vTaskDelay(pdMS_TO_TICKS(SETTINGS_UPDATE_INTERVAL));
     }
 }
 
@@ -149,15 +146,14 @@ void settings_init() {
 
     // clang-format off
     bed_settings = {
-        .screw_pitch = preferences.getFloat(PREFERENCES_KEY_BED_SCREW_PITCH, bed_settings.screw_pitch),
+        .screw_pitch_um = preferences.getUInt(PREFERENCES_KEY_BED_SCREW_PITCH, bed_settings.screw_pitch_um),
         .microstep_multiplier = preferences.getUInt(PREFERENCES_KEY_BED_MICROSTEP_MULTIPLIER, bed_settings.microstep_multiplier),
         .steps_per_revolution = preferences.getUInt(PREFERENCES_KEY_BED_STEPS_PER_REVOLUTION, bed_settings.steps_per_revolution),
-        .acceleration = preferences.getUInt(PREFERENCES_KEY_BED_ACCELERATION, bed_settings.acceleration),
         .moving_speed = preferences.getUInt(PREFERENCES_KEY_BED_MOVE_SPEED, bed_settings.moving_speed),
         .homing_speed = preferences.getUInt(PREFERENCES_KEY_BED_HOMING_SPEED, bed_settings.homing_speed),
         .origin = {
             .is_set = preferences.isKey(PREFERENCES_KEY_BED_ORIGIN),
-            .position = preferences.getFloat(PREFERENCES_KEY_BED_ORIGIN),
+            .position_nm = preferences.getInt(PREFERENCES_KEY_BED_ORIGIN),
         }
     };
     // clang-format on

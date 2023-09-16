@@ -3,7 +3,15 @@
 
 #include <math.h>
 
+#define BED_STEP_TIMER_ID 0
 #define BED_IDLE_UPDATE_INTERVAL 500
+#define BED_RUNNING_UPDATE_INTERVAL 100
+
+enum BedDirection {
+    BED_DIR_DOWN = -1,
+    BED_DIR_UNKNOWN = 0,
+    BED_DIR_UP = 1
+};
 
 enum BedStepperPin {
     PIN_BED_STEP = 16,
@@ -29,13 +37,13 @@ enum BedCommandType {
 typedef struct BedCommand BedCommand;
 struct BedCommand {
     BedCommandType type;
-    float_t value;
+    int32_t value_nm;
 };
 
 typedef struct BedPosition BedPosition;
 struct BedPosition {
     bool is_set;
-    float_t position;
+    int32_t position_nm;
 };
 
 typedef struct BedStatus BedStatus;

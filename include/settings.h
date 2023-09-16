@@ -17,10 +17,9 @@ enum SettingsType {
 
 typedef struct BedSettings BedSettings;
 struct BedSettings {
-    float_t screw_pitch;
+    uint32_t screw_pitch_um;
     uint32_t microstep_multiplier;
     uint32_t steps_per_revolution;
-    uint32_t acceleration;
     uint32_t moving_speed;
     uint32_t homing_speed;
     BedPosition origin;

@@ -23,7 +23,7 @@ static void cpu_monitor_idle_task(void *cpu_idle_bit) {
     while (true) {
         xEventGroupWaitBits(cpu_load_event_group, (int)cpu_idle_bit, false, false, portMAX_DELAY);
         start = millis();
-        vTaskDelay(0 / portTICK_RATE_MS);
+        vTaskDelay(0);
         end = millis();
         idle_counter += (end - start);
     }
@@ -58,9 +58,9 @@ static void cpu_monitor_task(void *param) {
         // CPU 0
         idle_counter = 0;
         xEventGroupSetBits(cpu_load_event_group, 0x01);
-        vTaskDelay(1000 / portTICK_RATE_MS);
+        vTaskDelay(pdMS_TO_TICKS(1000));
         xEventGroupClearBits(cpu_load_event_group, 0x01);
-        vTaskDelay(1 / portTICK_RATE_MS);
+        vTaskDelay(pdMS_TO_TICKS(1));
 
         TAKE_MUTEX(cpu_monitor_stats_mutex)
         cpu_monitor_load_0 = max(0., 100 - idle_counter / 10.);
@@ -69,16 +69,16 @@ static void cpu_monitor_task(void *param) {
         // CPU1
         idle_counter = 0;
         xEventGroupSetBits(cpu_load_event_group, 0x02);
-        vTaskDelay(1000 / portTICK_RATE_MS);
+        vTaskDelay(pdMS_TO_TICKS(1000));
         xEventGroupClearBits(cpu_load_event_group, 0x02);
-        vTaskDelay(1 / portTICK_RATE_MS);
+        vTaskDelay(pdMS_TO_TICKS(1));
 
         TAKE_MUTEX(cpu_monitor_stats_mutex)
         cpu_monitor_load_1 = max(0., 100 - idle_counter / 10.);
         RELEASE_MUTEX(cpu_monitor_stats_mutex)
 
         // Wait 10s for the next measurement
-        vTaskDelay(1000 / portTICK_RATE_MS);
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 

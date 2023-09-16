@@ -12,7 +12,7 @@
 
 static CoolingValues cooling_values;
 
-static uint32_t cooling_flow_interrupt_counter = 0;
+static volatile uint32_t cooling_flow_interrupt_counter = 0;
 void IRAM_ATTR cooling_flow_probe_interrupt() { cooling_flow_interrupt_counter++; }
 
 void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {

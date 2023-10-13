@@ -11,7 +11,6 @@
 #include "K40/flame_sensor.h"
 #include "K40/lids.h"
 #include "K40/relays.h"
-#include "K40/voltage_probes.h"
 #include "UI/screens/status.h"
 #include "UI/display.h"
 #include "UI/ui.h"
@@ -65,7 +64,6 @@ void state_update_task_func(void *params) {
         TAKE_MUTEX(probes_settings_mutex)
 
         // Update sensors
-        voltage_probes_update_status(&adc_chars);
         cooling_update_status(&adc_chars);
         lids_update_status();
         flame_sensor_update_status();
@@ -117,6 +115,7 @@ void setup() {
 
     /* Load settings */
     settings_init();
+    Serial.println("Init");
 
     /* Initialize LGFX/LVGL */
     tft.begin();
@@ -140,26 +139,28 @@ void setup() {
     lv_indev_drv_register(&indev_drv);
 
     /* Setup pins */
-    pinMode(PIN_VOLTAGE_PROBE_1, INPUT);
-    pinMode(PIN_VOLTAGE_PROBE_2, INPUT);
-    pinMode(PIN_VOLTAGE_PROBE_3, INPUT);
     pinMode(PIN_LID_STATUS_FRONT, INPUT);
     pinMode(PIN_LID_STATUS_BACK, INPUT_PULLUP);
     pinMode(PIN_FLAME_SENSOR, INPUT_PULLUP);
-    pinMode(PIN_RELAY_LASER, OUTPUT);
-    pinMode(PIN_RELAY_AIR_ASSIST, OUTPUT);
-    pinMode(PIN_RELAY_COOLING, OUTPUT);
-    pinMode(PIN_RELAY_ALARM, OUTPUT);
-    pinMode(PIN_RELAY_LIGHTS, OUTPUT);
-    pinMode(PIN_RELAY_BEAM_PREVIEW, OUTPUT);
-    pinMode(PIN_COOLING_THERMISTOR, INPUT);
-    pinMode(PIN_COOLING_FLOW, INPUT_PULLUP);
+    pinMode(RELAY_PIN_INTERLOCK, OUTPUT);
+    pinMode(RELAY_PIN_AIR_ASSIST, OUTPUT);
+    pinMode(RELAY_PIN_ALARM, OUTPUT);
+    pinMode(RELAY_PIN_LIGHTS, OUTPUT);
+    pinMode(RELAY_PIN_BEAM_PREVIEW, OUTPUT);
+    pinMode(PIN_COOLING_THERMISTOR_IN, INPUT);
+    pinMode(PIN_COOLING_FLOW_IN, INPUT_PULLUP);
+    pinMode(PIN_COOLING_THERMISTOR_OUT, INPUT);
+    pinMode(PIN_COOLING_FLOW_OUT, INPUT_PULLUP);
     pinMode(PIN_BED_STEP, OUTPUT);
     pinMode(PIN_BED_DIR, OUTPUT);
     pinMode(PIN_BED_LIMIT, INPUT_PULLUP);
 
+    /* Set default state for relays */
+    relays_init();
+
     /* Setup interrupts */
-    attachInterrupt(PIN_COOLING_FLOW, cooling_flow_probe_interrupt, FALLING);
+    attachInterrupt(PIN_COOLING_FLOW_IN, cooling_flow_input_probe_interrupt, FALLING);
+    attachInterrupt(PIN_COOLING_FLOW_OUT, cooling_flow_output_probe_interrupt, FALLING);
 
     /* Initialize UI */
     ui_init();

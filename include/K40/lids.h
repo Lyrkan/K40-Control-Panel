@@ -1,16 +1,15 @@
 #ifndef K40_LIDS_H
 #define K40_LIDS_H
 
-enum LidPin {
+typedef enum {
     PIN_LID_STATUS_FRONT = 35,
     PIN_LID_STATUS_BACK = 32
-};
+} LidPin;
 
-typedef struct LidsStates LidsStates;
-struct LidsStates {
+typedef struct {
     bool front_opened;
     bool back_opened;
-};
+} LidsStates;
 
 void lids_update_status();
 

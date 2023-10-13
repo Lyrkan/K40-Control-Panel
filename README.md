@@ -22,21 +22,19 @@
 
 What it **CAN** do:
 
--   Monitor coolant flow and temperature (using a "YF-B4"-type sensor and a thermistor)
+-   Monitor input/output coolant flow and temperature (using "YF-B4"-type sensors and thermistors)
 -   Monitor lids opening (using two microswitches)
--   Monitor 3 separate voltages (< 50V, they have to share the same ground as the control board)
 -   Monitor for fire (using an LM393 IR flame sensor module)
--   Control a 6 channels relays board for:
-    -   CO2 laser activation (the main switch on an vanilla K40, not the "fire" button)
+-   Control a 3 channels relays board for:
+    -   CO2 laser activation (the main switch/interlock on an vanilla K40, not the "fire" button)
     -   Air-assist activation
-    -   Cooling activation
-    -   Lights activation
-    -   Positioning laser diodes activation
     -   Alarm activation
+-   Control 12V lights
+-   Control 5V laser diodes
 -   Control a motorized bed (based on [this design](https://civade.com/post/2020/08/23/D%c3%a9coupe-laser-CO2-K40-:-R%c3%a9alisation-d-un-lit-motoris%c3%a9), but it should work with other ones as long as the stepper can be controled using a DRV8825 driver)
 -   Expose sensors/state data through an API **(unstable)**
 
-What it **CANNOT** do:
+What it **CANNOT** do yet:
 
 -   Move the laser head
 -   Trigger the CO2 laser
@@ -50,25 +48,27 @@ For the control panel:
 -   1x NodeMCU-32 (38 pins)
 -   1x ILI9488 3.95" LCD screen
 -   1x DRV8825 stepper driver
--   2x 10kΩ 1/4W resistor
--   3x 27kΩ 1/4W resistors
--   3x 470kΩ 1/4W resistors
+-   1x L7805CV 5V regulator
+-   2x IRLML6244 N-channel MOSFETs
+-   2x 1N4007 diodes
+-   5x 10kΩ 1/4W R1206 SMD resistors
+-   2x 220Ω 1/4W R1206 SMD resistors
 -   1x 0.1uF electrolytic capacitor
 -   1x 100uF electrolytic capacitor
--   3x 0.1uF ceramic capacitors
--   2x 2P PCB terminal blocks (5mm pitch)
--   some 2.54mm pin headers / XH connectors
+-   1x 2P PCB terminal blocks (5mm pitch)
+-   some 2.54mm pin headers / XH connectors / jumpers
 
 Other things you may need:
 
 -   1x motorized bed with a NEMA17 stepper and a limit switch
--   1x 6 channel relay board
+-   1x 3 channel relay board
 -   1x air compressor for air assist
--   1x YF-B4 flow sensor with a thermistor (preferably one with a 50kΩ resistance at 25°C and B=3950K)
+-   2x YF-B4 flow sensor with a thermistor (preferably one with a 50kΩ resistance at 25°C and B=3950K)
 -   1x LM393 IR flame sensor module
 -   2x micro switches
 -   1x (or 2x depending on your needs) 5V laser diodes
--   1x 12V blinking light
+-   1x 12V LED light (for the enclosure)
+-   1x 12V blinking light (for the alarm)
 
 ## Building the firmware
 
@@ -143,14 +143,15 @@ GET http://<YOUR_PANEL_IP>/api/sensors
 ```json
 {
     "sensors": {
-        "voltages": {
-            "v1": 4.900000095,
-            "v2": 12.10000038,
-            "v3": 18
-        },
         "cooling": {
-            "flow": 5.619999886,
-            "temp": 18.89999962
+            "flow": {
+                "input": 5.619999886,
+                "output": 5.60124556
+            },
+            "temp": {
+                "input": 18.89999962,
+                "output": 21.3
+            }
         },
         "lids": {
             "front": "opened",
@@ -172,7 +173,6 @@ GET http://<YOUR_PANEL_IP>/api/alerts
 ```json
 {
     "alerts": {
-        "voltages": true,
         "cooling": false,
         "lids": true,
         "flame_sensor": false
@@ -180,7 +180,7 @@ GET http://<YOUR_PANEL_IP>/api/alerts
 }
 ```
 
-### Relays activation state
+### Relays/MOSFETs activation state
 
 ```
 GET http://<YOUR_PANEL_IP>/api/relays
@@ -189,7 +189,7 @@ GET http://<YOUR_PANEL_IP>/api/relays
 ```json
 {
     "relays": {
-        "laser": false,
+        "interlock": false,
         "air_assist": true,
         "cooling": true,
         "alarm": false,

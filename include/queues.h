@@ -10,7 +10,6 @@ extern QueueHandle_t bed_command_queue;
 extern QueueHandle_t cooling_current_status_queue;
 extern QueueHandle_t flame_sensor_current_status_queue;
 extern QueueHandle_t lids_current_status_queue;
-extern QueueHandle_t voltage_current_status_queue;
 
 extern QueueHandle_t relays_command_queue;
 

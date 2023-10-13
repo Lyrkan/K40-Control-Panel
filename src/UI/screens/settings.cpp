@@ -37,12 +37,6 @@ static lv_obj_t *ui_settings_bed_steps_per_revolution_value;
 static lv_obj_t *ui_settings_bed_moving_speed_value;
 static lv_obj_t *ui_settings_bed_homing_speed_value;
 
-static lv_obj_t *ui_settings_probes_v1_min_value;
-static lv_obj_t *ui_settings_probes_v1_max_value;
-static lv_obj_t *ui_settings_probes_v2_min_value;
-static lv_obj_t *ui_settings_probes_v2_max_value;
-static lv_obj_t *ui_settings_probes_v3_min_value;
-static lv_obj_t *ui_settings_probes_v3_max_value;
 static lv_obj_t *ui_settings_probes_cooling_flow_min_value;
 static lv_obj_t *ui_settings_probes_cooling_flow_max_value;
 static lv_obj_t *ui_settings_probes_cooling_temp_min_value;
@@ -99,34 +93,16 @@ static void ui_settings_load_probes_settings() {
     // Acquire probes settings mutex
     TAKE_MUTEX(probes_settings_mutex)
 
-    static char v1_min_text[10];
-    static char v1_max_text[10];
-    static char v2_min_text[10];
-    static char v2_max_text[10];
-    static char v3_min_text[10];
-    static char v3_max_text[10];
     static char cooling_flow_min_text[10];
     static char cooling_flow_max_text[10];
     static char cooling_temp_min_text[10];
     static char cooling_temp_max_text[10];
 
-    snprintf(v1_min_text, ARRAY_SIZE(v1_min_text), "%.2f", probes_settings.voltage_probe_v1_min);
-    snprintf(v1_max_text, ARRAY_SIZE(v1_max_text), "%.2f", probes_settings.voltage_probe_v1_max);
-    snprintf(v2_min_text, ARRAY_SIZE(v2_min_text), "%.2f", probes_settings.voltage_probe_v2_min);
-    snprintf(v2_max_text, ARRAY_SIZE(v2_max_text), "%.2f", probes_settings.voltage_probe_v2_max);
-    snprintf(v3_min_text, ARRAY_SIZE(v3_min_text), "%.2f", probes_settings.voltage_probe_v3_min);
-    snprintf(v3_max_text, ARRAY_SIZE(v3_max_text), "%.2f", probes_settings.voltage_probe_v3_max);
     snprintf(cooling_flow_min_text, ARRAY_SIZE(cooling_flow_min_text), "%.2f", probes_settings.cooling_flow_min);
     snprintf(cooling_flow_max_text, ARRAY_SIZE(cooling_flow_max_text), "%.2f", probes_settings.cooling_flow_max);
     snprintf(cooling_temp_min_text, ARRAY_SIZE(cooling_temp_min_text), "%.2f", probes_settings.cooling_temp_min);
     snprintf(cooling_temp_max_text, ARRAY_SIZE(cooling_temp_max_text), "%.2f", probes_settings.cooling_temp_max);
 
-    lv_textarea_set_text(ui_settings_probes_v1_min_value, v1_min_text);
-    lv_textarea_set_text(ui_settings_probes_v1_max_value, v1_max_text);
-    lv_textarea_set_text(ui_settings_probes_v2_min_value, v2_min_text);
-    lv_textarea_set_text(ui_settings_probes_v2_max_value, v2_max_text);
-    lv_textarea_set_text(ui_settings_probes_v3_min_value, v3_min_text);
-    lv_textarea_set_text(ui_settings_probes_v3_max_value, v3_max_text);
     lv_textarea_set_text(ui_settings_probes_cooling_flow_min_value, cooling_flow_min_text);
     lv_textarea_set_text(ui_settings_probes_cooling_flow_max_value, cooling_flow_max_text);
     lv_textarea_set_text(ui_settings_probes_cooling_temp_min_value, cooling_temp_min_text);
@@ -140,18 +116,6 @@ static void ui_settings_save_probes_settings() {
     // Acquire probes settings mutex
     TAKE_MUTEX(probes_settings_mutex)
 
-    probes_settings.voltage_probe_v1_min =
-        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_v1_min_value)));
-    probes_settings.voltage_probe_v1_max =
-        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_v1_max_value)));
-    probes_settings.voltage_probe_v2_min =
-        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_v2_min_value)));
-    probes_settings.voltage_probe_v2_max =
-        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_v2_max_value)));
-    probes_settings.voltage_probe_v3_min =
-        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_v3_min_value)));
-    probes_settings.voltage_probe_v3_max =
-        static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_v3_max_value)));
     probes_settings.cooling_flow_min =
         static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_probes_cooling_flow_min_value)));
     probes_settings.cooling_flow_max =
@@ -256,9 +220,6 @@ static void ui_settings_field_value_changed_handler(lv_event_t *e) {
             target == ui_settings_bed_homing_speed_value) {
             ui_settings_save_bed_settings();
         } else if (
-            target == ui_settings_probes_v1_min_value || target == ui_settings_probes_v1_max_value ||
-            target == ui_settings_probes_v2_min_value || target == ui_settings_probes_v2_max_value ||
-            target == ui_settings_probes_v3_min_value || target == ui_settings_probes_v3_max_value ||
             target == ui_settings_probes_cooling_flow_min_value ||
             target == ui_settings_probes_cooling_flow_max_value ||
             target == ui_settings_probes_cooling_temp_min_value ||
@@ -469,12 +430,6 @@ static void ui_settings_init_screen_content() {
     ui_settings_bed_homing_speed_value = ui_settings_create_textarea_field(ui_settings_bed_page, "Homing speed");
 
     // Probes page
-    ui_settings_probes_v1_min_value = ui_settings_create_textarea_field(ui_settings_probes_page, "V1 min");
-    ui_settings_probes_v1_max_value = ui_settings_create_textarea_field(ui_settings_probes_page, "V1 max");
-    ui_settings_probes_v2_min_value = ui_settings_create_textarea_field(ui_settings_probes_page, "V2 min");
-    ui_settings_probes_v2_max_value = ui_settings_create_textarea_field(ui_settings_probes_page, "V2 max");
-    ui_settings_probes_v3_min_value = ui_settings_create_textarea_field(ui_settings_probes_page, "V3 min");
-    ui_settings_probes_v3_max_value = ui_settings_create_textarea_field(ui_settings_probes_page, "V3 max");
     ui_settings_probes_cooling_flow_min_value =
         ui_settings_create_textarea_field(ui_settings_probes_page, "Cool. flow min (L/mn)");
     ui_settings_probes_cooling_flow_max_value =

@@ -19,12 +19,6 @@ static const char PREFERENCES_KEY_BED_MOVE_SPEED[] = "move-speed";
 static const char PREFERENCES_KEY_BED_HOMING_SPEED[] = "homing-speed";
 static const char PREFERENCES_KEY_BED_ORIGIN[] = "origin";
 
-static const char PREFERENCES_KEY_PROBES_V1_MIN[] = "v1_min";
-static const char PREFERENCES_KEY_PROBES_V1_MAX[] = "v1_max";
-static const char PREFERENCES_KEY_PROBES_V2_MIN[] = "v2_min";
-static const char PREFERENCES_KEY_PROBES_V2_MAX[] = "v2_max";
-static const char PREFERENCES_KEY_PROBES_V3_MIN[] = "v3_min";
-static const char PREFERENCES_KEY_PROBES_V3_MAX[] = "v3_max";
 static const char PREFERENCES_KEY_PROBES_COOLING_FLOW_MIN[] = "cool_flow_min";
 static const char PREFERENCES_KEY_PROBES_COOLING_FLOW_MAX[] = "cool_flow_max";
 static const char PREFERENCES_KEY_PROBES_COOLING_TEMP_MIN[] = "cool_temp_min";
@@ -48,12 +42,6 @@ BedSettings bed_settings = {
     .origin = {.is_set = false, .position_nm = 0}};
 
 ProbesSettings probes_settings = {
-    .voltage_probe_v1_min = 4.0,
-    .voltage_probe_v1_max = 5.5,
-    .voltage_probe_v2_min = 11.0,
-    .voltage_probe_v2_max = 12.5,
-    .voltage_probe_v3_min = 24.0,
-    .voltage_probe_v3_max = 25.5,
     .cooling_flow_min = 1.0,
     .cooling_flow_max = 99.0,
     .cooling_temp_min = 5.0,
@@ -101,12 +89,6 @@ static void settings_save_task_func(void *params) {
             TAKE_MUTEX(probes_settings_mutex)
 
             preferences.begin(PREFERENCES_NAMESPACE_PROBES, false);
-            preferences.putFloat(PREFERENCES_KEY_PROBES_V1_MIN, probes_settings.voltage_probe_v1_min);
-            preferences.putFloat(PREFERENCES_KEY_PROBES_V1_MAX, probes_settings.voltage_probe_v1_max);
-            preferences.putFloat(PREFERENCES_KEY_PROBES_V2_MIN, probes_settings.voltage_probe_v2_min);
-            preferences.putFloat(PREFERENCES_KEY_PROBES_V2_MAX, probes_settings.voltage_probe_v2_max);
-            preferences.putFloat(PREFERENCES_KEY_PROBES_V3_MIN, probes_settings.voltage_probe_v3_min);
-            preferences.putFloat(PREFERENCES_KEY_PROBES_V3_MAX, probes_settings.voltage_probe_v3_max);
             preferences.putFloat(PREFERENCES_KEY_PROBES_COOLING_FLOW_MIN, probes_settings.cooling_flow_min);
             preferences.putFloat(PREFERENCES_KEY_PROBES_COOLING_FLOW_MAX, probes_settings.cooling_flow_max);
             preferences.putFloat(PREFERENCES_KEY_PROBES_COOLING_TEMP_MIN, probes_settings.cooling_temp_min);
@@ -170,12 +152,6 @@ void settings_init() {
 
     // clang-format off
     probes_settings = {
-        .voltage_probe_v1_min = preferences.getFloat(PREFERENCES_KEY_PROBES_V1_MIN, probes_settings.voltage_probe_v1_min),
-        .voltage_probe_v1_max = preferences.getFloat(PREFERENCES_KEY_PROBES_V1_MAX, probes_settings.voltage_probe_v1_max),
-        .voltage_probe_v2_min = preferences.getFloat(PREFERENCES_KEY_PROBES_V2_MIN, probes_settings.voltage_probe_v2_min),
-        .voltage_probe_v2_max = preferences.getFloat(PREFERENCES_KEY_PROBES_V2_MAX, probes_settings.voltage_probe_v2_max),
-        .voltage_probe_v3_min = preferences.getFloat(PREFERENCES_KEY_PROBES_V3_MIN, probes_settings.voltage_probe_v3_min),
-        .voltage_probe_v3_max = preferences.getFloat(PREFERENCES_KEY_PROBES_V3_MAX, probes_settings.voltage_probe_v3_max),
         .cooling_flow_min = preferences.getFloat(PREFERENCES_KEY_PROBES_COOLING_FLOW_MIN, probes_settings.cooling_flow_min),
         .cooling_flow_max = preferences.getFloat(PREFERENCES_KEY_PROBES_COOLING_FLOW_MAX, probes_settings.cooling_flow_max),
         .cooling_temp_min = preferences.getFloat(PREFERENCES_KEY_PROBES_COOLING_TEMP_MIN, probes_settings.cooling_temp_min),

@@ -46,8 +46,8 @@ static void ui_bed_button_handler(lv_event_t *e) {
     } else if (event_target == ui_bed_go_down_button || event_target == ui_bed_go_up_button) {
         const BedCommand bed_command = {
             .type = BED_COMMAND_MOVE_RELATIVE,
-            .value_nm = (event_target == ui_bed_go_down_button ? -1 : 1) * 1000000 *
-                        static_cast<float_t>(atof(lv_textarea_get_text(ui_bed_textarea))),
+            .value_nm = (event_target == ui_bed_go_down_button ? -1 : 1) *
+                        static_cast<int32_t>(1000000 * atof(lv_textarea_get_text(ui_bed_textarea))),
         };
         xQueueOverwrite(bed_command_queue, &bed_command);
     }

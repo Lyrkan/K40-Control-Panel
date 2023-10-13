@@ -5,12 +5,12 @@
 
 #define STATUS_SYSTEM_UPDATE_INTERVAL 500
 
-enum StatusUpdateType {
+typedef enum {
     STATUS_UPDATE_PROBE_VOLTAGE = 0x01,
     STATUS_UPDATE_PROBE_COOLING = 0x02,
     STATUS_UPDATE_PROBE_LIDS = 0x04,
     STATUS_UPDATE_PROBE_FLAME_SENSOR = 0x08,
-};
+} StatusUpdateType;
 
 extern lv_obj_t *ui_status_screen;
 

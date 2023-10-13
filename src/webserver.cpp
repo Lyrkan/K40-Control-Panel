@@ -13,7 +13,6 @@
 #include "K40/alerts.h"
 #include "K40/cooling.h"
 #include "K40/lids.h"
-#include "K40/voltage_probes.h"
 #include "K40/relays.h"
 #include "UI/display.h"
 #include "cpu_monitor.h"
@@ -57,27 +56,20 @@ static void handleApiSensorsRequest(AsyncWebServerRequest *request) {
     JsonVariant &state = response->getRoot();
 
     // Retrieve sensors values
-    VoltageProbesValues voltage_probes_values;
     CoolingValues cooling_values;
     LidsStates lids_states;
     bool flame_sensor_triggered;
 
-    if (xQueuePeek(voltage_current_status_queue, &voltage_probes_values, 100.f / portTICK_RATE_MS) == pdTRUE) {
-        state["sensors"]["voltages"]["v1"] = voltage_probes_values.probe1;
-        state["sensors"]["voltages"]["v2"] = voltage_probes_values.probe2;
-        state["sensors"]["voltages"]["v3"] = voltage_probes_values.probe3;
-    } else {
-        state["sensors"]["voltages"]["v1"] = nullptr;
-        state["sensors"]["voltages"]["v2"] = nullptr;
-        state["sensors"]["voltages"]["v3"] = nullptr;
-    }
-
     if (xQueuePeek(cooling_current_status_queue, &cooling_values, 100.f / portTICK_RATE_MS) == pdTRUE) {
-        state["sensors"]["cooling"]["flow"] = cooling_values.flow;
-        state["sensors"]["cooling"]["temp"] = cooling_values.temperature;
+        state["sensors"]["cooling"]["flow"]["input"] = cooling_values.input_flow;
+        state["sensors"]["cooling"]["flow"]["output"] = cooling_values.output_flow;
+        state["sensors"]["cooling"]["temp"]["input"] = cooling_values.input_temperature;
+        state["sensors"]["cooling"]["temp"]["output"] = cooling_values.output_temperature;
     } else {
-        state["sensors"]["cooling"]["flow"] = nullptr;
-        state["sensors"]["cooling"]["temp"] = nullptr;
+        state["sensors"]["cooling"]["flow"]["input"] = nullptr;
+        state["sensors"]["cooling"]["flow"]["output"] = nullptr;
+        state["sensors"]["cooling"]["temp"]["input"] = nullptr;
+        state["sensors"]["cooling"]["temp"]["output"] = nullptr;
     }
 
     if (xQueuePeek(lids_current_status_queue, &lids_states, 100.f / portTICK_RATE_MS) == pdTRUE) {
@@ -105,7 +97,6 @@ static void handleApiAlertsRequest(AsyncWebServerRequest *request) {
 
     // Retrieve alerts
     uint8_t alerts_status = alerts_get_current_alerts();
-    state["alerts"]["voltages"] = (alerts_status & ALERT_TYPE_VOLTAGE) != 0;
     state["alerts"]["cooling"] = (alerts_status & ALERT_TYPE_COOLING) != 0;
     state["alerts"]["lids"] = (alerts_status & ALERT_TYPE_LIDS) != 0;
     state["alerts"]["flame_sensor"] = (alerts_status & ALERT_TYPE_FLAME_SENSOR) != 0;
@@ -120,12 +111,11 @@ static void handleApiRelaysRequest(AsyncWebServerRequest *request) {
     JsonVariant &state = response->getRoot();
 
     // Retrieve relays state from the queue object
-    state["relays"]["laser"] = digitalRead(PIN_RELAY_LASER) == RELAY_PIN_STATE_ENABLED;
-    state["relays"]["air_assist"] = digitalRead(PIN_RELAY_AIR_ASSIST) == RELAY_PIN_STATE_ENABLED;
-    state["relays"]["cooling"] = digitalRead(PIN_RELAY_COOLING) == RELAY_PIN_STATE_ENABLED;
-    state["relays"]["alarm"] = digitalRead(PIN_RELAY_ALARM) == RELAY_PIN_STATE_ENABLED;
-    state["relays"]["lights"] = digitalRead(PIN_RELAY_LIGHTS) == RELAY_PIN_STATE_ENABLED;
-    state["relays"]["beam_preview"] = digitalRead(PIN_RELAY_BEAM_PREVIEW) == RELAY_PIN_STATE_ENABLED;
+    state["relays"]["interlock"] = relays_is_enabled(RELAY_PIN_INTERLOCK);
+    state["relays"]["air_assist"] = relays_is_enabled(RELAY_PIN_AIR_ASSIST);
+    state["relays"]["alarm"] = relays_is_enabled(RELAY_PIN_ALARM);
+    state["relays"]["lights"] = relays_is_enabled(RELAY_PIN_LIGHTS);
+    state["relays"]["beam_preview"] = relays_is_enabled(RELAY_PIN_BEAM_PREVIEW);
 
     // Serialize JSON data and send it to the client
     response->setLength();
@@ -205,6 +195,8 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
         });
 }
 
+static void handleNotFoundRequest(AsyncWebServerRequest *request) { request->send(404, "text/plain", "Not Found"); }
+
 void webserver_init() {
     // APIs
     server.on("/api/info", HTTP_GET, handleApiInfoRequest);
@@ -217,6 +209,9 @@ void webserver_init() {
     // $ wget http://<YOUR_PANEL_IP>/screenshot
     // $ convert -size 480x320 -depth 8 -separate -swap 0,2 -combine rgba:screenshot screenshot.jpg
     server.on("/screenshot", HTTP_GET, handleScreenshotRequest);
+
+    // 404
+    server.onNotFound(handleNotFoundRequest);
 
     /* Initialize ElegantOTA */
     TAKE_MUTEX(ota_settings_mutex)

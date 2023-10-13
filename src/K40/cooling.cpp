@@ -12,22 +12,42 @@
 
 static CoolingValues cooling_values;
 
-static volatile uint32_t cooling_flow_interrupt_counter = 0;
-void IRAM_ATTR cooling_flow_probe_interrupt() { cooling_flow_interrupt_counter++; }
+static volatile uint32_t cooling_flow_input_interrupt_counter = 0;
+void IRAM_ATTR cooling_flow_input_probe_interrupt() { cooling_flow_input_interrupt_counter++; }
+
+static volatile uint32_t cooling_flow_output_interrupt_counter = 0;
+void IRAM_ATTR cooling_flow_output_probe_interrupt() { cooling_flow_output_interrupt_counter++; }
+
+static float_t cooling_seinhart_hart_temperature(float_t thermistor_value) {
+    float_t temperature = log(thermistor_value / COOLING_THERMISTOR_NOMINAL_RESISTANCE);
+    temperature /= COOLING_THERMISTOR_COEFF;
+    temperature += 1.0 / (COOLING_THERMISTOR_NOMINAL_TEMPERATURE + 273.15);
+    temperature = 1.0 / temperature;
+    temperature -= 273.15;
+    return temperature;
+}
 
 void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {
     bool cooling_values_updated = false;
 
     /* Update cooling temperature */
-    static float_t cooling_thermistor_buffer[COOLING_THERMISTOR_BUFFER_LENGTH];
+    static float_t cooling_input_thermistor_buffer[COOLING_THERMISTOR_BUFFER_LENGTH];
+    static float_t cooling_output_thermistor_buffer[COOLING_THERMISTOR_BUFFER_LENGTH];
     static uint32_t cooling_thermistor_buffer_index = 0;
 
-    float_t thermistor_pin_voltage = (float_t)esp_adc_cal_raw_to_voltage(analogRead(PIN_COOLING_THERMISTOR), adc_chars);
+    float_t input_thermistor_pin_voltage =
+        (float_t)esp_adc_cal_raw_to_voltage(analogRead(PIN_COOLING_THERMISTOR_IN), adc_chars);
 
-    // Add current thermistor resistance to the buffer
-    cooling_thermistor_buffer[cooling_thermistor_buffer_index] =
-        (thermistor_pin_voltage * COOLING_THERMISTOR_VOLTAGE_DIVIDER_RESISTANCE) /
-        (COOLING_THERMISTOR_REF_VOLTAGE - thermistor_pin_voltage);
+    float_t output_thermistor_pin_voltage =
+        (float_t)esp_adc_cal_raw_to_voltage(analogRead(PIN_COOLING_THERMISTOR_OUT), adc_chars);
+
+    // Add current thermistors resistances to the buffers
+    cooling_input_thermistor_buffer[cooling_thermistor_buffer_index] =
+        (input_thermistor_pin_voltage * COOLING_THERMISTOR_VOLTAGE_DIVIDER_RESISTANCE) /
+        (COOLING_THERMISTOR_REF_VOLTAGE - input_thermistor_pin_voltage);
+    cooling_output_thermistor_buffer[cooling_thermistor_buffer_index] =
+        (output_thermistor_pin_voltage * COOLING_THERMISTOR_VOLTAGE_DIVIDER_RESISTANCE) /
+        (COOLING_THERMISTOR_REF_VOLTAGE - input_thermistor_pin_voltage);
     cooling_thermistor_buffer_index++;
 
     // If the buffer is full compute the average temperature
@@ -36,20 +56,18 @@ void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {
         cooling_thermistor_buffer_index = 0;
 
         // Compute average buffer value
-        float_t average_thermistor_value = 0;
+        float_t average_input_thermistor_value = 0;
+        float_t average_output_thermistor_value = 0;
         for (uint32_t i = 0; i < COOLING_THERMISTOR_BUFFER_LENGTH; i++) {
-            average_thermistor_value += cooling_thermistor_buffer[cooling_thermistor_buffer_index];
+            average_input_thermistor_value += cooling_input_thermistor_buffer[cooling_thermistor_buffer_index];
+            average_output_thermistor_value += cooling_output_thermistor_buffer[cooling_thermistor_buffer_index];
         }
-        average_thermistor_value /= COOLING_THERMISTOR_BUFFER_LENGTH;
+        average_input_thermistor_value /= COOLING_THERMISTOR_BUFFER_LENGTH;
+        average_output_thermistor_value /= COOLING_THERMISTOR_BUFFER_LENGTH;
 
         // Seinhart-Hart equation
-        float_t cooling_temperature = log(average_thermistor_value / COOLING_THERMISTOR_NOMINAL_RESISTANCE);
-        cooling_temperature /= COOLING_THERMISTOR_COEFF;
-        cooling_temperature += 1.0 / (COOLING_THERMISTOR_NOMINAL_TEMPERATURE + 273.15);
-        cooling_temperature = 1.0 / cooling_temperature;
-        cooling_temperature -= 273.15;
-
-        cooling_values.temperature = cooling_temperature;
+        cooling_values.input_temperature = cooling_seinhart_hart_temperature(average_input_thermistor_value);
+        cooling_values.output_temperature = cooling_seinhart_hart_temperature(average_output_thermistor_value);
         cooling_values_updated = true;
     }
 
@@ -63,11 +81,13 @@ void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {
     unsigned long delta_time = current_time - cooling_flow_last_update;
     if (delta_time >= COOLING_FLOW_UPDATE_INTERVAL) {
         // F = 11 * Q ± 5% , Q = L/min
-        cooling_values.flow = (cooling_flow_interrupt_counter / 11) / ((float_t)delta_time / 1000);
+        cooling_values.input_flow = (cooling_flow_input_interrupt_counter / 11) / ((float_t)delta_time / 1000);
+        cooling_values.output_flow = (cooling_flow_output_interrupt_counter / 11) / ((float_t)delta_time / 1000);
         cooling_values_updated = true;
 
         // Reset counter
-        cooling_flow_interrupt_counter = 0;
+        cooling_flow_input_interrupt_counter = 0;
+        cooling_flow_output_interrupt_counter = 0;
         cooling_flow_last_update = current_time;
     }
 
@@ -75,10 +95,14 @@ void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {
     if (cooling_values_updated) {
         // Change alert state
         bool enable_alert =
-            (cooling_values.temperature < probes_settings.cooling_temp_min ||
-             cooling_values.temperature > probes_settings.cooling_temp_max ||
-             cooling_values.flow < probes_settings.cooling_flow_min ||
-             cooling_values.flow > probes_settings.cooling_temp_max);
+            (cooling_values.input_temperature < probes_settings.cooling_temp_min ||
+             cooling_values.input_temperature > probes_settings.cooling_temp_max ||
+             cooling_values.input_flow < probes_settings.cooling_flow_min ||
+             cooling_values.input_flow > probes_settings.cooling_temp_max ||
+             cooling_values.output_temperature < probes_settings.cooling_temp_min ||
+             cooling_values.output_temperature > probes_settings.cooling_temp_max ||
+             cooling_values.output_flow < probes_settings.cooling_flow_min ||
+             cooling_values.output_flow > probes_settings.cooling_temp_max);
 
         alerts_toggle_alert(ALERT_TYPE_COOLING, enable_alert);
 

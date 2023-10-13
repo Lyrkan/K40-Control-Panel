@@ -1,25 +1,26 @@
 #ifndef K40_RELAYS_H
 #define K40_RELAYS_H
 
-#define RELAY_PIN_STATE_ENABLED LOW
-#define RELAY_PIN_STATE_DISABLED HIGH
+typedef enum {
+    RELAY_STATE_ENABLED,
+    RELAY_STATE_DISABLED
+} RelayState;
 
-enum RelayPin {
-    PIN_RELAY_LASER = 14,
-    PIN_RELAY_AIR_ASSIST = 12,
-    PIN_RELAY_COOLING = 13,
-    PIN_RELAY_ALARM = 4,
-    PIN_RELAY_LIGHTS = 0,
-    PIN_RELAY_BEAM_PREVIEW = 26
-};
+typedef enum {
+    RELAY_PIN_INTERLOCK = 12,
+    RELAY_PIN_AIR_ASSIST = 14,
+    RELAY_PIN_ALARM = 4,
+    RELAY_PIN_LIGHTS = 13,
+    RELAY_PIN_BEAM_PREVIEW = 26
+} RelayPin;
 
-typedef struct RelaysCommand RelaysCommand;
-struct RelaysCommand {
+typedef struct {
     RelayPin pin;
-    bool enable;
-};
+    RelayState state;
+} RelaysCommand;
 
 void relays_init();
+bool relays_is_enabled(RelayPin pin);
 void relays_update();
 
 #endif

@@ -15,7 +15,7 @@ static volatile BedStatus bed_current_status = {
 
 void IRAM_ATTR bed_step_interrupt() {
     if ((bed_current_direction == BED_DIR_UNKNOWN) || (bed_step_interrupt_remaining_steps == 0) ||
-        (digitalRead(PIN_BED_LIMIT) == LOW)) {
+        (digitalRead(PIN_BED_LIMIT) == LOW) && bed_current_direction != BED_DIR_UP) {
         bed_step_interrupt_remaining_steps = 0;
         return;
     }
@@ -39,41 +39,6 @@ static void bed_update_status_queue() {
         .origin = {.is_set = bed_current_status.origin.is_set, .position_nm = bed_current_status.origin.position_nm}};
 
     xQueueOverwrite(bed_current_status_queue, &bed_current_status_copy);
-}
-
-static void bed_run() {
-    // Check if there is still distance to go
-    if ((bed_current_status.state != BED_STATE_IDLE) && (bed_step_interrupt_remaining_steps == 0)) {
-        // Disable the interrupt timer
-        timerAlarmDisable(bed_step_interrupt_timer);
-
-        // Check if we reached the limit switch
-        if (digitalRead(PIN_BED_LIMIT) == LOW) {
-            Serial.println("Bed: Limit switch triggered");
-            bed_current_status.current.is_set = true;
-            if (bed_current_status.origin.is_set) {
-                bed_current_status.current.position_nm = bed_current_status.origin.position_nm;
-            } else {
-                bed_current_status.current.position_nm = 0;
-                bed_current_status.origin.position_nm = 0;
-                bed_current_status.origin.is_set = true;
-            }
-        }
-
-        // Go to idling mode
-        bed_current_status.state = BED_STATE_IDLE;
-        bed_current_status.target.is_set = false;
-        bed_update_status_queue();
-        return;
-    }
-
-    // Notify the UI every BED_RUNNING_UPDATE_INTERVAL milliseconds
-    unsigned long current_time = millis();
-    static unsigned long last_update_time = 0;
-    if ((current_time - last_update_time) >= BED_RUNNING_UPDATE_INTERVAL) {
-        last_update_time = current_time;
-        bed_update_status_queue();
-    }
 }
 
 static void bed_run_steps(uint32_t steps, BedDirection direction, uint32_t steps_per_second) {
@@ -158,6 +123,45 @@ static void bed_set_current_position_as_origin() {
         .is_set = bed_current_status.origin.is_set,
         .position_nm = bed_current_status.origin.position_nm};
     settings_schedule_save(SETTINGS_TYPE_BED);
+}
+
+static void bed_run() {
+    // Check if there is still distance to go
+    if ((bed_current_status.state != BED_STATE_IDLE) && (bed_step_interrupt_remaining_steps == 0)) {
+        // Disable the interrupt timer
+        timerAlarmDisable(bed_step_interrupt_timer);
+
+        // Check if we reached the limit switch
+        if (digitalRead(PIN_BED_LIMIT) == LOW) {
+            Serial.println("Bed: Limit switch triggered");
+            bed_current_status.current.is_set = true;
+            if (bed_current_status.origin.is_set) {
+                bed_current_status.current.position_nm = bed_current_status.origin.position_nm;
+            } else {
+                bed_current_status.current.position_nm = 0;
+                bed_current_status.origin.position_nm = 0;
+                bed_current_status.origin.is_set = true;
+            }
+
+            // Move 1cm up to make sure the limit switch is not triggered anymore
+            bed_move_relative(10000000);
+        } else {
+            // Go to idling mode
+            bed_current_status.state = BED_STATE_IDLE;
+            bed_current_status.target.is_set = false;
+            bed_update_status_queue();
+        }
+
+        return;
+    }
+
+    // Notify the UI every BED_RUNNING_UPDATE_INTERVAL milliseconds
+    unsigned long current_time = millis();
+    static unsigned long last_update_time = 0;
+    if ((current_time - last_update_time) >= BED_RUNNING_UPDATE_INTERVAL) {
+        last_update_time = current_time;
+        bed_update_status_queue();
+    }
 }
 
 void bed_init() {

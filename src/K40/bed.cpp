@@ -132,7 +132,8 @@ static void bed_run() {
         timerAlarmDisable(bed_step_interrupt_timer);
 
         // Check if we reached the limit switch
-        if (digitalRead(PIN_BED_LIMIT) == BED_LIMIT_PIN_ACTIVATION_STATE) {
+        if (digitalRead(PIN_BED_LIMIT) == BED_LIMIT_PIN_ACTIVATION_STATE &&
+            bed_current_status.state != BED_STATE_GOING_UP) {
             Serial.println("Bed: Limit switch triggered");
             bed_current_status.current.is_set = true;
             if (bed_current_status.origin.is_set) {

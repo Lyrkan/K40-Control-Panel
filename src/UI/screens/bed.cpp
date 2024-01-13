@@ -337,7 +337,7 @@ void ui_bed_update(bool initialize) {
                     formatted_current_position,
                     ARRAY_SIZE(formatted_current_position),
                     "%.2fmm",
-                    current_bed_status.current.position_nm / 1000000);
+                    current_bed_status.current.position_nm / 1000000.f);
                 lv_label_set_text(ui_bed_current_position_value, formatted_current_position);
             } else {
                 lv_label_set_text(ui_bed_current_position_value, "-");
@@ -350,7 +350,7 @@ void ui_bed_update(bool initialize) {
                     formatted_target_position,
                     ARRAY_SIZE(formatted_target_position),
                     "%.2fmm",
-                    current_bed_status.target.position_nm / 1000000);
+                    current_bed_status.target.position_nm / 1000000.f);
                 lv_label_set_text(ui_bed_target_position_value, formatted_target_position);
             } else {
                 lv_label_set_text(ui_bed_target_position_value, "-");

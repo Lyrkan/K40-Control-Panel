@@ -14,9 +14,6 @@ typedef enum {
     RELAY_PIN_BEAM_PREVIEW = 26
 } RelayPin;
 
-RelayPin relay_pins[] = {
-    RELAY_PIN_INTERLOCK, RELAY_PIN_AIR_ASSIST, RELAY_PIN_ALARM, RELAY_PIN_LIGHTS, RELAY_PIN_BEAM_PREVIEW};
-
 typedef struct {
     RelayPin pin;
     RelayState state;

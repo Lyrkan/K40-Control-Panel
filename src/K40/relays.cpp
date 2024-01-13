@@ -5,6 +5,9 @@
 #include "macros.h"
 #include "queues.h"
 
+static RelayPin relay_pins[] = {
+    RELAY_PIN_INTERLOCK, RELAY_PIN_AIR_ASSIST, RELAY_PIN_ALARM, RELAY_PIN_LIGHTS, RELAY_PIN_BEAM_PREVIEW};
+
 static inline uint8_t relays_get_pin_state_value(RelayPin pin, RelayState state) {
     switch (pin) {
     // Relays board

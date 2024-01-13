@@ -12,7 +12,7 @@ static const char PREFERENCES_NAMESPACE_BED[] = "bed-settings";
 static const char PREFERENCES_NAMESPACE_PROBES[] = "probes-settings";
 static const char PREFERENCES_NAMESPACE_OTA[] = "ota-settings";
 
-static const char PREFERENCES_KEY_BED_SCREW_PITCH[] = "screw-pitch-um";
+static const char PREFERENCES_KEY_BED_SCREW_LEAD[] = "screw-lead-um";
 static const char PREFERENCES_KEY_BED_MICROSTEP_MULTIPLIER[] = "microstep-mul";
 static const char PREFERENCES_KEY_BED_STEPS_PER_REVOLUTION[] = "steps-per-rev";
 static const char PREFERENCES_KEY_BED_MOVE_SPEED[] = "move-speed";
@@ -34,7 +34,7 @@ SemaphoreHandle_t probes_settings_mutex = xSemaphoreCreateMutex();
 SemaphoreHandle_t ota_settings_mutex = xSemaphoreCreateMutex();
 
 BedSettings bed_settings = {
-    .screw_pitch_um = 800,
+    .screw_lead_um = 8000,
     .microstep_multiplier = 8,
     .steps_per_revolution = 200,
     .moving_speed = 4500,
@@ -68,7 +68,7 @@ static void settings_save_task_func(void *params) {
             TAKE_MUTEX(bed_settings_mutex)
 
             preferences.begin(PREFERENCES_NAMESPACE_BED, false);
-            preferences.putUInt(PREFERENCES_KEY_BED_SCREW_PITCH, bed_settings.screw_pitch_um);
+            preferences.putUInt(PREFERENCES_KEY_BED_SCREW_LEAD, bed_settings.screw_lead_um);
             preferences.putUInt(PREFERENCES_KEY_BED_MICROSTEP_MULTIPLIER, bed_settings.microstep_multiplier);
             preferences.putUInt(PREFERENCES_KEY_BED_STEPS_PER_REVOLUTION, bed_settings.steps_per_revolution);
             preferences.putUInt(PREFERENCES_KEY_BED_MOVE_SPEED, bed_settings.moving_speed);
@@ -128,7 +128,7 @@ void settings_init() {
 
     // clang-format off
     bed_settings = {
-        .screw_pitch_um = preferences.getUInt(PREFERENCES_KEY_BED_SCREW_PITCH, bed_settings.screw_pitch_um),
+        .screw_lead_um = preferences.getUInt(PREFERENCES_KEY_BED_SCREW_LEAD, bed_settings.screw_lead_um),
         .microstep_multiplier = preferences.getUInt(PREFERENCES_KEY_BED_MICROSTEP_MULTIPLIER, bed_settings.microstep_multiplier),
         .steps_per_revolution = preferences.getUInt(PREFERENCES_KEY_BED_STEPS_PER_REVOLUTION, bed_settings.steps_per_revolution),
         .moving_speed = preferences.getUInt(PREFERENCES_KEY_BED_MOVE_SPEED, bed_settings.moving_speed),

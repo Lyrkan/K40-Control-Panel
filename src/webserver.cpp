@@ -111,11 +111,11 @@ static void handleApiRelaysRequest(AsyncWebServerRequest *request) {
     JsonVariant &state = response->getRoot();
 
     // Retrieve relays state from the queue object
-    state["relays"]["interlock"] = relays_is_enabled(RELAY_PIN_INTERLOCK);
-    state["relays"]["air_assist"] = relays_is_enabled(RELAY_PIN_AIR_ASSIST);
-    state["relays"]["alarm"] = relays_is_enabled(RELAY_PIN_ALARM);
-    state["relays"]["lights"] = relays_is_enabled(RELAY_PIN_LIGHTS);
-    state["relays"]["beam_preview"] = relays_is_enabled(RELAY_PIN_BEAM_PREVIEW);
+    state["relays"]["interlock"] = relays_is_active(RELAY_PIN_INTERLOCK);
+    state["relays"]["air_assist"] = relays_is_active(RELAY_PIN_AIR_ASSIST);
+    state["relays"]["alarm"] = relays_is_active(RELAY_PIN_ALARM);
+    state["relays"]["lights"] = relays_is_active(RELAY_PIN_LIGHTS);
+    state["relays"]["beam_preview"] = relays_is_active(RELAY_PIN_BEAM_PREVIEW);
 
     // Serialize JSON data and send it to the client
     response->setLength();

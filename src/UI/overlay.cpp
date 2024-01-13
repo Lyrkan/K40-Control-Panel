@@ -45,7 +45,7 @@ void ui_overlay_init() {
 }
 
 void ui_overlay_update() {
-    if (relays_is_enabled(RELAY_PIN_INTERLOCK)) {
+    if (relays_is_active(RELAY_PIN_INTERLOCK)) {
         if (lv_obj_has_flag(ui_overlay_interlock_enabled_label, LV_OBJ_FLAG_HIDDEN)) {
             lv_obj_clear_flag(ui_overlay_interlock_enabled_label, LV_OBJ_FLAG_HIDDEN);
         }

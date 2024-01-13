@@ -78,12 +78,12 @@ static void ui_status_init_screen_content() {
     lv_obj_set_height(ui_status_cooling_input_label, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_cooling_input_label, 70);
     lv_obj_set_y(ui_status_cooling_input_label, 7);
-    lv_label_set_text(ui_status_cooling_input_label, "Flow:\nTemp:");
+    lv_label_set_text(ui_status_cooling_input_label, "Input flow:\nInput temp:");
 
     ui_status_cooling_input_flow_bar = lv_bar_create(ui_status_main_panel);
     lv_obj_set_width(ui_status_cooling_input_flow_bar, 150);
     lv_obj_set_height(ui_status_cooling_input_flow_bar, 10);
-    lv_obj_set_x(ui_status_cooling_input_flow_bar, 120);
+    lv_obj_set_x(ui_status_cooling_input_flow_bar, 160);
     lv_obj_set_y(ui_status_cooling_input_flow_bar, 11);
 
     ui_status_cooling_input_flow_value = lv_label_create(ui_status_cooling_input_flow_bar);
@@ -100,7 +100,7 @@ static void ui_status_init_screen_content() {
     ui_status_cooling_input_temp_bar = lv_bar_create(ui_status_main_panel);
     lv_obj_set_width(ui_status_cooling_input_temp_bar, 150);
     lv_obj_set_height(ui_status_cooling_input_temp_bar, 10);
-    lv_obj_set_x(ui_status_cooling_input_temp_bar, 120);
+    lv_obj_set_x(ui_status_cooling_input_temp_bar, 160);
     lv_obj_set_y(ui_status_cooling_input_temp_bar, 28);
 
     ui_status_cooling_input_temp_value = lv_label_create(ui_status_cooling_input_temp_bar);
@@ -119,12 +119,12 @@ static void ui_status_init_screen_content() {
     lv_obj_set_height(ui_status_cooling_output_label, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_cooling_output_label, 70);
     lv_obj_set_y(ui_status_cooling_output_label, 51);
-    lv_label_set_text(ui_status_cooling_output_label, "Flow:\nTemp:");
+    lv_label_set_text(ui_status_cooling_output_label, "Output flow:\nOutput temp:");
 
     ui_status_cooling_output_flow_bar = lv_bar_create(ui_status_main_panel);
     lv_obj_set_width(ui_status_cooling_output_flow_bar, 150);
     lv_obj_set_height(ui_status_cooling_output_flow_bar, 10);
-    lv_obj_set_x(ui_status_cooling_output_flow_bar, 120);
+    lv_obj_set_x(ui_status_cooling_output_flow_bar, 160);
     lv_obj_set_y(ui_status_cooling_output_flow_bar, 55);
 
     ui_status_cooling_output_flow_value = lv_label_create(ui_status_cooling_output_flow_bar);
@@ -141,7 +141,7 @@ static void ui_status_init_screen_content() {
     ui_status_cooling_output_temp_bar = lv_bar_create(ui_status_main_panel);
     lv_obj_set_width(ui_status_cooling_output_temp_bar, 150);
     lv_obj_set_height(ui_status_cooling_output_temp_bar, 10);
-    lv_obj_set_x(ui_status_cooling_output_temp_bar, 120);
+    lv_obj_set_x(ui_status_cooling_output_temp_bar, 160);
     lv_obj_set_y(ui_status_cooling_output_temp_bar, 72);
 
     ui_status_cooling_output_temp_value = lv_label_create(ui_status_cooling_output_temp_bar);
@@ -176,12 +176,12 @@ static void ui_status_init_screen_content() {
     lv_obj_set_height(ui_status_lid_label, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_lid_label, 70);
     lv_obj_set_y(ui_status_lid_label, 115);
-    lv_label_set_text(ui_status_lid_label, "Front:\nBack:");
+    lv_label_set_text(ui_status_lid_label, "Front lid:\nBack lid:");
 
     ui_status_lid_front_value = lv_label_create(ui_status_main_panel);
     lv_obj_set_width(ui_status_lid_front_value, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_lid_front_value, LV_SIZE_CONTENT);
-    lv_obj_set_x(ui_status_lid_front_value, 115);
+    lv_obj_set_x(ui_status_lid_front_value, 135);
     lv_obj_set_y(ui_status_lid_front_value, 116);
     lv_label_set_text(ui_status_lid_front_value, "Unknown");
     lv_obj_set_style_text_color(ui_status_lid_front_value, lv_color_hex(0x777777), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -189,7 +189,7 @@ static void ui_status_init_screen_content() {
     ui_status_lid_back_value = lv_label_create(ui_status_main_panel);
     lv_obj_set_width(ui_status_lid_back_value, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_lid_back_value, LV_SIZE_CONTENT);
-    lv_obj_set_x(ui_status_lid_back_value, 115);
+    lv_obj_set_x(ui_status_lid_back_value, 135);
     lv_obj_set_y(ui_status_lid_back_value, 133);
     lv_label_set_text(ui_status_lid_back_value, "Unknown");
     lv_obj_set_style_text_color(ui_status_lid_back_value, lv_color_hex(0x777777), LV_PART_MAIN | LV_STATE_DEFAULT);

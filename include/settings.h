@@ -16,7 +16,7 @@ typedef enum {
 } SettingsType;
 
 typedef struct {
-    uint32_t screw_pitch_um;
+    uint32_t screw_lead_um;
     uint32_t microstep_multiplier;
     uint32_t steps_per_revolution;
     uint32_t moving_speed;

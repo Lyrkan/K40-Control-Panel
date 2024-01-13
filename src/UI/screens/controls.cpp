@@ -222,23 +222,28 @@ void ui_controls_update(bool initialize) {
 
     if (initialize || (delta_time > CONTROLS_STATE_UPDATE_INTERVAL)) {
         // Retrieve relays state from the queue object
-        const bool interlock_enabled = relays_is_enabled(RELAY_PIN_INTERLOCK);
-        const bool air_assist_enabled = relays_is_enabled(RELAY_PIN_AIR_ASSIST);
-        const bool lights_enabled = relays_is_enabled(RELAY_PIN_LIGHTS);
-        const bool beam_preview_enabled = relays_is_enabled(RELAY_PIN_BEAM_PREVIEW);
+        const bool interlock_active = relays_is_active(RELAY_PIN_INTERLOCK);
+        const bool air_assist_active = relays_is_active(RELAY_PIN_AIR_ASSIST);
+        const bool lights_active = relays_is_active(RELAY_PIN_LIGHTS);
+        const bool beam_preview_active = relays_is_active(RELAY_PIN_BEAM_PREVIEW);
+
+        const bool interlock_disabled = relays_is_disabled(RELAY_PIN_INTERLOCK);
 
         // Update switches to match the current state
-        interlock_enabled ? lv_obj_add_state(ui_controls_interlock_switch, LV_STATE_CHECKED)
-                          : lv_obj_clear_state(ui_controls_interlock_switch, LV_STATE_CHECKED);
+        interlock_active ? lv_obj_add_state(ui_controls_interlock_switch, LV_STATE_CHECKED)
+                         : lv_obj_clear_state(ui_controls_interlock_switch, LV_STATE_CHECKED);
 
-        air_assist_enabled ? lv_obj_add_state(ui_controls_air_assist_switch, LV_STATE_CHECKED)
-                           : lv_obj_clear_state(ui_controls_air_assist_switch, LV_STATE_CHECKED);
+        interlock_disabled ? lv_obj_add_state(ui_controls_interlock_switch, LV_STATE_DISABLED)
+                           : lv_obj_clear_state(ui_controls_interlock_switch, LV_STATE_DISABLED);
 
-        lights_enabled ? lv_obj_add_state(ui_controls_lights_switch, LV_STATE_CHECKED)
-                       : lv_obj_clear_state(ui_controls_lights_switch, LV_STATE_CHECKED);
+        air_assist_active ? lv_obj_add_state(ui_controls_air_assist_switch, LV_STATE_CHECKED)
+                          : lv_obj_clear_state(ui_controls_air_assist_switch, LV_STATE_CHECKED);
 
-        beam_preview_enabled ? lv_obj_add_state(ui_controls_preview_switch, LV_STATE_CHECKED)
-                             : lv_obj_clear_state(ui_controls_preview_switch, LV_STATE_CHECKED);
+        lights_active ? lv_obj_add_state(ui_controls_lights_switch, LV_STATE_CHECKED)
+                      : lv_obj_clear_state(ui_controls_lights_switch, LV_STATE_CHECKED);
+
+        beam_preview_active ? lv_obj_add_state(ui_controls_preview_switch, LV_STATE_CHECKED)
+                            : lv_obj_clear_state(ui_controls_preview_switch, LV_STATE_CHECKED);
 
         // Reset timer
         last_update = current_time;

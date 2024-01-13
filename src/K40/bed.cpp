@@ -27,7 +27,7 @@ void IRAM_ATTR bed_step_interrupt() {
 
     // Update current pos
     bed_current_status.current.position_nm +=
-        (1000 * bed_current_direction * (int32_t)bed_settings.screw_pitch_um) /
+        (1000 * bed_current_direction * (int32_t)bed_settings.screw_lead_um) /
         (int32_t)(bed_settings.steps_per_revolution * bed_settings.microstep_multiplier);
 }
 
@@ -75,7 +75,7 @@ static void bed_home() {
 static void bed_move_relative(float_t value_nm) {
     // Start the stepper with the amount of steps required
     uint32_t steps_to_run =
-        abs(value_nm / ((1000 * bed_settings.screw_pitch_um) /
+        abs(value_nm / ((1000 * bed_settings.screw_lead_um) /
                         (bed_settings.steps_per_revolution * bed_settings.microstep_multiplier)));
     bed_run_steps(steps_to_run, value_nm < 0 ? BED_DIR_DOWN : BED_DIR_UP, bed_settings.moving_speed);
 
@@ -96,8 +96,8 @@ static void bed_move_absolute(float_t value_nm) {
     // Start the stepper with the amount of steps required
     uint32_t target_absolute_delta_nm = abs(value_nm - bed_current_status.current.position_nm);
     uint32_t steps_to_run =
-        target_absolute_delta_nm / ((1000 * bed_settings.screw_pitch_um) /
-                                    (bed_settings.steps_per_revolution * bed_settings.microstep_multiplier));
+        target_absolute_delta_nm /
+        ((1000 * bed_settings.screw_lead_um) / (bed_settings.steps_per_revolution * bed_settings.microstep_multiplier));
     bed_run_steps(steps_to_run, BED_DIR_DOWN, bed_settings.moving_speed);
     bed_update_status_queue();
 

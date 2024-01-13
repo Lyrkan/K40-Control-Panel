@@ -31,7 +31,7 @@ static lv_obj_t *ui_settings_wifi_current_ip_label;
 static lv_obj_t *ui_settings_wifi_ssid_value;
 static lv_obj_t *ui_settings_wifi_connect_button;
 
-static lv_obj_t *ui_settings_bed_screw_pitch_value;
+static lv_obj_t *ui_settings_bed_screw_lead_value;
 static lv_obj_t *ui_settings_bed_microstep_multiplier_value;
 static lv_obj_t *ui_settings_bed_steps_per_revolution_value;
 static lv_obj_t *ui_settings_bed_moving_speed_value;
@@ -49,19 +49,19 @@ static void ui_settings_load_bed_settings() {
     // Acquire bed settings mutex
     TAKE_MUTEX(bed_settings_mutex)
 
-    static char screw_pitch_text[10];
+    static char screw_lead_text[10];
     static char microstep_multiplier_text[10];
     static char steps_per_revolution_text[10];
     static char moving_speed_text[10];
     static char homing_speed_text[10];
 
-    snprintf(screw_pitch_text, ARRAY_SIZE(screw_pitch_text), "%.2f", bed_settings.screw_pitch_um / 1000.f);
+    snprintf(screw_lead_text, ARRAY_SIZE(screw_lead_text), "%.2f", bed_settings.screw_lead_um / 1000.f);
     snprintf(microstep_multiplier_text, ARRAY_SIZE(microstep_multiplier_text), "%d", bed_settings.microstep_multiplier);
     snprintf(steps_per_revolution_text, ARRAY_SIZE(steps_per_revolution_text), "%d", bed_settings.steps_per_revolution);
     snprintf(moving_speed_text, ARRAY_SIZE(moving_speed_text), "%d", bed_settings.moving_speed);
     snprintf(homing_speed_text, ARRAY_SIZE(homing_speed_text), "%d", bed_settings.homing_speed);
 
-    lv_textarea_set_text(ui_settings_bed_screw_pitch_value, screw_pitch_text);
+    lv_textarea_set_text(ui_settings_bed_screw_lead_value, screw_lead_text);
     lv_textarea_set_text(ui_settings_bed_microstep_multiplier_value, microstep_multiplier_text);
     lv_textarea_set_text(ui_settings_bed_steps_per_revolution_value, steps_per_revolution_text);
     lv_textarea_set_text(ui_settings_bed_moving_speed_value, moving_speed_text);
@@ -75,8 +75,8 @@ static void ui_settings_save_bed_settings() {
     // Acquire bed settings mutex
     TAKE_MUTEX(bed_settings_mutex)
 
-    bed_settings.screw_pitch_um =
-        static_cast<uint32_t>(1000 * atof(lv_textarea_get_text(ui_settings_bed_screw_pitch_value)));
+    bed_settings.screw_lead_um =
+        static_cast<uint32_t>(1000 * atof(lv_textarea_get_text(ui_settings_bed_screw_lead_value)));
     bed_settings.microstep_multiplier =
         static_cast<uint32_t>(atoi(lv_textarea_get_text(ui_settings_bed_microstep_multiplier_value)));
     bed_settings.steps_per_revolution =
@@ -215,7 +215,7 @@ static void ui_settings_field_value_changed_handler(lv_event_t *e) {
     lv_obj_t *target = lv_event_get_target(e);
 
     if (code == LV_EVENT_VALUE_CHANGED) {
-        if (target == ui_settings_bed_screw_pitch_value || target == ui_settings_bed_microstep_multiplier_value ||
+        if (target == ui_settings_bed_screw_lead_value || target == ui_settings_bed_microstep_multiplier_value ||
             target == ui_settings_bed_steps_per_revolution_value || target == ui_settings_bed_moving_speed_value ||
             target == ui_settings_bed_homing_speed_value) {
             ui_settings_save_bed_settings();
@@ -421,7 +421,7 @@ static void ui_settings_init_screen_content() {
         LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Bed page
-    ui_settings_bed_screw_pitch_value = ui_settings_create_textarea_field(ui_settings_bed_page, "Screw pitch (mm)");
+    ui_settings_bed_screw_lead_value = ui_settings_create_textarea_field(ui_settings_bed_page, "Screw lead (mm)");
     ui_settings_bed_microstep_multiplier_value =
         ui_settings_create_textarea_field(ui_settings_bed_page, "Microsteps multiplier");
     ui_settings_bed_steps_per_revolution_value =

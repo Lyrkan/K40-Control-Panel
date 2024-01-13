@@ -38,7 +38,7 @@ bool relays_is_active(RelayPin pin) { return digitalRead(pin) == relays_get_pin_
 bool relays_is_disabled(RelayPin pin) {
     // Only the interlock pin can currently be in disabled state
     if (pin != RELAY_PIN_INTERLOCK) {
-        return true;
+        return false;
     }
 
     uint8_t alerts_status = alerts_get_current_alerts();

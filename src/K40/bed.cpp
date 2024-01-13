@@ -15,7 +15,7 @@ static volatile BedStatus bed_current_status = {
 
 void IRAM_ATTR bed_step_interrupt() {
     if ((bed_current_direction == BED_DIR_UNKNOWN) || (bed_step_interrupt_remaining_steps == 0) ||
-        (digitalRead(PIN_BED_LIMIT) == LOW) && bed_current_direction != BED_DIR_UP) {
+        (digitalRead(PIN_BED_LIMIT) == BED_LIMIT_PIN_ACTIVATION_STATE) && bed_current_direction != BED_DIR_UP) {
         bed_step_interrupt_remaining_steps = 0;
         return;
     }
@@ -132,7 +132,7 @@ static void bed_run() {
         timerAlarmDisable(bed_step_interrupt_timer);
 
         // Check if we reached the limit switch
-        if (digitalRead(PIN_BED_LIMIT) == LOW) {
+        if (digitalRead(PIN_BED_LIMIT) == BED_LIMIT_PIN_ACTIVATION_STATE) {
             Serial.println("Bed: Limit switch triggered");
             bed_current_status.current.is_set = true;
             if (bed_current_status.origin.is_set) {

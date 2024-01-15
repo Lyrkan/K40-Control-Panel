@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <math.h>
+
 #include "K40/bed.h"
 #include "queues.h"
 #include "settings.h"
@@ -134,11 +135,13 @@ static void bed_run() {
         // Check if we reached the limit switch
         if (digitalRead(PIN_BED_LIMIT) == BED_LIMIT_PIN_ACTIVATION_STATE &&
             bed_current_status.state != BED_STATE_GOING_UP) {
-            Serial.println("Bed: Limit switch triggered");
+            log_i("Bed limit switch triggered");
             bed_current_status.current.is_set = true;
             if (bed_current_status.origin.is_set) {
+                log_d("Bed current position set to origin (%dnm)", bed_current_status.origin.position_nm);
                 bed_current_status.current.position_nm = bed_current_status.origin.position_nm;
             } else {
+                log_d("Bed origin set to 0");
                 bed_current_status.current.position_nm = 0;
                 bed_current_status.origin.position_nm = 0;
                 bed_current_status.origin.is_set = true;
@@ -183,23 +186,23 @@ BedState bed_update() {
     if (xQueueReceive(bed_command_queue, &bed_command, 0) == pdTRUE) {
         switch (bed_command.type) {
         case BED_COMMAND_STOP:
-            Serial.println("Bed: Received STOP command");
+            log_i("Bed: Received STOP command");
             bed_stop();
             break;
         case BED_COMMAND_HOME:
-            Serial.println("Bed: Received HOME command");
+            log_i("Bed: Received HOME command");
             bed_home();
             break;
         case BED_COMMAND_MOVE_ABSOLUTE:
-            Serial.println("Bed: Received MOVE_ABSOLUTE command");
+            log_i("Bed: Received MOVE_ABSOLUTE command (value_nm=%d)", bed_command.value_nm);
             bed_move_absolute(bed_command.value_nm);
             break;
         case BED_COMMAND_MOVE_RELATIVE:
-            Serial.println("Bed: Received MOVE_RELATIVE command");
+            log_i("Bed: Received MOVE_RELATIVE command (value_nm=%d)", bed_command.value_nm);
             bed_move_relative(bed_command.value_nm);
             break;
         case BED_COMMAND_SET_CURRENT_POSITION_AS_ORIGIN:
-            Serial.println("Bed: Received SET_CURRENT_POSITION_AS_ORIGIN command");
+            log_i("Bed: Received SET_CURRENT_POSITION_AS_ORIGIN command");
             bed_set_current_position_as_origin();
             break;
         }

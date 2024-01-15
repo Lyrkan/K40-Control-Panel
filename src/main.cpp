@@ -106,16 +106,16 @@ void bed_update_task_func(void *params) {
 }
 
 void setup() {
-    Serial.begin(115200);
-
     static lv_disp_draw_buf_t draw_buf;
     static lv_color_t buf[DISPLAY_SCREEN_WIDTH * 10];
     static lv_disp_drv_t disp_drv;
     static lv_indev_drv_t indev_drv;
 
+    Serial.begin(115200);
+    log_i("K40 Control Panel (%s)", GIT_CURRENT_REF);
+
     /* Load settings */
     settings_init();
-    Serial.println("Init");
 
     /* Initialize LGFX/LVGL */
     tft.begin();

@@ -59,10 +59,10 @@ static void settings_save_task_func(void *params) {
     while (true) {
         // Wait for a change notification
         xTaskNotifyWait(0x00, ULONG_MAX, &settings_types, portMAX_DELAY);
-        Serial.println("Received a settings save request");
+        log_i("Received a settings save request");
 
         if ((settings_types & SETTINGS_TYPE_BED) != 0) {
-            Serial.println("Bed settings have changed, saving new values...");
+            log_i("Bed settings have changed, saving new values...");
 
             // Acquire bed settings lock
             TAKE_MUTEX(bed_settings_mutex)
@@ -83,7 +83,7 @@ static void settings_save_task_func(void *params) {
         }
 
         if ((settings_types & SETTINGS_TYPE_PROBES) != 0) {
-            Serial.println("Probes settings have changed, saving new values...");
+            log_i("Probes settings have changed, saving new values...");
 
             // Acquire probes settings lock
             TAKE_MUTEX(probes_settings_mutex)
@@ -100,7 +100,7 @@ static void settings_save_task_func(void *params) {
         }
 
         if ((settings_types & SETTINGS_TYPE_OTA) != 0) {
-            Serial.println("OTA settings have changed, saving new values...");
+            log_i("OTA settings have changed, saving new values...");
 
             // Acquire OTA settings lock
             TAKE_MUTEX(ota_settings_mutex)
@@ -123,7 +123,7 @@ void settings_init() {
     // Acquire bed settings lock
     TAKE_MUTEX(bed_settings_mutex)
 
-    Serial.println("Loading bed settings... ");
+    log_i("Loading bed settings... ");
     preferences.begin(PREFERENCES_NAMESPACE_BED, true);
 
     // clang-format off
@@ -142,12 +142,21 @@ void settings_init() {
 
     preferences.end();
 
+    log_d("  screw_lead_um: %d", bed_settings.screw_lead_um);
+    log_d("  microstep_multiplier: %d", bed_settings.microstep_multiplier);
+    log_d("  steps_per_revolution: %d", bed_settings.steps_per_revolution);
+    log_d("  moving_speed: %d", bed_settings.moving_speed);
+    log_d("  homing_speed: %d", bed_settings.homing_speed);
+    log_d("  origin:");
+    log_d("    is_set: %d", bed_settings.origin.is_set);
+    log_d("    position_nm: %d", bed_settings.origin.position_nm);
+
     // Release bed settings lock
     RELEASE_MUTEX(bed_settings_mutex)
 
     // Acquire probes settings lock
     TAKE_MUTEX(probes_settings_mutex)
-    Serial.println("Loading probes settings... ");
+    log_i("Loading probes settings... ");
     preferences.begin(PREFERENCES_NAMESPACE_PROBES, true);
 
     // clang-format off
@@ -161,12 +170,17 @@ void settings_init() {
 
     preferences.end();
 
+    log_d("  cooling_flow_min: %.4f", probes_settings.cooling_flow_min);
+    log_d("  cooling_flow_max: %.4f", probes_settings.cooling_flow_max);
+    log_d("  cooling_temp_min: %.4f", probes_settings.cooling_temp_min);
+    log_d("  cooling_temp_max: %.4f", probes_settings.cooling_temp_max);
+
     // Release probes settings lock
     RELEASE_MUTEX(probes_settings_mutex)
 
     // Acquire OTA settings lock
     TAKE_MUTEX(ota_settings_mutex)
-    Serial.println("Loading OTA settings... ");
+    log_i("Loading OTA settings... ");
     preferences.begin(PREFERENCES_NAMESPACE_OTA, true);
 
     strncpy(
@@ -179,6 +193,9 @@ void settings_init() {
         ARRAY_SIZE(ota_settings.password));
 
     preferences.end();
+
+    log_d("  login: %s", ota_settings.login);
+    log_d("  password: %s", ota_settings.password);
 
     // Release probes settings lock
     RELEASE_MUTEX(ota_settings_mutex)

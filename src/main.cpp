@@ -6,6 +6,7 @@
 #include "esp_adc_cal.h"
 
 #include "LGFX/LGFX.h"
+#include "Grbl/grbl_serial.h"
 #include "K40/bed.h"
 #include "K40/cooling.h"
 #include "K40/flame_sensor.h"
@@ -173,6 +174,9 @@ void setup() {
 
     /* Initialize Webserver */
     webserver_init();
+
+    /* Initialize Grbl serial task */
+    grbl_serial_init();
 
     /* Start state update loop */
     xTaskCreatePinnedToCore(

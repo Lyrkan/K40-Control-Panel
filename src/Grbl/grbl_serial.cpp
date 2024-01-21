@@ -102,6 +102,9 @@ static void grbl_tx_task(void *param) {
             continue;
         }
 
+        // Enable auto-report
+        write(fd, GRBL_REPORT_INTERVAL "\n", ARRAY_SIZE(GRBL_REPORT_INTERVAL));
+
         char *msg_pointer = NULL;
         while (true) {
             if (xQueueReceive(grbl_tx_msg_queue, &msg_pointer, portMAX_DELAY) != pdTRUE) {
@@ -110,6 +113,7 @@ static void grbl_tx_task(void *param) {
             }
 
             log_d("Sending message from TX queue: %s", msg_pointer);
+            xTaskNotifyStateClearIndexed(NULL, GRBL_TASK_NOTIFY_ACK_INDEX);
             if (write(fd, msg_pointer, strnlen(msg_pointer, GRBL_MAX_LINE_lENGTH)) == -1) {
                 log_e("Could not write buffer to serial: %d", errno);
             }

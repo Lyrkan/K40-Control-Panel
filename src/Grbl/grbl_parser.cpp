@@ -4,8 +4,9 @@
 
 #include "Grbl/grbl_parser.h"
 #include "Grbl/grbl_serial.h"
+#include "Grbl/grbl_state.h"
 
-static bool grbl_check_type(char **input, const char *prefix, const char *suffix = NULL) {
+static bool grbl_remove_prefix_suffix(char **input, const char *prefix, const char *suffix = NULL) {
     size_t input_length = strnlen(*input, GRBL_MAX_LINE_lENGTH);
     size_t prefix_length = strnlen(prefix, GRBL_MAX_LINE_lENGTH);
 
@@ -53,16 +54,74 @@ static void grbl_process_error(const char *error_code) {
     }
 }
 
+static void grbl_process_alarm(const char *alarm_code) { log_e("Alarm triggered: %d", atoi(alarm_code)); }
+
 static void grbl_process_settings(const char *settings_body) { log_d("Setting value: %s", settings_body); }
 
-static void grbl_process_report(const char *report_body) {
+static void grbl_process_report(char *report_body) {
     log_d("Report: %s", report_body);
-    grbl_send_message("foo");
+
+    char *report_token_saveptr;
+    for (char *report_token = strtok_r(report_body, "|", &report_token_saveptr); report_token != NULL;
+         report_token = strtok_r(NULL, "|", &report_token_saveptr)) {
+        GrblState state = grbl_state_from_string(report_token);
+        if (state != GRBL_STATE_INVALID) {
+            log_i("Grbl current state: %s", grbl_state_to_string(state));
+            continue;
+        }
+
+        if (grbl_remove_prefix_suffix(&report_token, "WPos:")) {
+            log_i("Work position: %s", report_token);
+            continue;
+        }
+
+        if (grbl_remove_prefix_suffix(&report_token, "MPos:")) {
+            log_i("Machine position: %s", report_token);
+            continue;
+        }
+
+        if (grbl_remove_prefix_suffix(&report_token, "Bf:")) {
+            log_i("Buffer state: %s", report_token);
+            continue;
+        }
+
+        if (grbl_remove_prefix_suffix(&report_token, "Ln:")) {
+            log_i("Line number: %s", report_token);
+            continue;
+        }
+
+        if (grbl_remove_prefix_suffix(&report_token, "F:")) {
+            log_i("F: %s", report_token);
+            continue;
+        }
+
+        if (grbl_remove_prefix_suffix(&report_token, "FS:")) {
+            log_i("FS: %s", report_token);
+            continue;
+        }
+
+        if (grbl_remove_prefix_suffix(&report_token, "Pn:")) {
+            log_i("Triggered pins: %s", report_token);
+            continue;
+        }
+
+        if (grbl_remove_prefix_suffix(&report_token, "Ov:")) {
+            log_i("Override values: %s", report_token);
+            continue;
+        }
+
+        if (grbl_remove_prefix_suffix(&report_token, "A:")) {
+            log_i("Accessory state: %s", report_token);
+            continue;
+        }
+
+        log_d("Unsupported Grbl report token: %s", report_token);
+    }
 }
 
 static void grbl_process_feedback(const char *feedback_body) { log_d("Feedback body: %s", feedback_body); }
 
-static void grbl_process_welcome(const char *welcome_line) { log_d("Welcome: %s", welcome_line); }
+static void grbl_process_welcome(const char *welcome_line) { log_d("Welcome message: %s", welcome_line); }
 
 void grbl_process_line(char *line) {
     // Make sure we have at least one char
@@ -71,8 +130,8 @@ void grbl_process_line(char *line) {
         return;
     }
 
-    log_i("Received Grbl data: %s", line);
-    if (strncmp(line, "ok", 2) == 0) {
+    log_d("Received Grbl data: %s", line);
+    if (strcmp(line, "ok") == 0) {
         // ACK
         grbl_process_ack();
         return;
@@ -80,31 +139,37 @@ void grbl_process_line(char *line) {
 
     char *processed_line = line;
 
-    if (grbl_check_type(&processed_line, "error:")) {
+    if (grbl_remove_prefix_suffix(&processed_line, "error:")) {
         // Error
         grbl_process_error(processed_line);
         return;
     }
 
-    if (grbl_check_type(&processed_line, "$")) {
+    if (grbl_remove_prefix_suffix(&processed_line, "ALARM:")) {
+        // Error
+        grbl_process_alarm(processed_line);
+        return;
+    }
+
+    if (grbl_remove_prefix_suffix(&processed_line, "$")) {
         // Settings message
         grbl_process_settings(processed_line);
         return;
     }
 
-    if (grbl_check_type(&processed_line, "<", ">")) {
+    if (grbl_remove_prefix_suffix(&processed_line, "<", ">")) {
         // Status report
         grbl_process_report(processed_line);
         return;
     }
 
-    if (grbl_check_type(&processed_line, "[", "]")) {
+    if (grbl_remove_prefix_suffix(&processed_line, "[", "]")) {
         // Feedback message
         grbl_process_feedback(processed_line);
         return;
     }
 
-    if (grbl_check_type(&processed_line, "Grbl ")) {
+    if (grbl_remove_prefix_suffix(&processed_line, "Grbl ")) {
         // Welcome message
         grbl_process_welcome(line);
         return;

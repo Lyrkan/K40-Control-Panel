@@ -87,6 +87,32 @@ const char *grbl_state_to_string(GrblState state) {
     case GRBL_STATE_SLEEP:
         return "Sleep";
     default:
-        return "Invalid/unknown";
+        return "Invalid/unknown Grbl state";
+    }
+}
+
+const char *grbl_error_to_string(GrblError error) {
+    switch (error) {
+    case GRBL_ERROR_HARD_LIMIT:
+        return "Hard limit triggered";
+    case GRBL_ERROR_MOTION_EXCEEDS_MACHINE_TRAVEL:
+        return "G-code motion target exceeds machine travel";
+    case GRBL_ERROR_RESET_WHILE_IN_MOTION:
+        return "Reset while in motion, re-homing is highly recommended";
+    case GRBL_ERROR_PROBE_FAIL_INITIAL_STATE:
+        return "Probe fail: The probe is not in the expected initial state before starting probe cycle";
+    case GRBL_ERROR_PROBE_FAIL_TRAVEL:
+        return "Probe fail: Probe did not contact the workpiece within the programmed travel";
+    case GRBL_ERROR_HOMING_FAIL_RESET:
+        return "Homing fail: Reset during active homing cycle";
+    case GRBL_ERROR_HOMING_FAIL_DOOR:
+        return "Homing fail: Safety door was opened during active homing cycle";
+    case GRBL_ERROR_HOMING_FAIL_LIMIT_CYCLE:
+        return "Homing fail: Cycle failed to clear limit switch when pulling off, try increasing pull-off setting or "
+               "check wiring";
+    case GRBL_ERROR_HOMING_FAIL_SWITCH_NOT_FOUND:
+        return "Homing fail: Could not find limit switch within search distance";
+    default:
+        return "Invalid/unknown Grbl error";
     }
 }

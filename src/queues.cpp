@@ -1,7 +1,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 
-#include "Grbl/grbl_serial.h"
 #include "K40/bed.h"
 #include "K40/cooling.h"
 #include "K40/lids.h"

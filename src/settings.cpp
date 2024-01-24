@@ -183,11 +183,11 @@ void settings_init() {
     log_i("Loading OTA settings... ");
     preferences.begin(PREFERENCES_NAMESPACE_OTA, true);
 
-    strncpy(
+    strlcpy(
         ota_settings.login,
         preferences.getString(PREFERENCES_KEY_OTA_LOGIN).c_str(),
         ARRAY_SIZE(ota_settings.login));
-    strncpy(
+    strlcpy(
         ota_settings.password,
         preferences.getString(PREFERENCES_KEY_OTA_PASSWORD).c_str(),
         ARRAY_SIZE(ota_settings.password));

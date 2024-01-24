@@ -1,5 +1,6 @@
 #include <lvgl.h>
 
+#include "Grbl/grbl_serial.h"
 #include "UI/menu.h"
 #include "UI/images.h"
 #include "UI/screens/splashscreen.h"

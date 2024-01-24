@@ -8,6 +8,7 @@
 
 #include "Grbl/grbl_parser.h"
 #include "Grbl/grbl_serial.h"
+#include "UI/overlay.h"
 #include "macros.h"
 #include "queues.h"
 
@@ -103,7 +104,8 @@ static void grbl_tx_task(void *param) {
         }
 
         // Enable auto-report
-        write(fd, GRBL_REPORT_INTERVAL "\n", ARRAY_SIZE(GRBL_REPORT_INTERVAL));
+        write(fd, GRBL_MESSAGE_REPORT_FORMAT "\n", ARRAY_SIZE(GRBL_MESSAGE_REPORT_FORMAT));
+        write(fd, GRBL_MESSAGE_REPORT_INTERVAL "\n", ARRAY_SIZE(GRBL_MESSAGE_REPORT_INTERVAL));
 
         char *msg_pointer = NULL;
         while (true) {
@@ -116,6 +118,7 @@ static void grbl_tx_task(void *param) {
             xTaskNotifyStateClearIndexed(NULL, GRBL_TASK_NOTIFY_ACK_INDEX);
             if (write(fd, msg_pointer, strnlen(msg_pointer, GRBL_MAX_LINE_lENGTH)) == -1) {
                 log_e("Could not write buffer to serial: %d", errno);
+                ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, "An error happened when trying to send Grbl message");
             }
 
             free(msg_pointer);
@@ -127,6 +130,7 @@ static void grbl_tx_task(void *param) {
                     NULL,
                     pdMS_TO_TICKS(GRBL_ACK_TIMEOUT_MS)) != pdTRUE) {
                 log_w("No ack received after %d milliseconds", GRBL_ACK_TIMEOUT_MS);
+                ui_overlay_add_flash_message(FLASH_LEVEL_WARNING, "Grbl command timed-out");
             }
         }
 
@@ -176,16 +180,22 @@ void grbl_serial_init() {
 bool grbl_send_message(const char *message) {
     size_t message_length = strlen(message);
     if (message_length > GRBL_MAX_LINE_lENGTH) {
-        log_e("Message length exceeds GRBL_MAX_LINE_LENGTH");
+        log_e("Message length exceeds GRBL_MAX_LINE_LENGTH: %s", message);
+        ui_overlay_add_flash_message(
+            FLASH_LEVEL_WARNING,
+            "A Grbl message was ignored becaused it exceeded the max allowed length");
         return false;
     }
 
     char *message_copy = (char *)malloc(sizeof(char) * (message_length + 2));
-    strncpy(message_copy, message, message_length);
+    strlcpy(message_copy, message, message_length);
     message_copy[message_length] = '\n';
     message_copy[message_length + 1] = '\0';
     if (xQueueSendToBack(grbl_tx_msg_queue, &message_copy, 0) != pdTRUE) {
         log_w("TX queue seems to be full, a message was dropped");
+        ui_overlay_add_flash_message(
+            FLASH_LEVEL_WARNING,
+            "A Grbl message was dropped because the TX queue seemed to be full");
         return false;
     }
 

@@ -5,6 +5,7 @@
 #include "Grbl/grbl_parser.h"
 #include "Grbl/grbl_serial.h"
 #include "Grbl/grbl_state.h"
+#include "UI/overlay.h"
 
 static bool grbl_remove_prefix_suffix(char **input, const char *prefix, const char *suffix = NULL) {
     size_t input_length = strnlen(*input, GRBL_MAX_LINE_lENGTH);
@@ -45,7 +46,11 @@ static void grbl_process_ack() {
 }
 
 static void grbl_process_error(const char *error_code) {
-    log_e("Error %d", atoi(error_code));
+    int error_code_i = error_code[0] != '\0' ? atoi(error_code) : -1;
+    const char *error_description = grbl_error_to_string((GrblError)error_code_i);
+
+    log_e("Error message received (code: %d): %s", error_code_i, error_description);
+    ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, error_description);
 
     // Notify the TX task that its previous message has been acknowledged
     // TODO Differenciate acks from errors in the TX task
@@ -121,7 +126,10 @@ static void grbl_process_report(char *report_body) {
 
 static void grbl_process_feedback(const char *feedback_body) { log_d("Feedback body: %s", feedback_body); }
 
-static void grbl_process_welcome(const char *welcome_line) { log_d("Welcome message: %s", welcome_line); }
+static void grbl_process_welcome(const char *welcome_line) {
+    ui_overlay_add_flash_message(FLASH_LEVEL_INFO, welcome_line);
+    log_d("Welcome message: %s", welcome_line);
+}
 
 void grbl_process_line(char *line) {
     // Make sure we have at least one char

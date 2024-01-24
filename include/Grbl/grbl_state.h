@@ -17,7 +17,20 @@ typedef enum {
     GRBL_STATE_SLEEP,
 } GrblState;
 
+typedef enum {
+    GRBL_ERROR_HARD_LIMIT = 1,
+    GRBL_ERROR_MOTION_EXCEEDS_MACHINE_TRAVEL = 2,
+    GRBL_ERROR_RESET_WHILE_IN_MOTION = 3,
+    GRBL_ERROR_PROBE_FAIL_INITIAL_STATE = 4,
+    GRBL_ERROR_PROBE_FAIL_TRAVEL = 5,
+    GRBL_ERROR_HOMING_FAIL_RESET = 6,
+    GRBL_ERROR_HOMING_FAIL_DOOR = 7,
+    GRBL_ERROR_HOMING_FAIL_LIMIT_CYCLE = 8,
+    GRBL_ERROR_HOMING_FAIL_SWITCH_NOT_FOUND = 9,
+} GrblError;
+
 GrblState grbl_state_from_string(char *state);
 const char *grbl_state_to_string(GrblState state);
+const char *grbl_error_to_string(GrblError error);
 
 #endif

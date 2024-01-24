@@ -14,7 +14,8 @@
 #define GRBL_MAX_LINE_lENGTH 100
 #define GRBL_ACK_TIMEOUT_MS 5000
 #define GRBL_TX_QUEUE_SIZE 10
-#define GRBL_REPORT_INTERVAL "$Report/Interval=200"
+#define GRBL_MESSAGE_REPORT_FORMAT "$Report/Status=2"
+#define GRBL_MESSAGE_REPORT_INTERVAL "$Report/Interval=200"
 
 #define GRBL_TASK_NOTIFY_ACK_INDEX 0
 

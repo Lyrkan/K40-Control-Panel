@@ -40,7 +40,7 @@ What it **CANNOT** do yet:
 -   Move the laser head
 -   Trigger the CO2 laser
 
-I plan on adding an interface with Grbl motherboards through UART that should allow those things in the near future.
+I plan on adding an interface with FluidNC motherboards through UART that should allow those things in the near future.
 
 Also, don't expect an ultra smooth experience, the ESP32 being a bit underpowered for a screen of that size the user interface can be a bit laggy sometimes (eg. during screen transitions or scrolling). It should still be fully usable though.
 

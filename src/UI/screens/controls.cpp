@@ -37,7 +37,7 @@ static void ui_controls_switch_handler(lv_event_t *e) {
             .state = lv_obj_has_state(target, LV_STATE_CHECKED) ? RELAY_STATE_ENABLED : RELAY_STATE_DISABLED,
         };
 
-        xQueueSendToBack(relays_command_queue, &command, 100);
+        xQueueSendToBack(relays_command_queue, &command, pdMS_TO_TICKS(100));
     }
 }
 

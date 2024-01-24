@@ -145,8 +145,8 @@ static void ui_settings_save_ota_settings() {
     // Acquire OTA settings mutex
     TAKE_MUTEX(ota_settings_mutex)
 
-    strncpy(ota_settings.login, lv_textarea_get_text(ui_settings_ota_login_value), ARRAY_SIZE(ota_settings.login));
-    strncpy(
+    strlcpy(ota_settings.login, lv_textarea_get_text(ui_settings_ota_login_value), ARRAY_SIZE(ota_settings.login));
+    strlcpy(
         ota_settings.password,
         lv_textarea_get_text(ui_settings_ota_password_value),
         ARRAY_SIZE(ota_settings.password));

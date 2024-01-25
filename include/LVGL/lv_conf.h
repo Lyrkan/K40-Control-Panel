@@ -407,6 +407,9 @@
 #define LV_SYMBOL_SNOWFLAKE "\xEF\x8B\x9C" /*62172, 0xF2DC*/
 #define LV_SYMBOL_BOLT "\xEF\x83\xA7" /*61671, 0xF0E7*/
 #define LV_SYMBOL_EYE "\xEF\x81\xAE" /*61550, 0xF06E*/
+#define LV_SYMBOL_WIFI "\xEF\x87\xAB" /*61931, 0xF1EB*/
+#define LV_SYMBOL_TEMPERATURE_FULL "\xEF\x8B\x87" /*62151, 0xF2C7*/
+#define LV_SYMBOL_CODE_PULL_REQUEST "\xEE\x84\xBC" /*57660, 0xE13C*/
 
 /*Enable handling large font and/or fonts with a lot of characters.
  *The limit depends on the font size, font face and bpp.

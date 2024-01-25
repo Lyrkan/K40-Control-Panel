@@ -304,22 +304,22 @@ static void ui_settings_init_screen_content() {
 
     item_cont = lv_menu_cont_create(ui_settings_root_page);
     item_label = lv_label_create(item_cont);
-    lv_label_set_text(item_label, "WiFi");
+    lv_label_set_text(item_label, LV_SYMBOL_WIFI " WiFi");
     lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_wifi_page);
 
     item_cont = lv_menu_cont_create(ui_settings_root_page);
     item_label = lv_label_create(item_cont);
-    lv_label_set_text(item_label, "Bed");
+    lv_label_set_text(item_label, LV_SYMBOL_ARROW_DOWN_UP_ACROSS_LINE " Bed");
     lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_bed_page);
 
     item_cont = lv_menu_cont_create(ui_settings_root_page);
     item_label = lv_label_create(item_cont);
-    lv_label_set_text(item_label, "Probes");
+    lv_label_set_text(item_label, LV_SYMBOL_TEMPERATURE_FULL " Probes");
     lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_probes_page);
 
     item_cont = lv_menu_cont_create(ui_settings_root_page);
     item_label = lv_label_create(item_cont);
-    lv_label_set_text(item_label, "OTA Updates");
+    lv_label_set_text(item_label, LV_SYMBOL_CODE_PULL_REQUEST " OTA Updates");
     lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_ota_page);
 
     // Keyboard

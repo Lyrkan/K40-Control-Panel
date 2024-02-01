@@ -340,6 +340,9 @@ void ui_status_update(bool initialize) {
         lv_bar_set_value(ui_status_cooling_output_temp_bar, (int)cooling_values.output_temperature, LV_ANIM_ON);
 
         updateWarningIcon(ui_status_cooling_icon_warning, (alerts_status & ALERT_TYPE_COOLING) != 0);
+        xEventGroupClearBits(
+            ui_status_event_group,
+            STATUS_UPDATE_PROBE_COOLING | STATUS_UPDATE_PROBE_LIDS | STATUS_UPDATE_PROBE_FLAME_SENSOR);
     }
 
     // Update lids widgets
@@ -347,6 +350,7 @@ void ui_status_update(bool initialize) {
         lv_label_set_text(ui_status_lid_front_value, lids_states.front_opened ? "Opened" : "Closed");
         lv_label_set_text(ui_status_lid_back_value, lids_states.back_opened ? "Opened" : "Closed");
         updateWarningIcon(ui_status_lid_icon_warning, (alerts_status & ALERT_TYPE_LIDS) != 0);
+        xEventGroupClearBits(ui_status_event_group, STATUS_UPDATE_PROBE_LIDS);
     }
 
     // Update flame sensor widgets
@@ -354,12 +358,8 @@ void ui_status_update(bool initialize) {
         xQueuePeek(flame_sensor_current_status_queue, &flame_sensor_triggered, 0) == pdTRUE) {
         lv_label_set_text(ui_status_fire_value, flame_sensor_triggered ? "Triggered" : "OK");
         updateWarningIcon(ui_status_fire_icon_warning, (alerts_status & ALERT_TYPE_FLAME_SENSOR) != 0);
+        xEventGroupClearBits(ui_status_event_group, STATUS_UPDATE_PROBE_FLAME_SENSOR);
     }
-
-    // Clear pending updates bits
-    xEventGroupClearBits(
-        ui_status_event_group,
-        (STATUS_UPDATE_PROBE_COOLING | STATUS_UPDATE_PROBE_LIDS | STATUS_UPDATE_PROBE_FLAME_SENSOR));
 
     // Update heap indicator
     static unsigned long system_status_last_update = 0;

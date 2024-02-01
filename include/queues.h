@@ -13,4 +13,6 @@ extern QueueHandle_t lids_current_status_queue;
 
 extern QueueHandle_t relays_command_queue;
 
+extern QueueHandle_t grbl_report_update_queue;
+
 #endif

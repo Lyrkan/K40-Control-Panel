@@ -5,11 +5,14 @@
 #include "K40/alerts.h"
 #include "K40/lids.h"
 #include "UI/screens/status.h"
+#include "macros.h"
+#include "mutex.h"
 #include "queues.h"
 
-static LidsStates lids_states;
+LidsStates lids_states;
 
 void lids_update_status() {
+    TAKE_MUTEX(lids_current_status_mutex);
     static bool first_update = true;
     bool front_lid_opened = digitalRead(PIN_LID_STATUS_FRONT) == HIGH;
     bool back_lid_opened = digitalRead(PIN_LID_STATUS_BACK) == HIGH;
@@ -24,7 +27,7 @@ void lids_update_status() {
         alerts_toggle_alert(ALERT_TYPE_LIDS, enable_alert);
 
         // Notify UI of new values
-        xQueueOverwrite(lids_current_status_queue, &lids_states);
         ui_status_notify_update(STATUS_UPDATE_PROBE_LIDS);
     }
+    RELEASE_MUTEX(lids_current_status_mutex);
 }

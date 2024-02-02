@@ -7,8 +7,8 @@
 
 #include "cpu_monitor.h"
 #include "macros.h"
+#include "mutex.h"
 
-SemaphoreHandle_t cpu_monitor_stats_mutex = xSemaphoreCreateMutex();
 float_t cpu_monitor_load_0 = 0;
 float_t cpu_monitor_load_1 = 0;
 

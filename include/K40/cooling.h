@@ -28,6 +28,8 @@ typedef struct {
     float_t output_temperature;
 } CoolingValues;
 
+extern CoolingValues cooling_values;
+
 void IRAM_ATTR cooling_flow_input_probe_interrupt();
 void IRAM_ATTR cooling_flow_output_probe_interrupt();
 void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars);

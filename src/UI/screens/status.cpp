@@ -5,11 +5,13 @@
 
 #include "K40/alerts.h"
 #include "K40/cooling.h"
+#include "K40/flame_sensor.h"
 #include "K40/lids.h"
 #include "UI/images.h"
 #include "UI/screens/status.h"
 #include "cpu_monitor.h"
 #include "macros.h"
+#include "mutex.h"
 #include "queues.h"
 
 lv_obj_t *ui_status_screen;
@@ -297,10 +299,6 @@ void ui_status_update(bool initialize) {
         return;
     }
 
-    static CoolingValues cooling_values;
-    static LidsStates lids_states;
-    static bool flame_sensor_triggered;
-
     static char cooling_input_flow_formatted_value[10];
     static char cooling_input_temp_formatted_value[10];
     static char cooling_output_flow_formatted_value[10];
@@ -318,7 +316,8 @@ void ui_status_update(bool initialize) {
     uint8_t alerts_status = alerts_get_current_alerts();
 
     // Update cooling widgets
-    if (pending_cooling_update && xQueuePeek(cooling_current_status_queue, &cooling_values, 0) == pdTRUE) {
+    if (pending_cooling_update) {
+        TAKE_MUTEX(cooling_current_status_mutex)
         // Input Cooling flow
         sprintf(cooling_input_flow_formatted_value, "%2.2fL/mn", cooling_values.input_flow);
         lv_label_set_text(ui_status_cooling_input_flow_value, cooling_input_flow_formatted_value);
@@ -343,22 +342,26 @@ void ui_status_update(bool initialize) {
         xEventGroupClearBits(
             ui_status_event_group,
             STATUS_UPDATE_PROBE_COOLING | STATUS_UPDATE_PROBE_LIDS | STATUS_UPDATE_PROBE_FLAME_SENSOR);
+        RELEASE_MUTEX(cooling_current_status_mutex)
     }
 
     // Update lids widgets
-    if (pending_lids_update && xQueuePeek(lids_current_status_queue, &lids_states, 0) == pdTRUE) {
+    if (pending_lids_update) {
+        TAKE_MUTEX(lids_current_status_mutex)
         lv_label_set_text(ui_status_lid_front_value, lids_states.front_opened ? "Opened" : "Closed");
         lv_label_set_text(ui_status_lid_back_value, lids_states.back_opened ? "Opened" : "Closed");
         updateWarningIcon(ui_status_lid_icon_warning, (alerts_status & ALERT_TYPE_LIDS) != 0);
         xEventGroupClearBits(ui_status_event_group, STATUS_UPDATE_PROBE_LIDS);
+        RELEASE_MUTEX(lids_current_status_mutex)
     }
 
     // Update flame sensor widgets
-    if (pending_flame_sensor_update &&
-        xQueuePeek(flame_sensor_current_status_queue, &flame_sensor_triggered, 0) == pdTRUE) {
+    if (pending_flame_sensor_update) {
+        TAKE_MUTEX(flame_sensor_current_status_mutex)
         lv_label_set_text(ui_status_fire_value, flame_sensor_triggered ? "Triggered" : "OK");
         updateWarningIcon(ui_status_fire_icon_warning, (alerts_status & ALERT_TYPE_FLAME_SENSOR) != 0);
         xEventGroupClearBits(ui_status_event_group, STATUS_UPDATE_PROBE_FLAME_SENSOR);
+        RELEASE_MUTEX(flame_sensor_current_status_mutex)
     }
 
     // Update heap indicator

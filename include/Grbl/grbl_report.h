@@ -18,6 +18,7 @@ class GrblReport {
     void update(const GrblReport *report);
 };
 
+extern GrblReport grbl_last_report;
 void grbl_update_last_report(const GrblReport *report);
 
 #endif

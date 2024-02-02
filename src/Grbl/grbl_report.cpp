@@ -1,9 +1,11 @@
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
-#include "queues.h"
 #include "Grbl/grbl_report.h"
 #include "Grbl/grbl_state.h"
+#include "macros.h"
+#include "mutex.h"
+#include "queues.h"
 
 GrblReport::GrblReport() {
     state = GRBL_STATE_UNKNOWN;
@@ -104,8 +106,11 @@ void GrblReport::update(const GrblReport *report) {
     log_d("  Line number: %d", line_number);
 }
 
-static GrblReport grbl_last_report;
+GrblReport grbl_last_report;
 void grbl_update_last_report(const GrblReport *report) {
+    TAKE_MUTEX(grbl_last_report_mutex)
     grbl_last_report.update(report);
-    xQueueOverwrite(grbl_report_update_queue, &grbl_last_report);
+    RELEASE_MUTEX(grbl_last_report_mutex)
+
+    // TODO Notify UI
 }

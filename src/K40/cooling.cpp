@@ -7,10 +7,11 @@
 #include "K40/alerts.h"
 #include "K40/cooling.h"
 #include "UI/screens/status.h"
-#include "queues.h"
+#include "macros.h"
+#include "mutex.h"
 #include "settings.h"
 
-static CoolingValues cooling_values;
+CoolingValues cooling_values;
 
 static volatile uint32_t cooling_flow_input_interrupt_counter = 0;
 void IRAM_ATTR cooling_flow_input_probe_interrupt() { cooling_flow_input_interrupt_counter++; }
@@ -28,6 +29,7 @@ static float_t cooling_seinhart_hart_temperature(float_t thermistor_value) {
 }
 
 void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {
+    TAKE_MUTEX(cooling_current_status_mutex);
     bool cooling_values_updated = false;
 
     /* Update cooling temperature */
@@ -107,7 +109,8 @@ void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {
         alerts_toggle_alert(ALERT_TYPE_COOLING, enable_alert);
 
         // Notify UI of new values
-        xQueueOverwrite(cooling_current_status_queue, &cooling_values);
         ui_status_notify_update(STATUS_UPDATE_PROBE_COOLING);
     }
+
+    RELEASE_MUTEX(cooling_current_status_mutex);
 }

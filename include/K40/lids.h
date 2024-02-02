@@ -11,6 +11,8 @@ typedef struct {
     bool back_opened;
 } LidsStates;
 
+extern LidsStates lids_states;
+
 void lids_update_status();
 
 #endif

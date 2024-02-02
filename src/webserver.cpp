@@ -10,13 +10,17 @@
 #include <math.h>
 #include <SPIFFS.h>
 
+#include "Grbl/grbl_report.h"
+#include "Grbl/grbl_state.h"
 #include "K40/alerts.h"
 #include "K40/cooling.h"
+#include "K40/flame_sensor.h"
 #include "K40/lids.h"
 #include "K40/relays.h"
 #include "UI/display.h"
 #include "cpu_monitor.h"
 #include "macros.h"
+#include "mutex.h"
 #include "queues.h"
 #include "settings.h"
 #include "webserver.h"
@@ -55,36 +59,21 @@ static void handleApiSensorsRequest(AsyncWebServerRequest *request) {
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &state = response->getRoot();
 
-    // Retrieve sensors values
-    CoolingValues cooling_values;
-    LidsStates lids_states;
-    bool flame_sensor_triggered;
+    TAKE_MUTEX(cooling_current_status_mutex)
+    state["sensors"]["cooling"]["flow"]["input"] = cooling_values.input_flow;
+    state["sensors"]["cooling"]["flow"]["output"] = cooling_values.output_flow;
+    state["sensors"]["cooling"]["temp"]["input"] = cooling_values.input_temperature;
+    state["sensors"]["cooling"]["temp"]["output"] = cooling_values.output_temperature;
+    RELEASE_MUTEX(cooling_current_status_mutex)
 
-    if (xQueuePeek(cooling_current_status_queue, &cooling_values, 100.f / portTICK_RATE_MS) == pdTRUE) {
-        state["sensors"]["cooling"]["flow"]["input"] = cooling_values.input_flow;
-        state["sensors"]["cooling"]["flow"]["output"] = cooling_values.output_flow;
-        state["sensors"]["cooling"]["temp"]["input"] = cooling_values.input_temperature;
-        state["sensors"]["cooling"]["temp"]["output"] = cooling_values.output_temperature;
-    } else {
-        state["sensors"]["cooling"]["flow"]["input"] = nullptr;
-        state["sensors"]["cooling"]["flow"]["output"] = nullptr;
-        state["sensors"]["cooling"]["temp"]["input"] = nullptr;
-        state["sensors"]["cooling"]["temp"]["output"] = nullptr;
-    }
+    TAKE_MUTEX(lids_current_status_mutex)
+    state["sensors"]["lids"]["front"] = lids_states.front_opened ? "opened" : "closed";
+    state["sensors"]["lids"]["back"] = lids_states.back_opened ? "opened" : "closed";
+    RELEASE_MUTEX(lids_current_status_mutex)
 
-    if (xQueuePeek(lids_current_status_queue, &lids_states, 100.f / portTICK_RATE_MS) == pdTRUE) {
-        state["sensors"]["lids"]["front"] = lids_states.front_opened ? "opened" : "closed";
-        state["sensors"]["lids"]["back"] = lids_states.back_opened ? "opened" : "closed";
-    } else {
-        state["sensors"]["lids"]["front"] = nullptr;
-        state["sensors"]["lids"]["back"] = nullptr;
-    }
-
-    if (xQueuePeek(flame_sensor_current_status_queue, &flame_sensor_triggered, 0) == pdTRUE) {
-        state["sensors"]["flame_sensor"]["triggered"] = flame_sensor_triggered;
-    } else {
-        state["sensors"]["flame_sensor"]["triggered"] = nullptr;
-    }
+    TAKE_MUTEX(flame_sensor_current_status_mutex)
+    state["sensors"]["flame_sensor"]["triggered"] = flame_sensor_triggered;
+    RELEASE_MUTEX(flame_sensor_current_status_mutex)
 
     // Serialize JSON data and send it to the client
     response->setLength();
@@ -116,6 +105,72 @@ static void handleApiRelaysRequest(AsyncWebServerRequest *request) {
     state["relays"]["alarm"] = relays_is_active(RELAY_PIN_ALARM);
     state["relays"]["lights"] = relays_is_active(RELAY_PIN_LIGHTS);
     state["relays"]["beam_preview"] = relays_is_active(RELAY_PIN_BEAM_PREVIEW);
+
+    // Serialize JSON data and send it to the client
+    response->setLength();
+    request->send(response);
+}
+
+static void handleGrblStatusRequest(AsyncWebServerRequest *request) {
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    JsonVariant &state = response->getRoot();
+
+    TAKE_MUTEX(grbl_last_report_mutex)
+
+    state["state"] = grbl_last_report.state;
+
+    if (grbl_last_report.w_pos.is_set) {
+        state["w_pos"]["x"] = grbl_last_report.w_pos.x;
+        state["w_pos"]["y"] = grbl_last_report.w_pos.y;
+        state["w_pos"]["z"] = grbl_last_report.w_pos.z;
+    } else {
+        state["w_pos"] = nullptr;
+    }
+
+    if (grbl_last_report.m_pos.is_set) {
+        state["m_pos"]["x"] = grbl_last_report.m_pos.x;
+        state["m_pos"]["y"] = grbl_last_report.m_pos.y;
+        state["m_pos"]["z"] = grbl_last_report.m_pos.z;
+    } else {
+        state["w_pos"] = nullptr;
+    }
+
+    if (grbl_last_report.wco.is_set) {
+        state["wco"]["x"] = grbl_last_report.wco.x;
+        state["wco"]["y"] = grbl_last_report.wco.y;
+        state["wco"]["z"] = grbl_last_report.wco.z;
+    } else {
+        state["wco"] = nullptr;
+    }
+
+    if (grbl_last_report.buffer_state.is_set) {
+        state["buffer"]["planned_buffer_available_blocks"] =
+            grbl_last_report.buffer_state.planned_buffer_available_blocks;
+        state["buffer"]["rx_buffer_available_bytes"] = grbl_last_report.buffer_state.rx_buffer_available_bytes;
+    } else {
+        state["buffer"] = nullptr;
+    }
+
+    if (grbl_last_report.feed_state.is_set) {
+        state["feed"]["rate"] = grbl_last_report.feed_state.rate;
+        state["feed"]["spindle_speed"] = grbl_last_report.feed_state.spindle_speed;
+    } else {
+        state["feed"] = nullptr;
+    }
+
+    state["line_number"] = grbl_last_report.line_number;
+
+    int active_pins = grbl_last_report.active_pins;
+    RELEASE_MUTEX(grbl_last_report_mutex)
+
+    state["active_pins"]["x"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_X) != 0;
+    state["active_pins"]["y"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_Y) != 0;
+    state["active_pins"]["z"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_Z) != 0;
+    state["active_pins"]["p"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_P) != 0;
+    state["active_pins"]["d"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_D) != 0;
+    state["active_pins"]["h"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_H) != 0;
+    state["active_pins"]["r"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_R) != 0;
+    state["active_pins"]["s"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_S) != 0;
 
     // Serialize JSON data and send it to the client
     response->setLength();
@@ -203,6 +258,7 @@ void webserver_init() {
     server.on("/api/sensors", HTTP_GET, handleApiSensorsRequest);
     server.on("/api/alerts", HTTP_GET, handleApiAlertsRequest);
     server.on("/api/relays", HTTP_GET, handleApiRelaysRequest);
+    server.on("/api/grbl", HTTP_GET, handleGrblStatusRequest);
 
     // Screenshot utility
     // Usage:

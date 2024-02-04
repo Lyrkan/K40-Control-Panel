@@ -112,6 +112,18 @@ const char *grbl_alarm_to_string(GrblAlarm alarm) {
                "check wiring";
     case GRBL_ALARM_HOMING_FAIL_SWITCH_NOT_FOUND:
         return "Homing fail: Could not find limit switch within search distance";
+    case GRBL_ALARM_SPINDLE_CONTROL:
+        return "Spindle control";
+    case GRBL_ALARM_CONTROL_PIN:
+        return "Control pin";
+    case GRBL_ALARM_AMBIGUOUS_SWITCH:
+        return "Ambiguous switch: There is a limit switch active";
+    case GRBL_ALARM_HARD_STOP:
+        return "Hard stop";
+    case GRBL_ALARM_UNHOMED:
+        return "Unhomed: Your machine needs to be homed";
+    case GRBL_ALARM_INIT:
+        return "Init";
     default:
         return "Invalid/unknown Grbl alarm";
     }
@@ -199,6 +211,64 @@ const char *grbl_error_to_string(GrblError error) {
                "configured axis. The Grbl default axis is the Z-axis.";
     case GRBL_ERROR_TOOL_NUMBER_GREATER_THAN_MAX_VALUE:
         return "Tool number greater than max supported value.";
+    case GRBL_ERROR_P_PARAM_MAX_EXCEEDED:
+        return "P param max exceeded";
+    case GRBL_ERROR_CHECK_CONTROLS_PINS:
+        return "Check control pins";
+    case GRBL_ERROR_FAILED_TO_MOUNT_DEVICE:
+        return "Failed to mount device";
+    case GRBL_ERROR_READ_FAILED:
+        return "Read failed";
+    case GRBL_ERROR_FAILED_TO_OPEN_DIRECTORY:
+        return "Failed to open directory";
+    case GRBL_ERROR_DIRECTORY_NOT_FOUND:
+        return "Directory not found";
+    case GRBL_ERROR_FILE_EMPTY:
+        return "File empty";
+    case GRBL_ERROR_FILE_NOT_FOUND:
+        return "File not found";
+    case GRBL_ERROR_FAILED_TO_OPEN_FILE:
+        return "Failed to open file";
+    case GRBL_ERROR_DEVICE_IS_BUSY:
+        return "Device is busy";
+    case GRBL_ERROR_FAILED_TO_DELETE_DIRECTORY:
+        return "Failed to delete directory";
+    case GRBL_ERROR_FAILED_TO_DELETE_FILE:
+        return "Failed to delete file";
+    case GRBL_ERROR_BLUETOOTH_FAILED_TO_START:
+        return "Bluetooth failed to start";
+    case GRBL_ERROR_WIFI_FAILED_TO_START:
+        return "WiFi failed to start";
+    case GRBL_ERROR_NUMBER_OUT_OF_RANGE_FOR_SETTING:
+        return "Number out of range for setting";
+    case GRBL_ERROR_INVALID_VALUE_FOR_SETTING:
+        return "Invalid value for setting";
+    case GRBL_ERROR_FAILED_TO_CREATE_FILE:
+        return "Failed to create file";
+    case GRBL_ERROR_FAILED_TO_SEND_MESSAGE:
+        return "Failed to send message";
+    case GRBL_ERROR_FAILED_TO_STORE_SETTING:
+        return "Failed to store setting";
+    case GRBL_ERROR_FAILED_TO_GET_SETTING_STATUS:
+        return "Failed to get setting status";
+    case GRBL_ERROR_AUTHENTICATION_FAILED:
+        return "Authentication failed!";
+    case GRBL_ERROR_END_OF_LINE:
+        return "End of line";
+    case GRBL_ERROR_END_OF_FILE:
+        return "End of file";
+    case GRBL_ERROR_ANOTHER_INTERFACE_IS_BUSY:
+        return "Another interface is busy";
+    case GRBL_ERROR_JOG_CANCELLED:
+        return "Jog Cancelled";
+    case GRBL_ERROR_BAD_PIN_SPECIFICATION:
+        return "Bad Pin Specification";
+    case GRBL_ERROR_INVALID_CONFIGURATION:
+        return "Configuration is invalid. Check boot messages for ERR's.";
+    case GRBL_ERROR_FILE_UPLOAD_FAILED:
+        return "File Upload Failed";
+    case GRBL_ERROR_FILE_DOWNLOAD_FAILED:
+        return "File Download Failed";
     default:
         return "Invalid/unknown Grbl error";
     }

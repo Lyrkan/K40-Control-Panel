@@ -2,11 +2,15 @@
 #include <lvgl.h>
 
 #include "K40/relays.h"
+#include "UI/images.h"
+#include "UI/utils.h"
 #include "UI/screens/controls.h"
 #include "queues.h"
 
 lv_obj_t *ui_controls_screen;
 
+static lv_obj_t *ui_controls_laser_pos_x_textarea;
+static lv_obj_t *ui_controls_laser_pos_y_textarea;
 static lv_obj_t *ui_controls_interlock_switch;
 static lv_obj_t *ui_controls_air_assist_switch;
 static lv_obj_t *ui_controls_lights_switch;
@@ -45,142 +49,172 @@ void ui_controls_init_screen_content() {
     // Make sure the screen is empty
     lv_obj_clean(ui_controls_screen);
 
-    lv_obj_t *ui_controls_main_panel = lv_obj_create(ui_controls_screen);
-    lv_obj_set_width(ui_controls_main_panel, 460);
-    lv_obj_set_height(ui_controls_main_panel, 255);
-    lv_obj_set_x(ui_controls_main_panel, 10);
-    lv_obj_set_y(ui_controls_main_panel, -10);
-    lv_obj_set_align(ui_controls_main_panel, LV_ALIGN_BOTTOM_LEFT);
-    lv_obj_set_style_bg_opa(ui_controls_main_panel, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_width(ui_controls_main_panel, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_clear_flag(ui_controls_main_panel, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_t *ui_controls_main_panel = ui_utils_create_screen_panel(ui_controls_screen);
 
-    lv_obj_t *ui_controls_interlock_switch_label = lv_label_create(ui_controls_main_panel);
+    // Laser card
+    lv_obj_t *ui_controls_laser_card =
+        ui_utils_create_card(ui_controls_main_panel, "LASER HEAD", LV_SYMBOL_UP_DOWN_LEFT_RIGHT);
+    lv_obj_set_width(ui_controls_laser_card, 460);
+    lv_obj_set_height(ui_controls_laser_card, 135);
+    lv_obj_set_pos(ui_controls_laser_card, 0, 0);
+
+    lv_obj_t *ui_controls_laser_home_button = lv_btn_create(ui_controls_laser_card);
+    lv_obj_set_width(ui_controls_laser_home_button, 80);
+    lv_obj_set_height(ui_controls_laser_home_button, 25);
+    lv_obj_set_x(ui_controls_laser_home_button, 100);
+    lv_obj_set_y(ui_controls_laser_home_button, 20);
+    lv_obj_set_style_radius(ui_controls_laser_home_button, 6, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_t *ui_controls_laser_home_button_label = lv_label_create(ui_controls_laser_home_button);
+    lv_obj_set_width(ui_controls_laser_home_button_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_controls_laser_home_button_label, LV_SIZE_CONTENT);
+    lv_obj_set_align(ui_controls_laser_home_button_label, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_controls_laser_home_button_label, LV_SYMBOL_HOUSE " Home");
+
+    lv_obj_t *ui_controls_laser_disable_steppers_button = lv_btn_create(ui_controls_laser_card);
+    lv_obj_set_width(ui_controls_laser_disable_steppers_button, 130);
+    lv_obj_set_height(ui_controls_laser_disable_steppers_button, 25);
+    lv_obj_set_x(ui_controls_laser_disable_steppers_button, 185);
+    lv_obj_set_y(ui_controls_laser_disable_steppers_button, 20);
+    lv_obj_set_style_radius(ui_controls_laser_disable_steppers_button, 6, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_t *ui_controls_laser_disable_steppers_button_label =
+        lv_label_create(ui_controls_laser_disable_steppers_button);
+    lv_obj_set_width(ui_controls_laser_disable_steppers_button_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_controls_laser_disable_steppers_button_label, LV_SIZE_CONTENT);
+    lv_obj_set_align(ui_controls_laser_disable_steppers_button_label, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_controls_laser_disable_steppers_button_label, LV_SYMBOL_UNLOCK " Disable steppers");
+
+    lv_obj_t *ui_controls_laser_pos_x_label = lv_label_create(ui_controls_laser_card);
+    lv_obj_set_width(ui_controls_laser_pos_x_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_controls_laser_pos_x_label, LV_SIZE_CONTENT);
+    lv_obj_set_x(ui_controls_laser_pos_x_label, 0);
+    lv_obj_set_y(ui_controls_laser_pos_x_label, 58);
+    lv_label_set_text(ui_controls_laser_pos_x_label, "X:");
+
+    lv_obj_t *ui_controls_laser_pos_y_label = lv_label_create(ui_controls_laser_card);
+    lv_obj_set_width(ui_controls_laser_pos_y_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_controls_laser_pos_y_label, LV_SIZE_CONTENT);
+    lv_obj_set_x(ui_controls_laser_pos_y_label, 0);
+    lv_obj_set_y(ui_controls_laser_pos_y_label, 94);
+    lv_label_set_text(ui_controls_laser_pos_y_label, "Y:");
+
+    ui_controls_laser_pos_x_textarea = lv_textarea_create(ui_controls_laser_card);
+    lv_obj_set_width(ui_controls_laser_pos_x_textarea, 70);
+    lv_obj_set_height(ui_controls_laser_pos_x_textarea, 24);
+    lv_obj_set_x(ui_controls_laser_pos_x_textarea, 25);
+    lv_obj_set_y(ui_controls_laser_pos_x_textarea, 53);
+    lv_obj_set_style_pad_all(ui_controls_laser_pos_x_textarea, 4, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_textarea_set_accepted_chars(ui_controls_laser_pos_x_textarea, "0123456789.");
+    lv_textarea_set_placeholder_text(ui_controls_laser_pos_x_textarea, "Pos (mm)");
+    lv_textarea_set_one_line(ui_controls_laser_pos_x_textarea, true);
+
+    ui_controls_laser_pos_y_textarea = lv_textarea_create(ui_controls_laser_card);
+    lv_obj_set_width(ui_controls_laser_pos_y_textarea, 70);
+    lv_obj_set_height(ui_controls_laser_pos_y_textarea, 25);
+    lv_obj_set_x(ui_controls_laser_pos_y_textarea, 25);
+    lv_obj_set_y(ui_controls_laser_pos_y_textarea, 88);
+    lv_obj_set_style_pad_all(ui_controls_laser_pos_y_textarea, 4, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_textarea_set_accepted_chars(ui_controls_laser_pos_y_textarea, "0123456789.");
+    lv_textarea_set_placeholder_text(ui_controls_laser_pos_y_textarea, "Pos (mm)");
+    lv_textarea_set_one_line(ui_controls_laser_pos_y_textarea, true);
+
+    static lv_style_t laser_head_moves_matrix_style_bg;
+    lv_style_init(&laser_head_moves_matrix_style_bg);
+    lv_style_set_pad_all(&laser_head_moves_matrix_style_bg, 0);
+    lv_style_set_pad_gap(&laser_head_moves_matrix_style_bg, 0);
+    lv_style_set_clip_corner(&laser_head_moves_matrix_style_bg, true);
+    lv_style_set_radius(&laser_head_moves_matrix_style_bg, 6);
+    lv_style_set_border_width(&laser_head_moves_matrix_style_bg, 0);
+
+    static lv_style_t laser_head_moves_matrix_style_btn;
+    lv_style_init(&laser_head_moves_matrix_style_btn);
+    lv_style_set_radius(&laser_head_moves_matrix_style_btn, 0);
+    lv_style_set_border_width(&laser_head_moves_matrix_style_btn, 1);
+    lv_style_set_border_opa(&laser_head_moves_matrix_style_btn, LV_OPA_50);
+    lv_style_set_border_color(&laser_head_moves_matrix_style_btn, lv_color_white());
+    lv_style_set_border_side(&laser_head_moves_matrix_style_btn, LV_BORDER_SIDE_INTERNAL);
+    lv_style_set_bg_color(&laser_head_moves_matrix_style_btn, lv_palette_main(LV_PALETTE_BLUE));
+    lv_style_set_text_color(&laser_head_moves_matrix_style_btn, lv_color_white());
+    lv_style_set_radius(&laser_head_moves_matrix_style_btn, 0);
+
+    static const char *laser_head_moves_map[] = {"-100", "-10", "-1", LV_SYMBOL_HOUSE, "+1", "+10", "+100", ""};
+    lv_obj_t *ui_controls_laser_move_x_matrix = lv_btnmatrix_create(ui_controls_laser_card);
+    lv_btnmatrix_set_map(ui_controls_laser_move_x_matrix, laser_head_moves_map);
+    lv_obj_add_style(ui_controls_laser_move_x_matrix, &laser_head_moves_matrix_style_bg, 0);
+    lv_obj_add_style(ui_controls_laser_move_x_matrix, &laser_head_moves_matrix_style_btn, LV_PART_ITEMS);
+    lv_obj_set_size(ui_controls_laser_move_x_matrix, 340, 25);
+    lv_obj_set_pos(ui_controls_laser_move_x_matrix, 100, 55);
+
+    lv_obj_t *ui_controls_laser_move_y_matrix = lv_btnmatrix_create(ui_controls_laser_card);
+    lv_btnmatrix_set_map(ui_controls_laser_move_y_matrix, laser_head_moves_map);
+    lv_obj_add_style(ui_controls_laser_move_y_matrix, &laser_head_moves_matrix_style_bg, 0);
+    lv_obj_add_style(ui_controls_laser_move_y_matrix, &laser_head_moves_matrix_style_btn, LV_PART_ITEMS);
+    lv_obj_set_size(ui_controls_laser_move_y_matrix, 340, 25);
+    lv_obj_set_pos(ui_controls_laser_move_y_matrix, 100, 90);
+
+    // Toggles card
+    lv_obj_t *ui_controls_toggles_card =
+        ui_utils_create_card(ui_controls_main_panel, "TOGGLES", LV_SYMBOL_PLUG_CIRCLE_BOLT);
+    lv_obj_set_width(ui_controls_toggles_card, 460);
+    lv_obj_set_height(ui_controls_toggles_card, 110);
+    lv_obj_set_pos(ui_controls_toggles_card, 0, 145);
+
+    lv_obj_t *ui_controls_interlock_switch_label = lv_label_create(ui_controls_toggles_card);
     lv_obj_set_width(ui_controls_interlock_switch_label, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_controls_interlock_switch_label, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_controls_interlock_switch_label, 0);
-    lv_obj_set_y(ui_controls_interlock_switch_label, -80);
-    lv_obj_set_align(ui_controls_interlock_switch_label, LV_ALIGN_LEFT_MID);
+    lv_obj_set_y(ui_controls_interlock_switch_label, 35);
     lv_label_set_text(ui_controls_interlock_switch_label, "Laser interlock");
 
-    lv_obj_t *ui_controls_air_assist_switch_label = lv_label_create(ui_controls_main_panel);
+    lv_obj_t *ui_controls_air_assist_switch_label = lv_label_create(ui_controls_toggles_card);
     lv_obj_set_width(ui_controls_air_assist_switch_label, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_controls_air_assist_switch_label, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_controls_air_assist_switch_label, 0);
-    lv_obj_set_y(ui_controls_air_assist_switch_label, -40);
-    lv_obj_set_align(ui_controls_air_assist_switch_label, LV_ALIGN_LEFT_MID);
+    lv_obj_set_y(ui_controls_air_assist_switch_label, 65);
     lv_label_set_text(ui_controls_air_assist_switch_label, "Air Assist");
 
-    lv_obj_t *ui_controls_lights_switch_label = lv_label_create(ui_controls_main_panel);
+    lv_obj_t *ui_controls_lights_switch_label = lv_label_create(ui_controls_toggles_card);
     lv_obj_set_width(ui_controls_lights_switch_label, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_controls_lights_switch_label, LV_SIZE_CONTENT);
-    lv_obj_set_x(ui_controls_lights_switch_label, 0);
-    lv_obj_set_align(ui_controls_lights_switch_label, LV_ALIGN_LEFT_MID);
+    lv_obj_set_x(ui_controls_lights_switch_label, 230);
+    lv_obj_set_y(ui_controls_lights_switch_label, 35);
     lv_label_set_text(ui_controls_lights_switch_label, "Lights");
 
-    lv_obj_t *ui_controls_preview_switch_label = lv_label_create(ui_controls_main_panel);
+    lv_obj_t *ui_controls_preview_switch_label = lv_label_create(ui_controls_toggles_card);
     lv_obj_set_width(ui_controls_preview_switch_label, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_controls_preview_switch_label, LV_SIZE_CONTENT);
-    lv_obj_set_x(ui_controls_preview_switch_label, 0);
-    lv_obj_set_y(ui_controls_preview_switch_label, 40);
-    lv_obj_set_align(ui_controls_preview_switch_label, LV_ALIGN_LEFT_MID);
+    lv_obj_set_x(ui_controls_preview_switch_label, 230);
+    lv_obj_set_y(ui_controls_preview_switch_label, 65);
     lv_label_set_text(ui_controls_preview_switch_label, "Beam preview");
 
-    ui_controls_interlock_switch = lv_switch_create(ui_controls_main_panel);
+    ui_controls_interlock_switch = lv_switch_create(ui_controls_toggles_card);
     lv_obj_set_width(ui_controls_interlock_switch, 50);
     lv_obj_set_height(ui_controls_interlock_switch, 25);
     lv_obj_set_x(ui_controls_interlock_switch, 100);
-    lv_obj_set_y(ui_controls_interlock_switch, -80);
-    lv_obj_set_align(ui_controls_interlock_switch, LV_ALIGN_LEFT_MID);
+    lv_obj_set_y(ui_controls_interlock_switch, 35);
     lv_obj_add_event_cb(ui_controls_interlock_switch, ui_controls_switch_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
-    ui_controls_air_assist_switch = lv_switch_create(ui_controls_main_panel);
+    ui_controls_air_assist_switch = lv_switch_create(ui_controls_toggles_card);
     lv_obj_set_width(ui_controls_air_assist_switch, 50);
     lv_obj_set_height(ui_controls_air_assist_switch, 25);
     lv_obj_set_x(ui_controls_air_assist_switch, 100);
-    lv_obj_set_y(ui_controls_air_assist_switch, -40);
-    lv_obj_set_align(ui_controls_air_assist_switch, LV_ALIGN_LEFT_MID);
+    lv_obj_set_y(ui_controls_air_assist_switch, 65);
     lv_obj_add_event_cb(ui_controls_air_assist_switch, ui_controls_switch_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
-    ui_controls_lights_switch = lv_switch_create(ui_controls_main_panel);
+    ui_controls_lights_switch = lv_switch_create(ui_controls_toggles_card);
     lv_obj_set_width(ui_controls_lights_switch, 50);
     lv_obj_set_height(ui_controls_lights_switch, 25);
-    lv_obj_set_x(ui_controls_lights_switch, 100);
-    lv_obj_set_align(ui_controls_lights_switch, LV_ALIGN_LEFT_MID);
+    lv_obj_set_x(ui_controls_lights_switch, 330);
+    lv_obj_set_y(ui_controls_lights_switch, 35);
     lv_obj_add_event_cb(ui_controls_lights_switch, ui_controls_switch_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
-    ui_controls_preview_switch = lv_switch_create(ui_controls_main_panel);
+    ui_controls_preview_switch = lv_switch_create(ui_controls_toggles_card);
     lv_obj_set_width(ui_controls_preview_switch, 50);
     lv_obj_set_height(ui_controls_preview_switch, 25);
-    lv_obj_set_x(ui_controls_preview_switch, 100);
-    lv_obj_set_y(ui_controls_preview_switch, 40);
-    lv_obj_set_align(ui_controls_preview_switch, LV_ALIGN_LEFT_MID);
+    lv_obj_set_x(ui_controls_preview_switch, 330);
+    lv_obj_set_y(ui_controls_preview_switch, 65);
     lv_obj_add_event_cb(ui_controls_preview_switch, ui_controls_switch_handler, LV_EVENT_VALUE_CHANGED, NULL);
-
-    lv_obj_t *ui_controls_interlock_switch_explanation = lv_label_create(ui_controls_main_panel);
-    lv_obj_set_width(ui_controls_interlock_switch_explanation, 199);
-    lv_obj_set_height(ui_controls_interlock_switch_explanation, LV_SIZE_CONTENT);
-    lv_obj_set_x(ui_controls_interlock_switch_explanation, 160);
-    lv_obj_set_y(ui_controls_interlock_switch_explanation, -80);
-    lv_obj_set_align(ui_controls_interlock_switch_explanation, LV_ALIGN_LEFT_MID);
-    lv_label_set_text(
-        ui_controls_interlock_switch_explanation,
-        "Allow laser to be fired.\nCan only be enabled if all lids are closed.");
-    lv_obj_set_style_text_color(
-        ui_controls_interlock_switch_explanation,
-        lv_color_hex(0xEA0303),
-        LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(
-        ui_controls_interlock_switch_explanation,
-        &font_default_12,
-        LV_PART_MAIN | LV_STATE_DEFAULT);
-
-    lv_obj_t *ui_controls_air_assist_switch_explanation = lv_label_create(ui_controls_main_panel);
-    lv_obj_set_width(ui_controls_air_assist_switch_explanation, 199);
-    lv_obj_set_height(ui_controls_air_assist_switch_explanation, LV_SIZE_CONTENT);
-    lv_obj_set_x(ui_controls_air_assist_switch_explanation, 160);
-    lv_obj_set_y(ui_controls_air_assist_switch_explanation, -40);
-    lv_obj_set_align(ui_controls_air_assist_switch_explanation, LV_ALIGN_LEFT_MID);
-    lv_label_set_text(ui_controls_air_assist_switch_explanation, "Enable air assist pump");
-    lv_obj_set_style_text_color(
-        ui_controls_air_assist_switch_explanation,
-        lv_color_hex(0x808080),
-        LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(
-        ui_controls_air_assist_switch_explanation,
-        &font_default_12,
-        LV_PART_MAIN | LV_STATE_DEFAULT);
-
-    lv_obj_t *ui_controls_lights_switch_explanation = lv_label_create(ui_controls_main_panel);
-    lv_obj_set_width(ui_controls_lights_switch_explanation, 199);
-    lv_obj_set_height(ui_controls_lights_switch_explanation, LV_SIZE_CONTENT);
-    lv_obj_set_x(ui_controls_lights_switch_explanation, 160);
-    lv_obj_set_align(ui_controls_lights_switch_explanation, LV_ALIGN_LEFT_MID);
-    lv_label_set_text(ui_controls_lights_switch_explanation, "Enable inner lights");
-    lv_obj_set_style_text_color(
-        ui_controls_lights_switch_explanation,
-        lv_color_hex(0x808080),
-        LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(
-        ui_controls_lights_switch_explanation,
-        &font_default_12,
-        LV_PART_MAIN | LV_STATE_DEFAULT);
-
-    lv_obj_t *ui_controls_preview_switch_explanation = lv_label_create(ui_controls_main_panel);
-    lv_obj_set_width(ui_controls_preview_switch_explanation, 199);
-    lv_obj_set_height(ui_controls_preview_switch_explanation, LV_SIZE_CONTENT);
-    lv_obj_set_x(ui_controls_preview_switch_explanation, 160);
-    lv_obj_set_y(ui_controls_preview_switch_explanation, 40);
-    lv_obj_set_align(ui_controls_preview_switch_explanation, LV_ALIGN_LEFT_MID);
-    lv_label_set_text(ui_controls_preview_switch_explanation, "Enable beam preview laser diodes");
-    lv_obj_set_style_text_color(
-        ui_controls_preview_switch_explanation,
-        lv_color_hex(0x808080),
-        LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(
-        ui_controls_preview_switch_explanation,
-        &font_default_12,
-        LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Force the first update
     ui_controls_update(true);

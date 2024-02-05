@@ -45,19 +45,19 @@ static void ui_status_init_screen_content() {
     lv_obj_t *ui_status_main_panel = ui_utils_create_screen_panel(ui_status_screen);
 
     // Laser card
-    lv_obj_t *ui_laser_card = ui_utils_create_card(ui_status_main_panel, "LASER", &image_laser_head);
-    lv_obj_set_width(ui_laser_card, 225);
-    lv_obj_set_height(ui_laser_card, 100);
-    lv_obj_set_pos(ui_laser_card, 0, 0);
+    lv_obj_t *ui_status_laser_card = ui_utils_create_card(ui_status_main_panel, "LASER", &image_laser_head);
+    lv_obj_set_width(ui_status_laser_card, 225);
+    lv_obj_set_height(ui_status_laser_card, 100);
+    lv_obj_set_pos(ui_status_laser_card, 0, 0);
 
-    lv_obj_t *ui_status_laser_labels = lv_label_create(ui_laser_card);
+    lv_obj_t *ui_status_laser_labels = lv_label_create(ui_status_laser_card);
     lv_obj_set_width(ui_status_laser_labels, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_laser_labels, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_laser_labels, 0);
     lv_obj_set_y(ui_status_laser_labels, 35);
     lv_label_set_text(ui_status_laser_labels, "State:\nAlarm:");
 
-    ui_status_laser_state_value = lv_label_create(ui_laser_card);
+    ui_status_laser_state_value = lv_label_create(ui_status_laser_card);
     lv_obj_set_width(ui_status_laser_state_value, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_laser_state_value, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_laser_state_value, 50);
@@ -65,7 +65,7 @@ static void ui_status_init_screen_content() {
     lv_label_set_text(ui_status_laser_state_value, "Unknown");
     lv_obj_set_style_text_color(ui_status_laser_state_value, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_status_laser_alarm_value = lv_label_create(ui_laser_card);
+    ui_status_laser_alarm_value = lv_label_create(ui_status_laser_card);
     lv_obj_set_width(ui_status_laser_alarm_value, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_laser_alarm_value, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_laser_alarm_value, 50);
@@ -74,19 +74,20 @@ static void ui_status_init_screen_content() {
     lv_obj_set_style_text_color(ui_status_laser_alarm_value, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Lids card
-    lv_obj_t *ui_lids_card = ui_utils_create_card(ui_status_main_panel, "LIDS", LV_SYMBOL_EYE, lv_color_hex(0xF94892));
-    lv_obj_set_width(ui_lids_card, 225);
-    lv_obj_set_height(ui_lids_card, 100);
-    lv_obj_set_pos(ui_lids_card, 235, 0);
+    lv_obj_t *ui_status_lids_card =
+        ui_utils_create_card(ui_status_main_panel, "LIDS", LV_SYMBOL_EYE, lv_color_hex(0xF94892));
+    lv_obj_set_width(ui_status_lids_card, 225);
+    lv_obj_set_height(ui_status_lids_card, 100);
+    lv_obj_set_pos(ui_status_lids_card, 235, 0);
 
-    lv_obj_t *ui_status_lid_labels = lv_label_create(ui_lids_card);
+    lv_obj_t *ui_status_lid_labels = lv_label_create(ui_status_lids_card);
     lv_obj_set_width(ui_status_lid_labels, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_lid_labels, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_lid_labels, 0);
     lv_obj_set_y(ui_status_lid_labels, 35);
     lv_label_set_text(ui_status_lid_labels, "Front lid:\nBack lid:");
 
-    ui_status_lid_front_value = lv_label_create(ui_lids_card);
+    ui_status_lid_front_value = lv_label_create(ui_status_lids_card);
     lv_obj_set_width(ui_status_lid_front_value, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_lid_front_value, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_lid_front_value, 65);
@@ -94,7 +95,7 @@ static void ui_status_init_screen_content() {
     lv_label_set_text(ui_status_lid_front_value, "Unknown");
     lv_obj_set_style_text_color(ui_status_lid_front_value, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_status_lid_back_value = lv_label_create(ui_lids_card);
+    ui_status_lid_back_value = lv_label_create(ui_status_lids_card);
     lv_obj_set_width(ui_status_lid_back_value, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_lid_back_value, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_lid_back_value, 65);
@@ -103,20 +104,20 @@ static void ui_status_init_screen_content() {
     lv_obj_set_style_text_color(ui_status_lid_back_value, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Cooling card
-    lv_obj_t *ui_cooling_card =
+    lv_obj_t *ui_status_cooling_card =
         ui_utils_create_card(ui_status_main_panel, "COOLING", LV_SYMBOL_SNOWFLAKE, lv_color_hex(0x89CFFD));
-    lv_obj_set_width(ui_cooling_card, 225);
-    lv_obj_set_height(ui_cooling_card, 145);
-    lv_obj_set_pos(ui_cooling_card, 0, 110);
+    lv_obj_set_width(ui_status_cooling_card, 225);
+    lv_obj_set_height(ui_status_cooling_card, 145);
+    lv_obj_set_pos(ui_status_cooling_card, 0, 110);
 
-    lv_obj_t *ui_status_cooling_input_label = lv_label_create(ui_cooling_card);
+    lv_obj_t *ui_status_cooling_input_label = lv_label_create(ui_status_cooling_card);
     lv_obj_set_width(ui_status_cooling_input_label, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_cooling_input_label, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_cooling_input_label, 0);
     lv_obj_set_y(ui_status_cooling_input_label, 35);
     lv_label_set_text(ui_status_cooling_input_label, "Input flow:\nInput temp:");
 
-    ui_status_cooling_input_flow_bar = lv_bar_create(ui_cooling_card);
+    ui_status_cooling_input_flow_bar = lv_bar_create(ui_status_cooling_card);
     lv_obj_set_width(ui_status_cooling_input_flow_bar, 110);
     lv_obj_set_height(ui_status_cooling_input_flow_bar, 10);
     lv_obj_set_x(ui_status_cooling_input_flow_bar, 90);
@@ -133,7 +134,7 @@ static void ui_status_init_screen_content() {
         LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_status_cooling_input_flow_value, &font_default_12, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_status_cooling_input_temp_bar = lv_bar_create(ui_cooling_card);
+    ui_status_cooling_input_temp_bar = lv_bar_create(ui_status_cooling_card);
     lv_obj_set_width(ui_status_cooling_input_temp_bar, 110);
     lv_obj_set_height(ui_status_cooling_input_temp_bar, 10);
     lv_obj_set_x(ui_status_cooling_input_temp_bar, 90);
@@ -150,14 +151,14 @@ static void ui_status_init_screen_content() {
         LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_status_cooling_input_temp_value, &font_default_12, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    lv_obj_t *ui_status_cooling_output_label = lv_label_create(ui_cooling_card);
+    lv_obj_t *ui_status_cooling_output_label = lv_label_create(ui_status_cooling_card);
     lv_obj_set_width(ui_status_cooling_output_label, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_cooling_output_label, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_cooling_output_label, 0);
     lv_obj_set_y(ui_status_cooling_output_label, 75);
     lv_label_set_text(ui_status_cooling_output_label, "Output flow:\nOutput temp:");
 
-    ui_status_cooling_output_flow_bar = lv_bar_create(ui_cooling_card);
+    ui_status_cooling_output_flow_bar = lv_bar_create(ui_status_cooling_card);
     lv_obj_set_width(ui_status_cooling_output_flow_bar, 110);
     lv_obj_set_height(ui_status_cooling_output_flow_bar, 10);
     lv_obj_set_x(ui_status_cooling_output_flow_bar, 90);
@@ -174,7 +175,7 @@ static void ui_status_init_screen_content() {
         LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_status_cooling_output_flow_value, &font_default_12, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_status_cooling_output_temp_bar = lv_bar_create(ui_cooling_card);
+    ui_status_cooling_output_temp_bar = lv_bar_create(ui_status_cooling_card);
     lv_obj_set_width(ui_status_cooling_output_temp_bar, 110);
     lv_obj_set_height(ui_status_cooling_output_temp_bar, 10);
     lv_obj_set_x(ui_status_cooling_output_temp_bar, 90);
@@ -192,19 +193,20 @@ static void ui_status_init_screen_content() {
     lv_obj_set_style_text_font(ui_status_cooling_output_temp_value, &font_default_12, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Misc. card
-    lv_obj_t *ui_misc_card = ui_utils_create_card(ui_status_main_panel, "MISC", LV_SYMBOL_FIRE, lv_color_hex(0xFF7F3F));
-    lv_obj_set_width(ui_misc_card, 225);
-    lv_obj_set_height(ui_misc_card, 145);
-    lv_obj_set_pos(ui_misc_card, 235, 110);
+    lv_obj_t *ui_status_misc_card =
+        ui_utils_create_card(ui_status_main_panel, "MISC", LV_SYMBOL_FIRE, lv_color_hex(0xFF7F3F));
+    lv_obj_set_width(ui_status_misc_card, 225);
+    lv_obj_set_height(ui_status_misc_card, 145);
+    lv_obj_set_pos(ui_status_misc_card, 235, 110);
 
-    lv_obj_t *ui_status_misc_labels = lv_label_create(ui_misc_card);
+    lv_obj_t *ui_status_misc_labels = lv_label_create(ui_status_misc_card);
     lv_obj_set_width(ui_status_misc_labels, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_misc_labels, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_misc_labels, 0);
     lv_obj_set_y(ui_status_misc_labels, 35);
     lv_label_set_text(ui_status_misc_labels, "Flame sensor:\nUART:\nCore #0:\nCore #1:\nFree heap:");
 
-    ui_status_fire_value = lv_label_create(ui_misc_card);
+    ui_status_fire_value = lv_label_create(ui_status_misc_card);
     lv_obj_set_width(ui_status_fire_value, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_fire_value, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_fire_value, 100);
@@ -212,7 +214,7 @@ static void ui_status_init_screen_content() {
     lv_label_set_text(ui_status_fire_value, "Unknown");
     lv_obj_set_style_text_color(ui_status_fire_value, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_status_uart_status_value = lv_label_create(ui_misc_card);
+    ui_status_uart_status_value = lv_label_create(ui_status_misc_card);
     lv_obj_set_width(ui_status_uart_status_value, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_uart_status_value, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_uart_status_value, 100);
@@ -220,7 +222,7 @@ static void ui_status_init_screen_content() {
     lv_label_set_text(ui_status_uart_status_value, "Unknown");
     lv_obj_set_style_text_color(ui_status_uart_status_value, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_status_cpu_0_value = lv_label_create(ui_misc_card);
+    ui_status_cpu_0_value = lv_label_create(ui_status_misc_card);
     lv_obj_set_width(ui_status_cpu_0_value, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_cpu_0_value, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_cpu_0_value, 100);
@@ -228,7 +230,7 @@ static void ui_status_init_screen_content() {
     lv_label_set_text(ui_status_cpu_0_value, "Unknown");
     lv_obj_set_style_text_color(ui_status_cpu_0_value, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_status_cpu_1_value = lv_label_create(ui_misc_card);
+    ui_status_cpu_1_value = lv_label_create(ui_status_misc_card);
     lv_obj_set_width(ui_status_cpu_1_value, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_cpu_1_value, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_cpu_1_value, 100);
@@ -236,7 +238,7 @@ static void ui_status_init_screen_content() {
     lv_label_set_text(ui_status_cpu_1_value, "Unknown");
     lv_obj_set_style_text_color(ui_status_cpu_1_value, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_status_heap_value = lv_label_create(ui_misc_card);
+    ui_status_heap_value = lv_label_create(ui_status_misc_card);
     lv_obj_set_width(ui_status_heap_value, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_status_heap_value, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_status_heap_value, 100);

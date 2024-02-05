@@ -410,6 +410,10 @@
 #define LV_SYMBOL_WIFI "\xEF\x87\xAB" /*61931, 0xF1EB*/
 #define LV_SYMBOL_TEMPERATURE_FULL "\xEF\x8B\x87" /*62151, 0xF2C7*/
 #define LV_SYMBOL_CODE_PULL_REQUEST "\xEE\x84\xBC" /*57660, 0xE13C*/
+#define LV_SYMBOL_PLUG_CIRCLE_BOLT "\xEE\x95\x9B" /*58715, 0xE55B*/
+#define LV_SYMBOL_HOUSE "\xEF\x80\x95" /*61461, 0xF015*/
+#define LV_SYMBOL_UP_DOWN_LEFT_RIGHT "\xEF\x82\xB2" /*61618, 0xF0B2*/
+#define LV_SYMBOL_UNLOCK "\xEF\x82\x9C" /*61596, 0xF09C*/
 
 /*Enable handling large font and/or fonts with a lot of characters.
  *The limit depends on the font size, font face and bpp.

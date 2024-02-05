@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FONT_SIZES=(12 14)
+FONT_SIZES=(12 14 16)
 DEFAULT_FONT="Roboto-Regular.ttf"
 RANGE_DEFAULT="0x20-0x7F,0xB0,0x2022"
 
@@ -38,10 +38,9 @@ done
 #
 # * 0xF06D = fa-fire
 # * 0xF2DC = fa-snowflake
-# * 0xF0E7 = fa-bolt
 # * 0xF06E = fa-eye
-ICONS_SIZES=(40)
-RANGE_ICONS_FA_SOLID="0xF06D,0xF2DC,0xF0E7,0xF06E"
+ICONS_SIZES=(36)
+RANGE_ICONS_FA_SOLID="0xF06D,0xF2DC,0xF06E"
 
 for FONT_SIZE in "${ICONS_SIZES[@]}"
 do

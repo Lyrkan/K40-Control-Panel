@@ -6,6 +6,7 @@
 #include <WiFi.h>
 
 #include "UI/menu.h"
+#include "UI/utils.h"
 #include "UI/screens/settings.h"
 #include "macros.h"
 #include "settings.h"
@@ -260,12 +261,17 @@ static void ui_settings_init_screen_content() {
     // Make sure the screen is empty
     lv_obj_clean(ui_settings_screen);
 
+    lv_obj_t *ui_settings_main_panel = ui_utils_create_screen_panel(ui_settings_screen);
+    lv_obj_t *ui_settings_main_card = ui_utils_create_card(ui_settings_main_panel, "SETTINGS", LV_SYMBOl_GEAR);
+    lv_obj_set_width(ui_settings_main_card, 460);
+    lv_obj_set_height(ui_settings_main_card, 255);
+    lv_obj_set_pos(ui_settings_main_card, 0, 0);
+
     // Create menu
-    ui_settings_menu = lv_menu_create(ui_settings_screen);
-    lv_obj_set_width(ui_settings_menu, 460);
-    lv_obj_set_height(ui_settings_menu, 255);
-    lv_obj_set_x(ui_settings_menu, 10);
-    lv_obj_set_y(ui_settings_menu, -10);
+    ui_settings_menu = lv_menu_create(ui_settings_main_card);
+    lv_obj_set_width(ui_settings_menu, 440);
+    lv_obj_set_height(ui_settings_menu, 215);
+    lv_obj_set_pos(ui_settings_menu, 0, 10);
     lv_obj_set_align(ui_settings_menu, LV_ALIGN_BOTTOM_LEFT);
     lv_obj_set_style_bg_opa(ui_settings_menu, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_width(ui_settings_menu, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -370,42 +376,20 @@ static void ui_settings_init_screen_content() {
         LV_EVENT_ALL,
         ui_settings_keyboard);
 
-    ui_settings_wifi_connect_button = lv_btn_create(ui_settings_wifi_page_panel);
-    lv_obj_set_width(ui_settings_wifi_connect_button, 100);
-    lv_obj_set_height(ui_settings_wifi_connect_button, 40);
-    lv_obj_set_x(ui_settings_wifi_connect_button, 0);
-    lv_obj_set_y(ui_settings_wifi_connect_button, 110);
+    ui_settings_wifi_connect_button = ui_utils_create_small_button(ui_settings_wifi_page_panel, "Connect", 100);
+    lv_obj_set_pos(ui_settings_wifi_connect_button, 0, 95);
     lv_obj_set_align(ui_settings_wifi_connect_button, LV_ALIGN_TOP_RIGHT);
-    lv_obj_add_flag(ui_settings_wifi_connect_button, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
-    lv_obj_clear_flag(ui_settings_wifi_connect_button, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(ui_settings_wifi_connect_button, ui_settings_wifi_buttons_handler, LV_EVENT_CLICKED, NULL);
 
-    lv_obj_t *ui_settings_wifi_connect_button_label = lv_label_create(ui_settings_wifi_connect_button);
-    lv_obj_set_width(ui_settings_wifi_connect_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_height(ui_settings_wifi_connect_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_align(ui_settings_wifi_connect_button_label, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_settings_wifi_connect_button_label, "Connect");
-
-    ui_settings_wifi_disconnect_button = lv_btn_create(ui_settings_wifi_page_panel);
-    lv_obj_set_width(ui_settings_wifi_disconnect_button, 100);
-    lv_obj_set_height(ui_settings_wifi_disconnect_button, 40);
-    lv_obj_set_x(ui_settings_wifi_disconnect_button, 0);
-    lv_obj_set_y(ui_settings_wifi_disconnect_button, 110);
+    ui_settings_wifi_disconnect_button = ui_utils_create_small_button(ui_settings_wifi_page_panel, "Disconnect", 100);
+    lv_obj_set_pos(ui_settings_wifi_disconnect_button, 0, 95);
     lv_obj_set_align(ui_settings_wifi_disconnect_button, LV_ALIGN_TOP_RIGHT);
-    lv_obj_add_flag(ui_settings_wifi_disconnect_button, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
-    lv_obj_clear_flag(ui_settings_wifi_disconnect_button, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(ui_settings_wifi_disconnect_button, LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_style_bg_color(
         ui_settings_wifi_disconnect_button,
         lv_color_hex(0xE80C0C),
         LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_add_event_cb(ui_settings_wifi_disconnect_button, ui_settings_wifi_buttons_handler, LV_EVENT_CLICKED, NULL);
-
-    lv_obj_t *ui_settings_wifi_disconnect_button_label = lv_label_create(ui_settings_wifi_disconnect_button);
-    lv_obj_set_width(ui_settings_wifi_disconnect_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_height(ui_settings_wifi_disconnect_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_align(ui_settings_wifi_disconnect_button_label, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_settings_wifi_disconnect_button_label, "Disconnect");
 
     ui_settings_wifi_current_ip_label = lv_label_create(ui_settings_wifi_page_panel);
     lv_obj_set_width(ui_settings_wifi_current_ip_label, LV_SIZE_CONTENT);

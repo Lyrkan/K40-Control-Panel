@@ -5,6 +5,7 @@
 #include "K40/bed.h"
 #include "UI/images.h"
 #include "UI/keyboard.h"
+#include "UI/utils.h"
 #include "UI/screens/bed.h"
 #include "macros.h"
 #include "queues.h"
@@ -57,104 +58,52 @@ static void ui_bed_init_screen_content() {
     // Make sure the screen is empty
     lv_obj_clean(ui_bed_screen);
 
-    lv_obj_t *ui_bed_main_panel = lv_obj_create(ui_bed_screen);
-    lv_obj_set_width(ui_bed_main_panel, 460);
-    lv_obj_set_height(ui_bed_main_panel, 255);
-    lv_obj_set_x(ui_bed_main_panel, 10);
-    lv_obj_set_y(ui_bed_main_panel, -10);
-    lv_obj_set_align(ui_bed_main_panel, LV_ALIGN_BOTTOM_LEFT);
-    lv_obj_set_style_bg_opa(ui_bed_main_panel, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_width(ui_bed_main_panel, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_clear_flag(ui_bed_main_panel, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_t *ui_bed_main_panel = ui_utils_create_screen_panel(ui_bed_screen);
+    lv_obj_t *ui_bed_main_card =
+        ui_utils_create_card(ui_bed_main_panel, "BED CONTROLS", LV_SYMBOL_ARROW_DOWN_UP_ACROSS_LINE);
+    lv_obj_set_width(ui_bed_main_card, 460);
+    lv_obj_set_height(ui_bed_main_card, 255);
+    lv_obj_set_pos(ui_bed_main_card, 0, 0);
 
-    ui_bed_textarea = lv_textarea_create(ui_bed_main_panel);
+    ui_bed_textarea = lv_textarea_create(ui_bed_main_card);
     lv_obj_set_width(ui_bed_textarea, 120);
     lv_obj_set_height(ui_bed_textarea, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_bed_textarea, 0);
-    lv_obj_set_y(ui_bed_textarea, 50);
+    lv_obj_set_y(ui_bed_textarea, 69);
+    lv_obj_set_style_pad_all(ui_bed_textarea, 4, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_textarea_set_accepted_chars(ui_bed_textarea, "0123456789.");
     lv_textarea_set_placeholder_text(ui_bed_textarea, "Value (mm)");
     lv_textarea_set_one_line(ui_bed_textarea, true);
 
-    ui_bed_home_button = lv_btn_create(ui_bed_main_panel);
-    lv_obj_set_width(ui_bed_home_button, 120);
-    lv_obj_set_height(ui_bed_home_button, 40);
+    ui_bed_home_button = ui_utils_create_small_button(ui_bed_main_card, LV_SYMBOL_HOUSE " Home", 120);
+    lv_obj_set_pos(ui_bed_home_button, 0, 35);
     lv_obj_add_event_cb(ui_bed_home_button, ui_bed_button_handler, LV_EVENT_CLICKED, NULL);
 
-    lv_obj_t *ui_bed_home_button_label = lv_label_create(ui_bed_home_button);
-    lv_obj_set_width(ui_bed_home_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_height(ui_bed_home_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_align(ui_bed_home_button_label, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_bed_home_button_label, "Home");
-
-    ui_bed_set_origin_button = lv_btn_create(ui_bed_main_panel);
-    lv_obj_set_width(ui_bed_set_origin_button, 120);
-    lv_obj_set_height(ui_bed_set_origin_button, 40);
-    lv_obj_set_x(ui_bed_set_origin_button, 130);
-    lv_obj_set_y(ui_bed_set_origin_button, 0);
+    ui_bed_set_origin_button = ui_utils_create_small_button(ui_bed_main_card, LV_SYMBOL_CROSSHAIRS " Set origin", 130);
+    lv_obj_set_pos(ui_bed_set_origin_button, 130, 35);
     lv_obj_add_state(ui_bed_set_origin_button, LV_STATE_DISABLED);
     lv_obj_add_event_cb(ui_bed_set_origin_button, ui_bed_button_handler, LV_EVENT_CLICKED, NULL);
 
-    lv_obj_t *ui_bed_set_origin_button_label = lv_label_create(ui_bed_set_origin_button);
-    lv_obj_set_width(ui_bed_set_origin_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_height(ui_bed_set_origin_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_align(ui_bed_set_origin_button_label, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_bed_set_origin_button_label, "Set origin");
-
-    ui_bed_go_up_button = lv_btn_create(ui_bed_main_panel);
-    lv_obj_set_width(ui_bed_go_up_button, 59);
-    lv_obj_set_height(ui_bed_go_up_button, 40);
-    lv_obj_set_x(ui_bed_go_up_button, 130);
-    lv_obj_set_y(ui_bed_go_up_button, 50);
+    ui_bed_go_up_button = ui_utils_create_small_button(ui_bed_main_card, LV_SYMBOL_CARET_UP " Up", 62);
+    lv_obj_set_pos(ui_bed_go_up_button, 130, 70);
     lv_obj_add_event_cb(ui_bed_go_up_button, ui_bed_button_handler, LV_EVENT_CLICKED, NULL);
 
-    lv_obj_t *ui_bed_go_up_button_label = lv_label_create(ui_bed_go_up_button);
-    lv_obj_set_width(ui_bed_go_up_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_height(ui_bed_go_up_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_align(ui_bed_go_up_button_label, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_bed_go_up_button_label, "Up");
-
-    ui_bed_go_down_button = lv_btn_create(ui_bed_main_panel);
-    lv_obj_set_width(ui_bed_go_down_button, 59);
-    lv_obj_set_height(ui_bed_go_down_button, 40);
-    lv_obj_set_x(ui_bed_go_down_button, 192);
-    lv_obj_set_y(ui_bed_go_down_button, 50);
+    ui_bed_go_down_button = ui_utils_create_small_button(ui_bed_main_card, LV_SYMBOL_CARET_DOWN " Down", 62);
+    lv_obj_set_pos(ui_bed_go_down_button, 198, 70);
     lv_obj_add_event_cb(ui_bed_go_down_button, ui_bed_button_handler, LV_EVENT_CLICKED, NULL);
 
-    lv_obj_t *ui_bed_go_down_button_label = lv_label_create(ui_bed_go_down_button);
-    lv_obj_set_width(ui_bed_go_down_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_height(ui_bed_go_down_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_align(ui_bed_go_down_button_label, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_bed_go_down_button_label, "Down");
-
-    ui_bed_focus_surface_button = lv_btn_create(ui_bed_main_panel);
-    lv_obj_set_width(ui_bed_focus_surface_button, 170);
-    lv_obj_set_height(ui_bed_focus_surface_button, 40);
-    lv_obj_set_x(ui_bed_focus_surface_button, 260);
-    lv_obj_set_y(ui_bed_focus_surface_button, 0);
+    ui_bed_focus_surface_button =
+        ui_utils_create_small_button(ui_bed_main_card, LV_SYMBOL_ARROWS_TO_DOT " Focus surface", 170);
+    lv_obj_set_pos(ui_bed_focus_surface_button, 270, 35);
     lv_obj_add_state(ui_bed_focus_surface_button, LV_STATE_DISABLED);
 
-    lv_obj_t *ui_bed_focus_surface_button_label = lv_label_create(ui_bed_focus_surface_button);
-    lv_obj_set_width(ui_bed_focus_surface_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_height(ui_bed_focus_surface_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_align(ui_bed_focus_surface_button_label, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_bed_focus_surface_button_label, "Focus surface");
-
-    ui_bed_focus_center_button = lv_btn_create(ui_bed_main_panel);
-    lv_obj_set_width(ui_bed_focus_center_button, 170);
-    lv_obj_set_height(ui_bed_focus_center_button, 40);
-    lv_obj_set_x(ui_bed_focus_center_button, 260);
-    lv_obj_set_y(ui_bed_focus_center_button, 50);
+    ui_bed_focus_center_button =
+        ui_utils_create_small_button(ui_bed_main_card, LV_SYMBOL_ARROWS_TO_DOT " Focus center", 170);
+    lv_obj_set_pos(ui_bed_focus_center_button, 270, 70);
     lv_obj_add_state(ui_bed_focus_center_button, LV_STATE_DISABLED);
 
-    lv_obj_t *ui_bed_focus_center_button_label = lv_label_create(ui_bed_focus_center_button);
-    lv_obj_set_width(ui_bed_focus_center_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_height(ui_bed_focus_center_button_label, LV_SIZE_CONTENT);
-    lv_obj_set_align(ui_bed_focus_center_button_label, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_bed_focus_center_button_label, "Focus center");
-
-    lv_obj_t *ui_bed_status_panel = lv_obj_create(ui_bed_main_panel);
-    lv_obj_set_width(ui_bed_status_panel, 200);
+    lv_obj_t *ui_bed_status_panel = lv_obj_create(ui_bed_main_card);
+    lv_obj_set_width(ui_bed_status_panel, 190);
     lv_obj_set_height(ui_bed_status_panel, 122);
     lv_obj_set_align(ui_bed_status_panel, LV_ALIGN_BOTTOM_RIGHT);
     lv_obj_set_style_bg_opa(ui_bed_status_panel, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -225,12 +174,14 @@ static void ui_bed_init_screen_content() {
     lv_obj_add_flag(ui_bed_status_image, LV_OBJ_FLAG_HIDDEN);
     lv_img_set_zoom(ui_bed_status_image, 128);
 
-    lv_obj_t *ui_bed_keyboard = lv_keyboard_create(ui_bed_main_panel);
+    lv_obj_t *ui_bed_keyboard = lv_keyboard_create(ui_bed_main_card);
     lv_obj_set_width(ui_bed_keyboard, 210);
     lv_obj_set_height(ui_bed_keyboard, 120);
     lv_obj_set_align(ui_bed_keyboard, LV_ALIGN_BOTTOM_LEFT);
-    lv_obj_set_style_bg_color(ui_bed_keyboard, lv_color_hex(0xFAFAFA), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_bed_keyboard, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_bed_keyboard, &font_default_14, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_bed_keyboard, lv_palette_main(LV_PALETTE_BLUE), LV_PART_ITEMS);
+    lv_obj_set_style_text_color(ui_bed_keyboard, lv_color_white(), LV_PART_ITEMS);
     lv_keyboard_set_map(ui_bed_keyboard, LV_KEYBOARD_MODE_USER_1, KEYBOARD_NUMPAD_MAP, KEYBOARD_NUMPAD_CTRL);
     lv_keyboard_set_mode(ui_bed_keyboard, LV_KEYBOARD_MODE_USER_1);
     lv_keyboard_set_textarea(ui_bed_keyboard, ui_bed_textarea);

@@ -414,6 +414,10 @@
 #define LV_SYMBOL_HOUSE "\xEF\x80\x95" /*61461, 0xF015*/
 #define LV_SYMBOL_UP_DOWN_LEFT_RIGHT "\xEF\x82\xB2" /*61618, 0xF0B2*/
 #define LV_SYMBOL_UNLOCK "\xEF\x82\x9C" /*61596, 0xF09C*/
+#define LV_SYMBOL_CARET_DOWN "\xEF\x83\x97" /*61655, 0xF0D7*/
+#define LV_SYMBOL_CARET_UP "\xEF\x83\x98" /*61656, 0xF0D8*/
+#define LV_SYMBOL_CROSSHAIRS "\xEF\x81\x9B" /*61531, 0xF05B*/
+#define LV_SYMBOL_ARROWS_TO_DOT "\xEE\x92\xBE" /*58558, 0xE4BE*/
 
 /*Enable handling large font and/or fonts with a lot of characters.
  *The limit depends on the font size, font face and bpp.

@@ -51,3 +51,17 @@ lv_obj_t *ui_utils_create_card(lv_obj_t *parent, const char *title, const void *
 
     return card;
 }
+
+lv_obj_t *ui_utils_create_small_button(lv_obj_t *parent, const char *label, lv_coord_t width) {
+    lv_obj_t *button = lv_btn_create(parent);
+    lv_obj_set_size(button, width, 25);
+    lv_obj_set_style_radius(button, 6, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_t *button_label = lv_label_create(button);
+    lv_obj_set_width(button_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(button_label, LV_SIZE_CONTENT);
+    lv_obj_set_align(button_label, LV_ALIGN_CENTER);
+    lv_label_set_text(button_label, label);
+
+    return button;
+}

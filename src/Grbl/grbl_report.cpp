@@ -3,12 +3,15 @@
 #include <freertos/queue.h>
 #include "Grbl/grbl_report.h"
 #include "Grbl/grbl_state.h"
+#include "UI/screens/controls.h"
+#include "UI/screens/status.h"
 #include "macros.h"
 #include "mutex.h"
 #include "queues.h"
 
 GrblReport::GrblReport() {
     state = GRBL_STATE_UNKNOWN;
+    alarm = GRBL_ALARM_UNKNOWN;
     w_pos = {
         .is_set = false,
         .x = 0,
@@ -44,6 +47,11 @@ GrblReport::GrblReport() {
 void GrblReport::update(const GrblReport *report) {
     if (report->state > GRBL_STATE_INVALID) {
         state = report->state;
+        if (state == GRBL_STATE_IDLE) {
+            alarm = GRBL_ALARM_NONE;
+        } else if (state == GRBL_STATE_ALARM && alarm == GRBL_ALARM_NONE) {
+            alarm = GRBL_ALARM_UNKNOWN;
+        }
     }
 
     if (report->w_pos.is_set) {
@@ -107,10 +115,20 @@ void GrblReport::update(const GrblReport *report) {
 }
 
 GrblReport grbl_last_report;
+
 void grbl_update_last_report(const GrblReport *report) {
     TAKE_MUTEX(grbl_last_report_mutex)
     grbl_last_report.update(report);
     RELEASE_MUTEX(grbl_last_report_mutex)
 
-    // TODO Notify UI
+    ui_status_notify_update(STATUS_UPDATE_GRBL_REPORT);
+    ui_controls_notify_update(CONTROLS_UPDATE_GRBL_REPORT);
+}
+
+void grbl_update_last_alarm(GrblAlarm alarm) {
+    TAKE_MUTEX(grbl_last_report_mutex)
+    grbl_last_report.alarm = alarm;
+    RELEASE_MUTEX(grbl_last_report_mutex)
+
+    ui_status_notify_update(STATUS_UPDATE_GRBL_REPORT);
 }

@@ -1,21 +1,85 @@
 #include <Arduino.h>
 #include <lvgl.h>
 
+#include "Grbl/grbl_serial.h"
+#include "Grbl/grbl_report.h"
 #include "K40/relays.h"
 #include "UI/images.h"
 #include "UI/utils.h"
 #include "UI/screens/controls.h"
+#include "math.h"
+#include "macros.h"
+#include "mutex.h"
 #include "queues.h"
 
 lv_obj_t *ui_controls_screen;
 
+static StaticEventGroup_t ui_controls_event_group_static;
+static EventGroupHandle_t ui_controls_event_group = xEventGroupCreateStatic(&ui_controls_event_group_static);
+
 static lv_obj_t *ui_controls_laser_speed_textarea;
 static lv_obj_t *ui_controls_laser_pos_x_textarea;
 static lv_obj_t *ui_controls_laser_pos_y_textarea;
+static lv_obj_t *ui_controls_laser_home_button;
+static lv_obj_t *ui_controls_laser_disable_steppers_button;
+static lv_obj_t *ui_controls_laser_move_x_matrix;
+static lv_obj_t *ui_controls_laser_move_y_matrix;
 static lv_obj_t *ui_controls_interlock_switch;
 static lv_obj_t *ui_controls_air_assist_switch;
 static lv_obj_t *ui_controls_lights_switch;
 static lv_obj_t *ui_controls_preview_switch;
+
+static void ui_controls_btnmatrix_handler(lv_event_t *e) {
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if (event_code != LV_EVENT_VALUE_CHANGED) {
+        return;
+    }
+
+    lv_obj_t *event_target = lv_event_get_target(e);
+
+    if (event_target == NULL) {
+        // Should never happen
+        return;
+    } else if (event_target == ui_controls_laser_move_x_matrix || event_target == ui_controls_laser_move_y_matrix) {
+        uint32_t btn_id = lv_btnmatrix_get_selected_btn(event_target);
+        if (btn_id == 3) { // Home
+            if (event_target == ui_controls_laser_move_x_matrix) {
+                grbl_send_home_command(GRBL_AXIS_X);
+            } else if (event_target == ui_controls_laser_move_y_matrix) {
+                grbl_send_home_command(GRBL_AXIS_Y);
+            }
+        } else { // Relative move
+            float_t move_offset = pow10(abs((int)(btn_id - 3)) - 1) * (btn_id < 3 ? -1 : 1);
+            GrblMoveCoordinates move_target = {.axis_flags = 0};
+            if (event_target == ui_controls_laser_move_x_matrix) {
+                move_target.axis_flags = GRBL_AXIS_X;
+                move_target.x = move_offset;
+            } else if (event_target == ui_controls_laser_move_y_matrix) {
+                move_target.axis_flags = GRBL_AXIS_Y;
+                move_target.y = move_offset;
+            }
+            grbl_send_move_command(move_target, GRBL_MOVE_MODE_RELATIVE);
+        }
+    }
+}
+
+static void ui_controls_button_handler(lv_event_t *e) {
+    lv_event_code_t event_code = lv_event_get_code(e);
+    if (event_code != LV_EVENT_CLICKED) {
+        return;
+    }
+
+    lv_obj_t *event_target = lv_event_get_target(e);
+
+    if (event_target == NULL) {
+        // Should never happen
+        return;
+    } else if (event_target == ui_controls_laser_home_button) {
+        grbl_send_home_command(GRBL_AXIS_X | GRBL_AXIS_Y);
+    } else if (event_target == ui_controls_laser_disable_steppers_button) {
+        grbl_send_message("$MD");
+    }
+}
 
 static void ui_controls_switch_handler(lv_event_t *e) {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -76,13 +140,14 @@ void ui_controls_init_screen_content() {
     lv_textarea_set_placeholder_text(ui_controls_laser_speed_textarea, "mm/s");
     lv_textarea_set_one_line(ui_controls_laser_speed_textarea, true);
 
-    lv_obj_t *ui_controls_laser_home_button =
-        ui_utils_create_small_button(ui_controls_laser_card, LV_SYMBOL_HOUSE " Home", 80);
+    ui_controls_laser_home_button = ui_utils_create_small_button(ui_controls_laser_card, LV_SYMBOL_HOUSE " Home", 80);
     lv_obj_set_pos(ui_controls_laser_home_button, 100, 25);
+    lv_obj_add_event_cb(ui_controls_laser_home_button, ui_controls_button_handler, LV_EVENT_CLICKED, NULL);
 
-    lv_obj_t *ui_controls_laser_disable_steppers_button =
+    ui_controls_laser_disable_steppers_button =
         ui_utils_create_small_button(ui_controls_laser_card, LV_SYMBOL_UNLOCK " Disable steppers", 130);
     lv_obj_set_pos(ui_controls_laser_disable_steppers_button, 185, 25);
+    lv_obj_add_event_cb(ui_controls_laser_disable_steppers_button, ui_controls_button_handler, LV_EVENT_CLICKED, NULL);
 
     lv_obj_t *ui_controls_laser_pos_x_label = lv_label_create(ui_controls_laser_card);
     lv_obj_set_width(ui_controls_laser_pos_x_label, LV_SIZE_CONTENT);
@@ -138,19 +203,21 @@ void ui_controls_init_screen_content() {
     lv_style_set_radius(&laser_head_moves_matrix_style_btn, 0);
 
     static const char *laser_head_moves_map[] = {"-100", "-10", "-1", LV_SYMBOL_HOUSE, "+1", "+10", "+100", ""};
-    lv_obj_t *ui_controls_laser_move_x_matrix = lv_btnmatrix_create(ui_controls_laser_card);
+    ui_controls_laser_move_x_matrix = lv_btnmatrix_create(ui_controls_laser_card);
     lv_btnmatrix_set_map(ui_controls_laser_move_x_matrix, laser_head_moves_map);
     lv_obj_add_style(ui_controls_laser_move_x_matrix, &laser_head_moves_matrix_style_bg, 0);
     lv_obj_add_style(ui_controls_laser_move_x_matrix, &laser_head_moves_matrix_style_btn, LV_PART_ITEMS);
     lv_obj_set_size(ui_controls_laser_move_x_matrix, 340, 25);
     lv_obj_set_pos(ui_controls_laser_move_x_matrix, 100, 60);
+    lv_obj_add_event_cb(ui_controls_laser_move_x_matrix, ui_controls_btnmatrix_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
-    lv_obj_t *ui_controls_laser_move_y_matrix = lv_btnmatrix_create(ui_controls_laser_card);
+    ui_controls_laser_move_y_matrix = lv_btnmatrix_create(ui_controls_laser_card);
     lv_btnmatrix_set_map(ui_controls_laser_move_y_matrix, laser_head_moves_map);
     lv_obj_add_style(ui_controls_laser_move_y_matrix, &laser_head_moves_matrix_style_bg, 0);
     lv_obj_add_style(ui_controls_laser_move_y_matrix, &laser_head_moves_matrix_style_btn, LV_PART_ITEMS);
     lv_obj_set_size(ui_controls_laser_move_y_matrix, 340, 25);
     lv_obj_set_pos(ui_controls_laser_move_y_matrix, 100, 95);
+    lv_obj_add_event_cb(ui_controls_laser_move_y_matrix, ui_controls_btnmatrix_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
     // Toggles card
     lv_obj_t *ui_controls_toggles_card =
@@ -245,6 +312,36 @@ void ui_controls_update(bool initialize) {
         return;
     }
 
+    // Update fields that depend on the last Grbl report when a change is detected
+    static char laser_pos_x_formatted_value[10];
+    static char laser_pos_y_formatted_value[10];
+    static char laser_speed_formatted_value[10];
+
+    uint8_t pending_updates = xEventGroupGetBits(ui_controls_event_group);
+    bool pending_grbl_report_update = initialize || ((pending_updates & CONTROLS_UPDATE_GRBL_REPORT) != 0);
+
+    if (pending_grbl_report_update) {
+        TAKE_MUTEX(grbl_last_report_mutex)
+        GrblCoord m_pos = grbl_last_report.m_pos;
+        GrblFeedState feed = grbl_last_report.feed_state;
+        RELEASE_MUTEX(grbl_last_report_mutex)
+
+        if (m_pos.is_set) {
+            snprintf(laser_pos_x_formatted_value, ARRAY_SIZE(laser_pos_x_formatted_value), "%.2f", m_pos.x);
+            snprintf(laser_pos_y_formatted_value, ARRAY_SIZE(laser_pos_y_formatted_value), "%.2f", m_pos.y);
+            lv_textarea_set_text(ui_controls_laser_pos_x_textarea, laser_pos_x_formatted_value);
+            lv_textarea_set_text(ui_controls_laser_pos_y_textarea, laser_pos_y_formatted_value);
+        }
+
+        if (feed.is_set) {
+            snprintf(laser_speed_formatted_value, ARRAY_SIZE(laser_speed_formatted_value), "%d", feed.rate);
+            lv_textarea_set_text(ui_controls_laser_speed_textarea, laser_speed_formatted_value);
+        }
+
+        xEventGroupClearBits(ui_controls_event_group, CONTROLS_UPDATE_GRBL_REPORT);
+    }
+
+    // Update relays state on an interval
     static unsigned long last_update = 0;
     unsigned long current_time = millis();
     if (last_update == 0) {
@@ -282,3 +379,5 @@ void ui_controls_update(bool initialize) {
         last_update = current_time;
     }
 }
+
+void ui_controls_notify_update(uint8_t update_types) { xEventGroupSetBits(ui_controls_event_group, update_types); }

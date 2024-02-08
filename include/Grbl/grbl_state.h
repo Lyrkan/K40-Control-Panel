@@ -19,6 +19,8 @@ typedef enum {
 } GrblState;
 
 typedef enum GrblAlarm {
+    GRBL_ALARM_UNKNOWN = -1,
+    GRBL_ALARM_NONE = 0,
     GRBL_ALARM_HARD_LIMIT = 1,
     GRBL_ALARM_MOTION_EXCEEDS_MACHINE_TRAVEL = 2,
     GRBL_ALARM_RESET_WHILE_IN_MOTION = 3,

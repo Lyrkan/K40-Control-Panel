@@ -66,6 +66,7 @@ static void grbl_process_alarm(const char *alarm_code) {
 
     log_e("Alarm triggered (code: %d): %s", alarm_code_i, alarm_description);
     ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, alarm_description);
+    grbl_update_last_alarm((GrblAlarm)alarm_code_i);
 }
 
 static void grbl_process_settings(const char *settings_body) { log_d("Setting value: %s", settings_body); }

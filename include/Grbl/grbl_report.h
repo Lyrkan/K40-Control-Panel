@@ -6,6 +6,7 @@
 class GrblReport {
   public:
     GrblState state;
+    GrblAlarm alarm;
     GrblCoord w_pos;
     GrblCoord m_pos;
     GrblCoord wco;
@@ -20,5 +21,6 @@ class GrblReport {
 
 extern GrblReport grbl_last_report;
 void grbl_update_last_report(const GrblReport *report);
+void grbl_update_last_alarm(GrblAlarm alarm);
 
 #endif

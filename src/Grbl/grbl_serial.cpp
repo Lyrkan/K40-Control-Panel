@@ -9,12 +9,15 @@
 #include "Grbl/grbl_parser.h"
 #include "Grbl/grbl_serial.h"
 #include "UI/overlay.h"
+#include "UI/screens/status.h"
 #include "macros.h"
 #include "queues.h"
 
 TaskHandle_t grbl_rx_task_handle = NULL;
 TaskHandle_t grbl_tx_task_handle = NULL;
 
+static GrblSerialStatus grbl_serial_status = GRBL_SERIAL_STATUS_DISCONNECTED;
+static SemaphoreHandle_t grbl_serial_status_mutex = xSemaphoreCreateMutex();
 static QueueHandle_t grbl_tx_msg_queue = xQueueCreate(GRBL_TX_QUEUE_SIZE, sizeof(char *));
 
 static void grbl_rx_task(void *param) {
@@ -95,12 +98,16 @@ static void grbl_rx_task(void *param) {
 
 static void grbl_tx_task(void *param) {
     while (true) {
+        grbl_set_serial_status(GRBL_SERIAL_STATUS_DISCONNECTED);
+
         // Schedule initial messages and then delay a bit
         // to make sure FluidNC had enough time to start
         bool initialized = false;
         grbl_send_message(GRBL_MESSAGE_REPORT_INTERVAL, true);
         grbl_send_message(GRBL_MESSAGE_REPORT_FORMAT);
         vTaskDelay(pdMS_TO_TICKS(GRBL_INIT_MESSAGES_DELAY_MS));
+
+        grbl_set_serial_status(GRBL_SERIAL_STATUS_CONNECTING);
 
         int fd;
         if ((fd = open(GRBL_UART_FILE, O_WRONLY)) == -1) {
@@ -123,8 +130,6 @@ static void grbl_tx_task(void *param) {
                 ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, "An error happened when trying to send Grbl message");
             }
 
-            free(msg_pointer);
-
             if (xTaskNotifyWaitIndexed(
                     GRBL_TASK_NOTIFY_ACK_INDEX,
                     0x00,
@@ -137,11 +142,20 @@ static void grbl_tx_task(void *param) {
                     goto reset;
                 } else {
                     log_w("No ack received after %d milliseconds", GRBL_ACK_TIMEOUT_MS);
-                    ui_overlay_add_flash_message(FLASH_LEVEL_WARNING, "Grbl command timed-out");
+
+                    char flash_message[255];
+                    snprintf(flash_message, ARRAY_SIZE(flash_message), "Grbl command timed-out: %s", msg_pointer);
+                    flash_message[strnlen(flash_message, ARRAY_SIZE(flash_message)) - 1] = '\0'; // Remove line-ending
+                    ui_overlay_add_flash_message(FLASH_LEVEL_WARNING, flash_message);
                 }
             }
 
-            initialized = true;
+            free(msg_pointer);
+
+            if (!initialized) {
+                initialized = true;
+                grbl_set_serial_status(GRBL_SERIAL_STATUS_CONNECTED);
+            }
         }
 
     reset:
@@ -188,6 +202,21 @@ void grbl_serial_init() {
     );
 }
 
+GrblSerialStatus grbl_get_serial_status() {
+    GrblSerialStatus serial_status;
+    TAKE_MUTEX(grbl_serial_status_mutex)
+    serial_status = grbl_serial_status;
+    RELEASE_MUTEX(grbl_serial_status_mutex)
+    return serial_status;
+}
+
+void grbl_set_serial_status(GrblSerialStatus serial_status) {
+    TAKE_MUTEX(grbl_serial_status_mutex)
+    grbl_serial_status = serial_status;
+    RELEASE_MUTEX(grbl_serial_status_mutex)
+    ui_status_notify_update(STATUS_UPDATE_UART);
+}
+
 bool grbl_send_message(const char *message, bool send_to_front) {
     size_t message_length = strlen(message);
     if (message_length > GRBL_MAX_LINE_lENGTH) {
@@ -222,4 +251,67 @@ bool grbl_send_message(const char *message, bool send_to_front) {
     }
 
     return true;
+}
+
+bool grbl_send_home_command(uint8_t axis_flags) {
+    log_d(
+        "Sending a homing command for axis: %s%s%s",
+        (axis_flags & GRBL_AXIS_X) != 0 ? "X" : "",
+        (axis_flags & GRBL_AXIS_Y) != 0 ? "Y" : "",
+        (axis_flags & GRBL_AXIS_Z) != 0 ? "Z" : "");
+
+    char buffer[ARRAY_SIZE("$HXYZ")] = "$H\0";
+    if ((axis_flags & GRBL_AXIS_X) != 0) {
+        snprintf(buffer, ARRAY_SIZE(buffer), "%s%c", buffer, 'X');
+    }
+    if ((axis_flags & GRBL_AXIS_Y) != 0) {
+        snprintf(buffer, ARRAY_SIZE(buffer), "%s%c", buffer, 'Y');
+    }
+    if ((axis_flags & GRBL_AXIS_Z) != 0) {
+        snprintf(buffer, ARRAY_SIZE(buffer), "%s%c", buffer, 'Z');
+    }
+
+    return grbl_send_message(buffer);
+}
+
+bool grbl_send_move_command(GrblMoveCoordinates target, GrblMoveMode mode) {
+    log_i(
+        "Sending a%s move command for axis %s%s%s with coordinates (%.2f, %.2f, %.2f)",
+        mode == GRBL_MOVE_MODE_ABSOLUTE ? "n absolute"
+                                        : (mode == GRBL_MOVE_MODE_RELATIVE ? " relative" : "n undefined"),
+        (target.axis_flags & GRBL_AXIS_X) != 0 ? "X" : "",
+        (target.axis_flags & GRBL_AXIS_Y) != 0 ? "Y" : "",
+        (target.axis_flags & GRBL_AXIS_Z) != 0 ? "Z" : "",
+        (target.axis_flags & GRBL_AXIS_X) != 0 ? target.x : 0,
+        (target.axis_flags & GRBL_AXIS_Y) != 0 ? target.y : 0,
+        (target.axis_flags & GRBL_AXIS_Z) != 0 ? target.z : 0);
+
+    if (mode == GRBL_MOVE_MODE_ABSOLUTE || mode == GRBL_MOVE_MODE_RELATIVE) {
+        bool switch_mode_scheduled = false;
+        switch (mode) {
+        case GRBL_MOVE_MODE_ABSOLUTE:
+            if (!grbl_send_message("G90")) {
+                return false;
+            }
+            break;
+        case GRBL_MOVE_MODE_RELATIVE:
+            if (!grbl_send_message("G91")) {
+                return false;
+            }
+            break;
+        }
+    }
+
+    char buffer[ARRAY_SIZE("G0 X000.00 Y000.00 Z000.00")] = "G0\0";
+    if ((target.axis_flags & GRBL_AXIS_X) != 0) {
+        snprintf(buffer, ARRAY_SIZE(buffer), "%s X%.2f", buffer, target.x);
+    }
+    if ((target.axis_flags & GRBL_AXIS_Y) != 0) {
+        snprintf(buffer, ARRAY_SIZE(buffer), "%s Y%.2f", buffer, target.y);
+    }
+    if ((target.axis_flags & GRBL_AXIS_Z) != 0) {
+        snprintf(buffer, ARRAY_SIZE(buffer), "%s Z%.2f", buffer, target.z);
+    }
+
+    return grbl_send_message(buffer);
 }

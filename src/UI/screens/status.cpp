@@ -3,6 +3,9 @@
 #include <freertos/queue.h>
 #include <freertos/event_groups.h>
 
+#include "Grbl/grbl_report.h"
+#include "Grbl/grbl_serial.h"
+#include "Grbl/grbl_state.h"
 #include "K40/alerts.h"
 #include "K40/cooling.h"
 #include "K40/flame_sensor.h"
@@ -64,6 +67,8 @@ static void ui_status_init_screen_content() {
     lv_obj_set_y(ui_status_laser_state_value, 35);
     lv_label_set_text(ui_status_laser_state_value, "Unknown");
     lv_obj_set_style_text_color(ui_status_laser_state_value, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_max_width(ui_status_laser_state_value, 130, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_label_set_long_mode(ui_status_laser_state_value, LV_LABEL_LONG_SCROLL);
 
     ui_status_laser_alarm_value = lv_label_create(ui_status_laser_card);
     lv_obj_set_width(ui_status_laser_alarm_value, LV_SIZE_CONTENT);
@@ -72,6 +77,8 @@ static void ui_status_init_screen_content() {
     lv_obj_set_y(ui_status_laser_alarm_value, 52);
     lv_label_set_text(ui_status_laser_alarm_value, "Unknown");
     lv_obj_set_style_text_color(ui_status_laser_alarm_value, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_max_width(ui_status_laser_alarm_value, 160, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_label_set_long_mode(ui_status_laser_alarm_value, LV_LABEL_LONG_SCROLL);
 
     // Lids card
     lv_obj_t *ui_status_lids_card =
@@ -289,6 +296,8 @@ void ui_status_update(bool initialize) {
     bool pending_cooling_update = initialize || ((pending_updates & STATUS_UPDATE_PROBE_COOLING) != 0);
     bool pending_lids_update = initialize || ((pending_updates & STATUS_UPDATE_PROBE_LIDS) != 0);
     bool pending_flame_sensor_update = initialize || ((pending_updates & STATUS_UPDATE_PROBE_FLAME_SENSOR) != 0);
+    bool pending_grbl_report_update = initialize || ((pending_updates & STATUS_UPDATE_GRBL_REPORT) != 0);
+    bool pending_uart_update = initialize || ((pending_updates & STATUS_UPDATE_UART) != 0);
 
     uint8_t alerts_status = alerts_get_current_alerts();
 
@@ -296,29 +305,45 @@ void ui_status_update(bool initialize) {
     if (pending_cooling_update) {
         TAKE_MUTEX(cooling_current_status_mutex)
         // Input Cooling flow
-        sprintf(cooling_input_flow_formatted_value, "%2.2fL/mn", cooling_values.input_flow);
+        snprintf(
+            cooling_input_flow_formatted_value,
+            ARRAY_SIZE(cooling_input_flow_formatted_value),
+            "%2.2fL/mn",
+            cooling_values.input_flow);
         lv_label_set_text(ui_status_cooling_input_flow_value, cooling_input_flow_formatted_value);
         lv_bar_set_value(ui_status_cooling_input_flow_bar, (int)cooling_values.input_flow, LV_ANIM_ON);
 
         // Input Cooling temperature
-        sprintf(cooling_input_temp_formatted_value, "%2.2f°C", cooling_values.input_temperature);
+        snprintf(
+            cooling_input_temp_formatted_value,
+            ARRAY_SIZE(cooling_input_temp_formatted_value),
+            "%2.2f°C",
+            cooling_values.input_temperature);
         lv_label_set_text(ui_status_cooling_input_temp_value, cooling_input_temp_formatted_value);
         lv_bar_set_value(ui_status_cooling_input_temp_bar, (int)cooling_values.input_temperature, LV_ANIM_ON);
 
         // Output Cooling flow
-        sprintf(cooling_output_flow_formatted_value, "%2.2fL/mn", cooling_values.output_flow);
+        snprintf(
+            cooling_output_flow_formatted_value,
+            ARRAY_SIZE(cooling_output_flow_formatted_value),
+            "%2.2fL/mn",
+            cooling_values.output_flow);
         lv_label_set_text(ui_status_cooling_output_flow_value, cooling_output_flow_formatted_value);
         lv_bar_set_value(ui_status_cooling_output_flow_bar, (int)cooling_values.output_flow, LV_ANIM_ON);
 
         // Output Cooling temperature
-        sprintf(cooling_output_temp_formatted_value, "%2.2f°C", cooling_values.output_temperature);
+        snprintf(
+            cooling_output_temp_formatted_value,
+            ARRAY_SIZE(cooling_output_temp_formatted_value),
+            "%2.2f°C",
+            cooling_values.output_temperature);
         lv_label_set_text(ui_status_cooling_output_temp_value, cooling_output_temp_formatted_value);
         lv_bar_set_value(ui_status_cooling_output_temp_bar, (int)cooling_values.output_temperature, LV_ANIM_ON);
 
+        RELEASE_MUTEX(cooling_current_status_mutex)
         xEventGroupClearBits(
             ui_status_event_group,
             STATUS_UPDATE_PROBE_COOLING | STATUS_UPDATE_PROBE_LIDS | STATUS_UPDATE_PROBE_FLAME_SENSOR);
-        RELEASE_MUTEX(cooling_current_status_mutex)
     }
 
     // Update lids widgets
@@ -326,16 +351,49 @@ void ui_status_update(bool initialize) {
         TAKE_MUTEX(lids_current_status_mutex)
         lv_label_set_text(ui_status_lid_front_value, lids_states.front_opened ? "Opened" : "Closed");
         lv_label_set_text(ui_status_lid_back_value, lids_states.back_opened ? "Opened" : "Closed");
-        xEventGroupClearBits(ui_status_event_group, STATUS_UPDATE_PROBE_LIDS);
         RELEASE_MUTEX(lids_current_status_mutex)
+        xEventGroupClearBits(ui_status_event_group, STATUS_UPDATE_PROBE_LIDS);
     }
 
     // Update flame sensor widgets
     if (pending_flame_sensor_update) {
         TAKE_MUTEX(flame_sensor_current_status_mutex)
         lv_label_set_text(ui_status_fire_value, flame_sensor_triggered ? "Triggered" : "OK");
-        xEventGroupClearBits(ui_status_event_group, STATUS_UPDATE_PROBE_FLAME_SENSOR);
         RELEASE_MUTEX(flame_sensor_current_status_mutex)
+        xEventGroupClearBits(ui_status_event_group, STATUS_UPDATE_PROBE_FLAME_SENSOR);
+    }
+
+    // Update machine state
+    if (pending_grbl_report_update) {
+        TAKE_MUTEX(grbl_last_report_mutex)
+        lv_label_set_text(ui_status_laser_state_value, grbl_state_to_string(grbl_last_report.state));
+        lv_label_set_text(
+            ui_status_laser_alarm_value,
+            grbl_last_report.state == GRBL_STATE_ALARM ? grbl_alarm_to_string(grbl_last_report.alarm) : "No alarm");
+
+        RELEASE_MUTEX(grbl_last_report_mutex)
+        xEventGroupClearBits(ui_status_event_group, STATUS_UPDATE_GRBL_REPORT);
+    }
+
+    // Update UART status
+    if (pending_uart_update) {
+        GrblSerialStatus serial_status = grbl_get_serial_status();
+        switch (serial_status) {
+        case GRBL_SERIAL_STATUS_CONNECTING:
+            lv_label_set_text(ui_status_uart_status_value, "Connecting...");
+            break;
+        case GRBL_SERIAL_STATUS_CONNECTED:
+            lv_label_set_text(ui_status_uart_status_value, "Connected");
+            break;
+        case GRBL_SERIAL_STATUS_DISCONNECTED:
+            lv_label_set_text(ui_status_uart_status_value, "Disconnected");
+            break;
+        default:
+            lv_label_set_text(ui_status_uart_status_value, "Unknown");
+            break;
+        }
+
+        xEventGroupClearBits(ui_status_event_group, STATUS_UPDATE_UART);
     }
 
     // Update heap indicator

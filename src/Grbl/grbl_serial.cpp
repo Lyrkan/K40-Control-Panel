@@ -137,8 +137,19 @@ static void grbl_tx_task(void *param) {
                     NULL,
                     pdMS_TO_TICKS(GRBL_ACK_TIMEOUT_MS)) != pdTRUE) {
                 if (!initialized) {
-                    log_d("Initial ack timed out, retrying in %d seconds", GRBL_INIT_MESSAGES_DELAY_MS);
-                    xQueueReset(grbl_tx_msg_queue);
+                    // Drop current message and the ones that were already in the queue
+                    int dropped_messages = 1;
+                    free(msg_pointer);
+                    while (xQueueReceive(grbl_tx_msg_queue, &msg_pointer, 0) != pdFALSE) {
+                        free(msg_pointer);
+                        dropped_messages++;
+                    }
+
+                    log_d(
+                        "Initial ack timed out, retrying in %d seconds (%d dropped messages)",
+                        GRBL_INIT_MESSAGES_DELAY_MS,
+                        dropped_messages);
+
                     goto reset;
                 } else {
                     log_w("No ack received after %d milliseconds", GRBL_ACK_TIMEOUT_MS);

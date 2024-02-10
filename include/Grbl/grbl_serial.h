@@ -50,9 +50,6 @@ typedef struct {
     float z;
 } GrblMoveCoordinates;
 
-extern TaskHandle_t grbl_tx_task_handle;
-extern TaskHandle_t grbl_rx_task_handle;
-
 void grbl_serial_init();
 GrblSerialStatus grbl_get_serial_status();
 void grbl_set_serial_status(GrblSerialStatus serial_status);

@@ -12,9 +12,7 @@
 #include "UI/screens/status.h"
 #include "macros.h"
 #include "queues.h"
-
-TaskHandle_t grbl_rx_task_handle = NULL;
-TaskHandle_t grbl_tx_task_handle = NULL;
+#include "tasks.h"
 
 static GrblSerialStatus grbl_serial_status = GRBL_SERIAL_STATUS_DISCONNECTED;
 static SemaphoreHandle_t grbl_serial_status_mutex = xSemaphoreCreateMutex();
@@ -194,23 +192,21 @@ void grbl_serial_init() {
     // Start TX/RX consumers
     xTaskCreatePinnedToCore(
         grbl_rx_task,
-        "grbl_rx_task",
-        10000,
+        "grbl_rx",
+        TASK_GRBL_RX_STACK_SIZE,
         NULL,
-        0,
+        TASK_GRBL_RX_PRIORITY,
         &grbl_rx_task_handle,
-        0 // Run on core #0, UI will be updated by loop() in core#1
-    );
+        TASK_GRBL_RX_CORE_ID);
 
     xTaskCreatePinnedToCore(
         grbl_tx_task,
-        "grbl_tx_task",
-        10000,
+        "grbl_tx",
+        TASK_GRBL_TX_STACK_SIZE,
         NULL,
-        0,
+        TASK_GRBL_TX_PRIORITY,
         &grbl_tx_task_handle,
-        0 // Run on core #0, UI will be updated by loop() in core#1
-    );
+        TASK_GRBL_TX_CORE_ID);
 }
 
 GrblSerialStatus grbl_get_serial_status() {

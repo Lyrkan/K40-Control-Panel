@@ -23,10 +23,10 @@
 #include "mutex.h"
 #include "queues.h"
 #include "settings.h"
+#include "tasks.h"
 #include "webserver.h"
 
 SemaphoreHandle_t webserver_screenshot_mutex = xSemaphoreCreateRecursiveMutex();
-
 static AsyncWebServer server(80);
 
 static void handleApiInfoRequest(AsyncWebServerRequest *request) {
@@ -49,6 +49,33 @@ static void handleApiInfoRequest(AsyncWebServerRequest *request) {
     state["system"]["cpu"]["freq_mhz"] = ESP.getCpuFreqMHz();
     state["system"]["cpu"]["load_percent"]["core_0"] = core_usage_percentage_0;
     state["system"]["cpu"]["load_percent"]["core_1"] = core_usage_percentage_1;
+
+    TaskHandle_t task_handles[] = {
+        display_update_task_handle,
+        bed_update_task_handle,
+        state_update_task_handle,
+        grbl_rx_task_handle,
+        grbl_tx_task_handle,
+        settings_save_task_handle,
+        cpu_monitor_task_handle,
+        xTaskGetCurrentTaskHandle()};
+
+    const char *task_states[] = {
+        "running",
+        "ready",
+        "blocked",
+        "suspended",
+        "deleted",
+    };
+
+    for (int task_index = 0; task_index < ARRAY_SIZE(task_handles); task_index++) {
+        char *task_name = pcTaskGetName(task_handles[task_index]);
+        eTaskState task_state = eTaskGetState(task_handles[task_index]);
+        state["system"]["tasks"][task_name]["state"] =
+            (task_state >= 0 && task_state < ARRAY_SIZE(task_states)) ? task_states[task_state] : "invalid";
+        state["system"]["tasks"][task_name]["priority"] = uxTaskPriorityGet(task_handles[task_index]);
+        state["system"]["tasks"][task_name]["high_water_mark"] = uxTaskGetStackHighWaterMark(task_handles[task_index]);
+    }
 
     // Serialize JSON data and send it to the client
     response->setLength();

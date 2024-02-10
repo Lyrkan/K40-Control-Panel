@@ -5,8 +5,7 @@
 
 #include "macros.h"
 #include "settings.h"
-
-static TaskHandle_t settings_save_task_handle;
+#include "tasks.h"
 
 static const char PREFERENCES_NAMESPACE_BED[] = "bed-settings";
 static const char PREFERENCES_NAMESPACE_PROBES[] = "probes-settings";
@@ -203,13 +202,12 @@ void settings_init() {
     // Start saving task
     xTaskCreatePinnedToCore(
         settings_save_task_func,
-        "settings_save_task",
-        10000,
+        "settings_save",
+        TASK_SETTINGS_SAVE_STACK_SIZE,
         NULL,
-        0,
+        TASK_SETTINGS_PRIORITY,
         &settings_save_task_handle,
-        1 // Run on core #1, UI will also be updated by loop() in core#1
-    );
+        TASK_SETTINGS_CORE_ID);
 }
 
 void settings_schedule_save(uint32_t settings_types) {

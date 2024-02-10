@@ -18,14 +18,12 @@
 #include "cpu_monitor.h"
 #include "macros.h"
 #include "settings.h"
+#include "tasks.h"
 #include "webserver.h"
 #include "wifi.h"
 
 static LGFX tft;
 static uint16_t touch_calibration_data[] = {274, 3922, 312, 255, 3845, 3918, 3814, 242};
-
-static TaskHandle_t state_update_task_handle;
-static TaskHandle_t bed_update_task_handle;
 
 void display_flush_cb(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
     uint32_t w = (area->x2 - area->x1 + 1);
@@ -106,6 +104,21 @@ void bed_update_task_func(void *params) {
     }
 }
 
+/**
+ * LVGL update loop
+ */
+void display_update_task_func(void *params) {
+    while (true) {
+        // Avoid updating the screen when the webserver is taking a screenshot
+        TAKE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
+        ui_update();
+        lv_timer_handler();
+        RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
+
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
 void setup() {
     static lv_disp_draw_buf_t draw_buf;
     static lv_color_t buf[DISPLAY_SCREEN_WIDTH * 10];
@@ -181,35 +194,32 @@ void setup() {
     /* Start state update loop */
     xTaskCreatePinnedToCore(
         state_update_task_func,
-        "state_update_task",
-        10000,
+        "state_update",
+        TASK_STATE_UPDATE_STACK_SIZE,
         NULL,
-        0,
+        TASK_STATE_UPDATE_PRIORITY,
         &state_update_task_handle,
-        0 // Run on core #0, UI will be updated by loop() in core#1
-    );
+        TASK_STATE_UPDATE_CORE_ID);
 
     /* Start bed update loop */
     xTaskCreatePinnedToCore(
         bed_update_task_func,
-        "bed_update_task",
-        10000,
+        "bed_update",
+        TASK_BED_UPDATE_STACK_SIZE,
         NULL,
-        0,
+        TASK_BED_UPDATE_PRIORITY,
         &bed_update_task_handle,
-        0 // Run on core #0, UI will be updated by loop() in core#1
-    );
+        TASK_BED_UPDATE_CORE_ID);
+
+    /* Start LVGL update loop */
+    xTaskCreatePinnedToCore(
+        display_update_task_func,
+        "display_update",
+        TASK_DISPLAY_UPDATE_STACK_SIZE,
+        NULL,
+        TASK_DISPLAY_UPDATE_PRIORITY,
+        &display_update_task_handle,
+        TASK_DISPLAY_UPDATE_CORE_ID);
 }
 
-/**
- * UI update loop
- */
-void loop() {
-    // Avoid updating the screen when the webserver is taking a screenshot
-    TAKE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
-    ui_update();
-    lv_timer_handler();
-    RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
-
-    vTaskDelay(pdMS_TO_TICKS(5));
-}
+void loop() { vTaskDelete(NULL); }

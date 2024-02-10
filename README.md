@@ -32,17 +32,11 @@ What it **CAN** do:
 -   Control 12V lights
 -   Control 5V laser diodes
 -   Control a motorized bed (based on [this design](https://civade.com/post/2020/08/23/D%c3%a9coupe-laser-CO2-K40-:-R%c3%a9alisation-d-un-lit-motoris%c3%a9), but it should work with other ones as long as the stepper can be controled using a DRV8825 driver)
--   Expose sensors/state data through an API **(unstable)**
-
-What it **CANNOT** do yet:
-
+-   Expose sensors/state data through an API
 -   Retrieve the current state of the machine
 -   Move the laser head
--   Trigger the CO2 laser
 
-I plan on adding an interface with FluidNC motherboards through UART that should allow those things in the near future.
-
-Also, don't expect an ultra smooth experience, the ESP32 being a bit underpowered for a screen of that size the user interface can be a bit laggy sometimes (eg. during screen transitions or scrolling). It should still be fully usable though.
+Don't expect an ultra smooth experience, the ESP32 being a bit underpowered for a screen of that size the user interface can be a bit laggy sometimes (eg. during screen transitions or scrolling). It should still be fully usable though.
 
 ## BOM
 
@@ -132,6 +126,48 @@ GET http://<YOUR_PANEL_IP>/api/info
                 "core_0": 0,
                 "core_1": 0.100000001
             }
+        },
+        "tasks": {
+            "display_update": {
+                "state": "ready",
+                "priority": 1,
+                "high_water_mark": 1348
+            },
+            "bed_update": {
+                "state": "blocked",
+                "priority": 0,
+                "high_water_mark": 1044
+            },
+            "state_update": {
+                "state": "ready",
+                "priority": 0,
+                "high_water_mark": 600
+            },
+            "grbl_rx": {
+                "state": "blocked",
+                "priority": 1,
+                "high_water_mark": 1508
+            },
+            "grbl_tx": {
+                "state": "blocked",
+                "priority": 1,
+                "high_water_mark": 1992
+            },
+            "settings_save": {
+                "state": "blocked",
+                "priority": 0,
+                "high_water_mark": 472
+            },
+            "cpu_monitor": {
+                "state": "blocked",
+                "priority": 0,
+                "high_water_mark": 340
+            },
+            "async_tcp": {
+                "state": "running",
+                "priority": 3,
+                "high_water_mark": 15064
+            }
         }
     }
 }
@@ -198,6 +234,52 @@ GET http://<YOUR_PANEL_IP>/api/relays
         "alarm": false,
         "lights": true,
         "beam_preview": true
+    }
+}
+```
+
+### Grbl status report
+
+```
+GET http://<YOUR_PANEL_IP>/api/grbl
+```
+
+```json
+{
+    "state": 1,
+    "w_pos": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+    },
+    "m_pos": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+    },
+    "wco": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+    },
+    "buffer": {
+        "planned_buffer_available_blocks": 100,
+        "rx_buffer_available_bytes": 20
+    },
+    "feed": {
+        "rate": 0,
+        "spindle_speed": 0
+    },
+    "line_number": 0,
+    "active_pins": {
+        "x": false,
+        "y": false,
+        "z": false,
+        "p": false,
+        "d": false,
+        "h": false,
+        "r": false,
+        "s": false
     }
 }
 ```

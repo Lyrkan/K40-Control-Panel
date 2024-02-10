@@ -7,6 +7,7 @@
 #include "Grbl/grbl_serial.h"
 #include "Grbl/grbl_state.h"
 #include "UI/overlay.h"
+#include "tasks.h"
 
 static bool grbl_remove_prefix_suffix(char **input, const char *prefix, const char *suffix = NULL) {
     size_t input_length = strnlen(*input, GRBL_MAX_LINE_lENGTH);

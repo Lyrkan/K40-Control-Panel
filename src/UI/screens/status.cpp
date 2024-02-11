@@ -23,6 +23,11 @@ lv_obj_t *ui_status_screen;
 static StaticEventGroup_t ui_status_event_group_static;
 static EventGroupHandle_t ui_status_event_group = xEventGroupCreateStatic(&ui_status_event_group_static);
 
+static lv_obj_t *ui_status_laser_card;
+static lv_obj_t *ui_status_lids_card;
+static lv_obj_t *ui_status_cooling_card;
+static lv_obj_t *ui_status_misc_card;
+
 static lv_obj_t *ui_status_laser_state_value;
 static lv_obj_t *ui_status_laser_alarm_value;
 static lv_obj_t *ui_status_cooling_input_flow_bar;
@@ -48,7 +53,7 @@ static void ui_status_init_screen_content() {
     lv_obj_t *ui_status_main_panel = ui_utils_create_screen_panel(ui_status_screen);
 
     // Laser card
-    lv_obj_t *ui_status_laser_card = ui_utils_create_card(ui_status_main_panel, "LASER", &image_laser_head);
+    ui_status_laser_card = ui_utils_create_card(ui_status_main_panel, "LASER", &image_laser_head);
     lv_obj_set_width(ui_status_laser_card, 225);
     lv_obj_set_height(ui_status_laser_card, 100);
     lv_obj_set_pos(ui_status_laser_card, 0, 0);
@@ -81,8 +86,7 @@ static void ui_status_init_screen_content() {
     lv_label_set_long_mode(ui_status_laser_alarm_value, LV_LABEL_LONG_SCROLL);
 
     // Lids card
-    lv_obj_t *ui_status_lids_card =
-        ui_utils_create_card(ui_status_main_panel, "LIDS", LV_SYMBOL_EYE, lv_color_hex(0xF94892));
+    ui_status_lids_card = ui_utils_create_card(ui_status_main_panel, "LIDS", LV_SYMBOL_EYE, lv_color_hex(0xF94892));
     lv_obj_set_width(ui_status_lids_card, 225);
     lv_obj_set_height(ui_status_lids_card, 100);
     lv_obj_set_pos(ui_status_lids_card, 235, 0);
@@ -111,7 +115,7 @@ static void ui_status_init_screen_content() {
     lv_obj_set_style_text_color(ui_status_lid_back_value, lv_color_hex(0xAAAAAA), LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Cooling card
-    lv_obj_t *ui_status_cooling_card =
+    ui_status_cooling_card =
         ui_utils_create_card(ui_status_main_panel, "COOLING", LV_SYMBOL_SNOWFLAKE, lv_color_hex(0x89CFFD));
     lv_obj_set_width(ui_status_cooling_card, 225);
     lv_obj_set_height(ui_status_cooling_card, 145);
@@ -200,8 +204,7 @@ static void ui_status_init_screen_content() {
     lv_obj_set_style_text_font(ui_status_cooling_output_temp_value, &font_default_12, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Misc. card
-    lv_obj_t *ui_status_misc_card =
-        ui_utils_create_card(ui_status_main_panel, "MISC", LV_SYMBOL_FIRE, lv_color_hex(0xFF7F3F));
+    ui_status_misc_card = ui_utils_create_card(ui_status_main_panel, "MISC", LV_SYMBOL_FIRE, lv_color_hex(0xFF7F3F));
     lv_obj_set_width(ui_status_misc_card, 225);
     lv_obj_set_height(ui_status_misc_card, 145);
     lv_obj_set_pos(ui_status_misc_card, 235, 110);
@@ -284,9 +287,9 @@ void ui_status_update(bool initialize) {
     }
 
     static char cooling_input_flow_formatted_value[10];
-    static char cooling_input_temp_formatted_value[10];
+    static char cooling_input_temp_formatted_value[13];
     static char cooling_output_flow_formatted_value[10];
-    static char cooling_output_temp_formatted_value[10];
+    static char cooling_output_temp_formatted_value[13];
 
     static char heap_status[250];
     static char cpu_status_0[250];
@@ -300,6 +303,12 @@ void ui_status_update(bool initialize) {
     bool pending_uart_update = initialize || ((pending_updates & STATUS_UPDATE_UART) != 0);
 
     uint8_t alerts_status = alerts_get_current_alerts();
+
+    // Update alerts
+    ui_utils_toggle_state(ui_status_laser_card, LV_STATE_CARD_ERROR, (alerts_status & ALERT_TYPE_GRBL) != 0);
+    ui_utils_toggle_state(ui_status_lids_card, LV_STATE_CARD_ERROR, (alerts_status & ALERT_TYPE_LIDS) != 0);
+    ui_utils_toggle_state(ui_status_cooling_card, LV_STATE_CARD_ERROR, (alerts_status & ALERT_TYPE_COOLING) != 0);
+    ui_utils_toggle_state(ui_status_misc_card, LV_STATE_CARD_ERROR, (alerts_status & ALERT_TYPE_FLAME_SENSOR) != 0);
 
     // Update cooling widgets
     if (pending_cooling_update) {
@@ -317,7 +326,7 @@ void ui_status_update(bool initialize) {
         snprintf(
             cooling_input_temp_formatted_value,
             ARRAY_SIZE(cooling_input_temp_formatted_value),
-            "%2.2f°C",
+            (cooling_values.input_temperature <= COOLING_THERMISTOR_MINIMUM_TEMPERATURE) ? "Not detected" : "%2.2f°C",
             cooling_values.input_temperature);
         lv_label_set_text(ui_status_cooling_input_temp_value, cooling_input_temp_formatted_value);
         lv_bar_set_value(ui_status_cooling_input_temp_bar, (int)cooling_values.input_temperature, LV_ANIM_ON);
@@ -335,7 +344,7 @@ void ui_status_update(bool initialize) {
         snprintf(
             cooling_output_temp_formatted_value,
             ARRAY_SIZE(cooling_output_temp_formatted_value),
-            "%2.2f°C",
+            (cooling_values.input_temperature <= COOLING_THERMISTOR_MINIMUM_TEMPERATURE) ? "Not detected" : "%2.2f°C",
             cooling_values.output_temperature);
         lv_label_set_text(ui_status_cooling_output_temp_value, cooling_output_temp_formatted_value);
         lv_bar_set_value(ui_status_cooling_output_temp_bar, (int)cooling_values.output_temperature, LV_ANIM_ON);

@@ -5,6 +5,7 @@
 #include "Grbl/grbl_state.h"
 #include "UI/screens/controls.h"
 #include "UI/screens/status.h"
+#include "K40/alerts.h"
 #include "macros.h"
 #include "mutex.h"
 #include "queues.h"
@@ -45,13 +46,15 @@ GrblReport::GrblReport() {
 }
 
 void GrblReport::update(const GrblReport *report) {
-    if (report->state > GRBL_STATE_INVALID) {
+    if (report->state != state) {
         state = report->state;
         if (state == GRBL_STATE_IDLE) {
             alarm = GRBL_ALARM_NONE;
-        } else if (state == GRBL_STATE_ALARM && alarm == GRBL_ALARM_NONE) {
+        } else if ((state == GRBL_STATE_ALARM) && (alarm == GRBL_ALARM_NONE)) {
             alarm = GRBL_ALARM_UNKNOWN;
         }
+
+        alerts_toggle_alert(ALERT_TYPE_GRBL, state == GRBL_STATE_ALARM);
     }
 
     if (report->w_pos.is_set) {

@@ -210,71 +210,126 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
 
     lv_obj_t *current_screen = lv_scr_act();
 
-    request->sendChunked(
-        "application/octet-stream",
-        [current_screen](uint8_t *buffer, size_t max_len, size_t index) -> size_t {
-            uint8_t bytes_per_pixel = 4;
-            unsigned int current_pixel_index = index / bytes_per_pixel;
-            if (current_pixel_index >= DISPLAY_SCREEN_HEIGHT * DISPLAY_SCREEN_WIDTH) {
-                RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
+    request->sendChunked("image/bmp", [current_screen](uint8_t *buffer, size_t max_len, size_t index) -> size_t {
+        typedef struct __attribute__((__packed__)) {
+            char bmp_signature[2];
+            int32_t bmp_size;
+            int32_t bmp_reserved;
+            int32_t bmp_offset;
+            int32_t dib_header_size;
+            int32_t dib_width;
+            int32_t dib_height;
+            int16_t dib_color_planes;
+            int16_t dib_bpp;
+            int32_t dib_compression;
+            int32_t dib_bmp_size;
+            int32_t dib_hor_res;
+            int32_t dib_ver_res;
+            int32_t dib_palette;
+            int32_t dib_important_colors;
+            int32_t bitfield_mask_r;
+            int32_t bitfield_mask_g;
+            int32_t bitfield_mask_b;
+            int32_t bitfield_mask_a;
+        } BitmapHeader;
+
+        // Add bitmap header if this is the first chunk
+        size_t start_index = 0;
+        size_t header_size = sizeof(BitmapHeader);
+
+        if (index == 0) {
+            // TODO Make it so the header can still be sent
+            // even if the first buffer is less than header_size bytes.
+            if (max_len < header_size) {
                 return 0;
             }
 
-            unsigned int row = current_pixel_index / DISPLAY_SCREEN_WIDTH;
-            unsigned int column = (current_pixel_index % DISPLAY_SCREEN_WIDTH);
-            unsigned int remaining_columns = DISPLAY_SCREEN_WIDTH - column;
-            unsigned int max_pixels = min(max_len / bytes_per_pixel, remaining_columns);
+            BitmapHeader *bmp_header = (BitmapHeader *)buffer;
+            sprintf(bmp_header->bmp_signature, "BM");
+            bmp_header->bmp_size = header_size + (4 * DISPLAY_SCREEN_WIDTH * DISPLAY_SCREEN_HEIGHT);
+            bmp_header->bmp_offset = header_size;
+            bmp_header->dib_header_size = header_size - 14;
+            bmp_header->dib_width = DISPLAY_SCREEN_WIDTH;
+            bmp_header->dib_height = -DISPLAY_SCREEN_HEIGHT;
+            bmp_header->dib_color_planes = 1;
+            bmp_header->dib_bpp = 32;
+            bmp_header->dib_compression = 3; // BI_BITFIELDS
+            bmp_header->dib_bmp_size = (4 * DISPLAY_SCREEN_WIDTH * DISPLAY_SCREEN_HEIGHT);
+            bmp_header->dib_hor_res = 5000;
+            bmp_header->dib_ver_res = 5000;
+            bmp_header->dib_palette = 0;
+            bmp_header->dib_important_colors = 0;
+            bmp_header->bitfield_mask_r = 0x00FF0000;
+            bmp_header->bitfield_mask_g = 0x0000FF00;
+            bmp_header->bitfield_mask_b = 0x000000FF;
+            bmp_header->bitfield_mask_a = 0xFF000000;
 
-            if (max_pixels == 0) {
-                RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
-                return 0;
-            }
+            start_index = header_size;
+            max_len -= header_size;
+        }
 
-            lv_area_t snapshot_area = {
-                .x1 = (lv_coord_t)column,
-                .y1 = (lv_coord_t)row,
-                .x2 = (lv_coord_t)(column + max_pixels - 1),
-                .y2 = (lv_coord_t)row,
-            };
+        uint8_t bytes_per_pixel = 4;
+        unsigned int current_pixel_index = (index - (header_size - start_index)) / bytes_per_pixel;
+        if (current_pixel_index >= DISPLAY_SCREEN_HEIGHT * DISPLAY_SCREEN_WIDTH) {
+            RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
+            return 0;
+        }
 
-            lv_disp_t *obj_disp = lv_obj_get_disp(current_screen);
-            lv_disp_drv_t driver;
-            lv_disp_drv_init(&driver);
+        unsigned int row = current_pixel_index / DISPLAY_SCREEN_WIDTH;
+        unsigned int column = (current_pixel_index % DISPLAY_SCREEN_WIDTH);
+        unsigned int remaining_columns = DISPLAY_SCREEN_WIDTH - column;
+        unsigned int max_pixels = min(max_len / bytes_per_pixel, remaining_columns);
 
-            driver.hor_res = lv_disp_get_hor_res(obj_disp);
-            driver.ver_res = lv_disp_get_hor_res(obj_disp);
-            lv_disp_drv_use_generic_set_px_cb(&driver, LV_IMG_CF_TRUE_COLOR_ALPHA);
+        if (max_pixels == 0) {
+            RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
+            return 0;
+        }
 
-            lv_disp_t fake_disp;
-            lv_memset_00(&fake_disp, sizeof(lv_disp_t));
-            fake_disp.driver = &driver;
+        lv_area_t snapshot_area = {
+            .x1 = (lv_coord_t)column,
+            .y1 = (lv_coord_t)row,
+            .x2 = (lv_coord_t)(column + max_pixels - 1),
+            .y2 = (lv_coord_t)row,
+        };
 
-            lv_draw_ctx_t *draw_ctx = (lv_draw_ctx_t *)lv_mem_alloc(obj_disp->driver->draw_ctx_size);
-            if (draw_ctx == NULL) {
-                RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex);
-                return 0;
-            }
+        lv_disp_t *obj_disp = lv_obj_get_disp(current_screen);
+        lv_disp_drv_t driver;
+        lv_disp_drv_init(&driver);
 
-            obj_disp->driver->draw_ctx_init(fake_disp.driver, draw_ctx);
-            fake_disp.driver->draw_ctx = draw_ctx;
-            draw_ctx->clip_area = &snapshot_area;
-            draw_ctx->buf_area = &snapshot_area;
-            draw_ctx->buf = (void *)buffer;
-            driver.draw_ctx = draw_ctx;
+        driver.hor_res = lv_disp_get_hor_res(obj_disp);
+        driver.ver_res = lv_disp_get_hor_res(obj_disp);
+        lv_disp_drv_use_generic_set_px_cb(&driver, LV_IMG_CF_TRUE_COLOR_ALPHA);
 
-            lv_disp_t *refr_ori = _lv_refr_get_disp_refreshing();
-            _lv_refr_set_disp_refreshing(&fake_disp);
+        lv_disp_t fake_disp;
+        lv_memset_00(&fake_disp, sizeof(lv_disp_t));
+        fake_disp.driver = &driver;
 
-            lv_obj_redraw(draw_ctx, current_screen);
-            lv_obj_redraw(draw_ctx, lv_layer_top());
-            lv_obj_redraw(draw_ctx, lv_layer_sys());
+        lv_draw_ctx_t *draw_ctx = (lv_draw_ctx_t *)lv_mem_alloc(obj_disp->driver->draw_ctx_size);
+        if (draw_ctx == NULL) {
+            RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex);
+            return 0;
+        }
 
-            _lv_refr_set_disp_refreshing(refr_ori);
-            obj_disp->driver->draw_ctx_deinit(fake_disp.driver, draw_ctx);
-            lv_mem_free(draw_ctx);
+        obj_disp->driver->draw_ctx_init(fake_disp.driver, draw_ctx);
+        fake_disp.driver->draw_ctx = draw_ctx;
+        draw_ctx->clip_area = &snapshot_area;
+        draw_ctx->buf_area = &snapshot_area;
+        draw_ctx->buf = (void *)(buffer + start_index);
+        driver.draw_ctx = draw_ctx;
 
-            return max_pixels * bytes_per_pixel;
-        });
+        lv_disp_t *refr_ori = _lv_refr_get_disp_refreshing();
+        _lv_refr_set_disp_refreshing(&fake_disp);
+
+        lv_obj_redraw(draw_ctx, current_screen);
+        lv_obj_redraw(draw_ctx, lv_layer_top());
+        lv_obj_redraw(draw_ctx, lv_layer_sys());
+
+        _lv_refr_set_disp_refreshing(refr_ori);
+        obj_disp->driver->draw_ctx_deinit(fake_disp.driver, draw_ctx);
+        lv_mem_free(draw_ctx);
+
+        return start_index + (max_pixels * bytes_per_pixel);
+    });
 }
 
 static void handleNotFoundRequest(AsyncWebServerRequest *request) { request->send(404, "text/plain", "Not Found"); }
@@ -286,11 +341,6 @@ void webserver_init() {
     server.on("/api/alerts", HTTP_GET, handleApiAlertsRequest);
     server.on("/api/relays", HTTP_GET, handleApiRelaysRequest);
     server.on("/api/grbl", HTTP_GET, handleGrblStatusRequest);
-
-    // Screenshot utility
-    // Usage:
-    // $ wget http://<YOUR_PANEL_IP>/screenshot
-    // $ convert -size 480x320 -depth 8 -separate -swap 0,2 -combine rgba:screenshot screenshot.jpg
     server.on("/screenshot", HTTP_GET, handleScreenshotRequest);
 
     // 404

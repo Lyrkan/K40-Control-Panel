@@ -31,10 +31,9 @@ What it **CAN** do:
     -   Alarm activation
 -   Control 12V lights
 -   Control 5V laser diodes
--   Control a motorized bed (based on [this design](https://civade.com/post/2020/08/23/D%c3%a9coupe-laser-CO2-K40-:-R%c3%a9alisation-d-un-lit-motoris%c3%a9), but it should work with other ones as long as the stepper can be controled using a DRV8825 driver)
+-   Control a motorized bed (based on [this design](https://civade.com/post/2020/08/23/D%c3%a9coupe-laser-CO2-K40-:-R%c3%a9alisation-d-un-lit-motoris%c3%a9), but it should work with other ones as long as the stepper can be controeled using a DRV8825 driver)
 -   Expose sensors/state data through an API
--   Retrieve the current state of the machine
--   Move the laser head
+-   Retrieve the current state of the machine and move the laser head through UART if you're using a FluidNC controller board (WIP)
 
 Don't expect an ultra smooth experience, the ESP32 being a bit underpowered for a screen of that size the user interface can be a bit laggy sometimes (eg. during screen transitions or scrolling). It should still be fully usable though.
 
@@ -48,10 +47,12 @@ For the control panel:
 -   1x L7805CV 5V regulator
 -   2x IRLML6244 N-channel MOSFETs
 -   2x 1N4007 diodes
--   5x 10kΩ 1/4W R1206 SMD resistors
+-   7x 10kΩ 1/4W R1206 SMD resistors
+-   3x 1kΩ 1/4W R1206 SMD resistors
 -   2x 220Ω 1/4W R1206 SMD resistors
--   1x 0.1uF electrolytic capacitor
--   1x 100uF electrolytic capacitor
+-   1x 0.1uF electrolytic capacitors
+-   1x 100uF electrolytic capacitors
+-   3x 0.1uF ceramic capacitors
 -   1x 2P PCB terminal blocks (5mm pitch)
 -   some 2.54mm pin headers / XH connectors / jumpers
 
@@ -66,6 +67,7 @@ Other things you may need:
 -   1x (or 2x depending on your needs) 5V laser diodes
 -   1x 12V LED light (for the enclosure)
 -   1x 12V blinking light (for the alarm)
+-   1x FluidNC controller board
 
 ## Building the firmware
 

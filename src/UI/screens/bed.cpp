@@ -51,6 +51,14 @@ static void ui_bed_button_handler(lv_event_t *e) {
                         static_cast<int32_t>(1000000 * atof(lv_textarea_get_text(ui_bed_textarea))),
         };
         xQueueOverwrite(bed_command_queue, &bed_command);
+    } else if (event_target == ui_bed_focus_surface_button || event_target == ui_bed_focus_center_button) {
+        const BedCommand bed_command = {
+            .type = BED_COMMAND_MOVE_ABSOLUTE,
+            .value_nm = static_cast<int32_t>(
+                1000000 * (event_target == ui_bed_focus_surface_button ? -1 : -1.5) *
+                atof(lv_textarea_get_text(ui_bed_textarea))),
+        };
+        xQueueOverwrite(bed_command_queue, &bed_command);
     }
 }
 
@@ -96,11 +104,13 @@ static void ui_bed_init_screen_content() {
         ui_utils_create_small_button(ui_bed_main_card, LV_SYMBOL_ARROWS_TO_DOT " Focus surface", 170);
     lv_obj_set_pos(ui_bed_focus_surface_button, 270, 35);
     lv_obj_add_state(ui_bed_focus_surface_button, LV_STATE_DISABLED);
+    lv_obj_add_event_cb(ui_bed_focus_surface_button, ui_bed_button_handler, LV_EVENT_CLICKED, NULL);
 
     ui_bed_focus_center_button =
         ui_utils_create_small_button(ui_bed_main_card, LV_SYMBOL_ARROWS_TO_DOT " Focus center", 170);
     lv_obj_set_pos(ui_bed_focus_center_button, 270, 70);
     lv_obj_add_state(ui_bed_focus_center_button, LV_STATE_DISABLED);
+    lv_obj_add_event_cb(ui_bed_focus_center_button, ui_bed_button_handler, LV_EVENT_CLICKED, NULL);
 
     lv_obj_t *ui_bed_status_panel = lv_obj_create(ui_bed_main_card);
     lv_obj_set_width(ui_bed_status_panel, 190);
@@ -283,25 +293,36 @@ void ui_bed_update(bool initialize) {
 
             // Update current position
             if (current_bed_status.current.is_set) {
+                int32_t current_pos_nm = current_bed_status.current.position_nm;
+                if (current_bed_status.origin.is_set) {
+                    current_pos_nm -= current_bed_status.origin.position_nm;
+                }
+
                 char formatted_current_position[10];
                 snprintf(
                     formatted_current_position,
                     ARRAY_SIZE(formatted_current_position),
                     "%.2fmm",
-                    current_bed_status.current.position_nm / 1000000.f);
+                    current_pos_nm / 1000000.f);
                 lv_label_set_text(ui_bed_current_position_value, formatted_current_position);
             } else {
                 lv_label_set_text(ui_bed_current_position_value, "-");
             }
 
             // Update target position
-            if (current_bed_status.current.is_set && current_bed_status.target.is_set) {
+            if (current_bed_status.current.is_set && current_bed_status.origin.is_set &&
+                current_bed_status.target.is_set) {
+                int32_t target_pos_nm = current_bed_status.target.position_nm;
+                if (current_bed_status.origin.is_set) {
+                    target_pos_nm -= current_bed_status.origin.position_nm;
+                }
+
                 char formatted_target_position[10];
                 snprintf(
                     formatted_target_position,
                     ARRAY_SIZE(formatted_target_position),
                     "%.2fmm",
-                    current_bed_status.target.position_nm / 1000000.f);
+                    target_pos_nm / 1000000.f);
                 lv_label_set_text(ui_bed_target_position_value, formatted_target_position);
             } else {
                 lv_label_set_text(ui_bed_target_position_value, "-");

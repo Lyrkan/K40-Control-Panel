@@ -95,27 +95,23 @@ static void bed_move_absolute(float_t value_nm) {
     }
 
     // Start the stepper with the amount of steps required
-    uint32_t target_absolute_delta_nm = abs(value_nm - bed_current_status.current.position_nm);
-    uint32_t steps_to_run =
-        target_absolute_delta_nm /
-        ((1000 * bed_settings.screw_lead_um) / (bed_settings.steps_per_revolution * bed_settings.microstep_multiplier));
-    bed_run_steps(steps_to_run, BED_DIR_DOWN, bed_settings.moving_speed);
-    bed_update_status_queue();
+    int32_t target_absolute_delta_nm = value_nm - bed_current_status.current.position_nm;
+    if (bed_current_status.origin.is_set) {
+        target_absolute_delta_nm += bed_current_status.origin.position_nm;
+    }
 
-    // Set new state
-    bed_current_status.state =
-        value_nm < bed_current_status.current.position_nm ? BED_STATE_GOING_DOWN : BED_STATE_GOING_UP;
-    bed_current_status.target.is_set = true;
-    bed_current_status.target.position_nm = value_nm;
+    bed_move_relative(target_absolute_delta_nm);
 }
 
 static void bed_set_current_position_as_origin() {
-    bed_current_status.current.position_nm = 0;
-    bed_current_status.current.is_set = true;
+    // If the current position is not set we can't safely
+    // set it as the origin.
+    if (!bed_current_status.current.is_set) {
+        return;
+    }
 
+    bed_current_status.origin.position_nm = bed_current_status.current.position_nm;
     bed_current_status.origin.is_set = true;
-    bed_current_status.origin.position_nm += bed_current_status.current.position_nm;
-    bed_current_status.current.position_nm = 0;
 
     bed_update_status_queue();
 
@@ -137,18 +133,10 @@ static void bed_run() {
             bed_current_status.state != BED_STATE_GOING_UP) {
             log_i("Bed limit switch triggered");
             bed_current_status.current.is_set = true;
-            if (bed_current_status.origin.is_set) {
-                log_d("Bed current position set to origin (%dnm)", bed_current_status.origin.position_nm);
-                bed_current_status.current.position_nm = bed_current_status.origin.position_nm;
-            } else {
-                log_d("Bed origin set to 0");
-                bed_current_status.current.position_nm = 0;
-                bed_current_status.origin.position_nm = 0;
-                bed_current_status.origin.is_set = true;
-            }
+            bed_current_status.current.position_nm = 0;
 
-            // Move 1cm up to make sure the limit switch is not triggered anymore
-            bed_move_relative(10000000);
+            // Move up to make sure the limit switch is not triggered anymore
+            bed_move_relative(BED_BACKOFF_DISTANCE_NM);
         } else {
             // Go to idling mode
             bed_current_status.state = BED_STATE_IDLE;

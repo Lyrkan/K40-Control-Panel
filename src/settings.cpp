@@ -17,6 +17,7 @@ static const char PREFERENCES_KEY_BED_STEPS_PER_REVOLUTION[] = "steps-per-rev";
 static const char PREFERENCES_KEY_BED_MOVE_SPEED[] = "move-speed";
 static const char PREFERENCES_KEY_BED_HOMING_SPEED[] = "homing-speed";
 static const char PREFERENCES_KEY_BED_ORIGIN[] = "origin";
+static const char PREFERENCES_KEY_BED_BACKOFF_DISTANCE_UM[] = "backoff-distance-um";
 
 static const char PREFERENCES_KEY_PROBES_COOLING_FLOW_MIN[] = "cool_flow_min";
 static const char PREFERENCES_KEY_PROBES_COOLING_FLOW_MAX[] = "cool_flow_max";
@@ -38,7 +39,8 @@ BedSettings bed_settings = {
     .steps_per_revolution = 200,
     .moving_speed = 4500,
     .homing_speed = 3000,
-    .origin = {.is_set = false, .position_nm = 0}};
+    .origin = {.is_set = false, .position_nm = 0},
+    .backoff_distance_um = 500};
 
 ProbesSettings probes_settings = {
     .cooling_flow_min = 1.0,
@@ -75,6 +77,7 @@ static void settings_save_task_func(void *params) {
             if (bed_settings.origin.is_set) {
                 preferences.putInt(PREFERENCES_KEY_BED_ORIGIN, bed_settings.origin.position_nm);
             }
+            preferences.putUInt(PREFERENCES_KEY_BED_BACKOFF_DISTANCE_UM, bed_settings.backoff_distance_um);
             preferences.end();
 
             // Release bed settings lock
@@ -135,7 +138,8 @@ void settings_init() {
         .origin = {
             .is_set = preferences.isKey(PREFERENCES_KEY_BED_ORIGIN),
             .position_nm = preferences.getInt(PREFERENCES_KEY_BED_ORIGIN),
-        }
+        },
+        .backoff_distance_um = preferences.getUInt(PREFERENCES_KEY_BED_BACKOFF_DISTANCE_UM, bed_settings.backoff_distance_um),
     };
     // clang-format on
 
@@ -149,6 +153,7 @@ void settings_init() {
     log_d("  origin:");
     log_d("    is_set: %d", bed_settings.origin.is_set);
     log_d("    position_nm: %d", bed_settings.origin.position_nm);
+    log_d("  backoff_distance_um: %d", bed_settings.backoff_distance_um);
 
     // Release bed settings lock
     RELEASE_MUTEX(bed_settings_mutex)

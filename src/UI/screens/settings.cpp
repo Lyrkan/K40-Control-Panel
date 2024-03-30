@@ -37,6 +37,7 @@ static lv_obj_t *ui_settings_bed_microstep_multiplier_value;
 static lv_obj_t *ui_settings_bed_steps_per_revolution_value;
 static lv_obj_t *ui_settings_bed_moving_speed_value;
 static lv_obj_t *ui_settings_bed_homing_speed_value;
+static lv_obj_t *ui_settings_bed_backoff_distance_value;
 
 static lv_obj_t *ui_settings_probes_cooling_flow_min_value;
 static lv_obj_t *ui_settings_probes_cooling_flow_max_value;
@@ -55,18 +56,25 @@ static void ui_settings_load_bed_settings() {
     static char steps_per_revolution_text[10];
     static char moving_speed_text[10];
     static char homing_speed_text[10];
+    static char backoff_distance_text[10];
 
     snprintf(screw_lead_text, ARRAY_SIZE(screw_lead_text), "%.2f", bed_settings.screw_lead_um / 1000.f);
     snprintf(microstep_multiplier_text, ARRAY_SIZE(microstep_multiplier_text), "%d", bed_settings.microstep_multiplier);
     snprintf(steps_per_revolution_text, ARRAY_SIZE(steps_per_revolution_text), "%d", bed_settings.steps_per_revolution);
     snprintf(moving_speed_text, ARRAY_SIZE(moving_speed_text), "%d", bed_settings.moving_speed);
     snprintf(homing_speed_text, ARRAY_SIZE(homing_speed_text), "%d", bed_settings.homing_speed);
+    snprintf(
+        backoff_distance_text,
+        ARRAY_SIZE(backoff_distance_text),
+        "%.2f",
+        bed_settings.backoff_distance_um / 1000.f);
 
     lv_textarea_set_text(ui_settings_bed_screw_lead_value, screw_lead_text);
     lv_textarea_set_text(ui_settings_bed_microstep_multiplier_value, microstep_multiplier_text);
     lv_textarea_set_text(ui_settings_bed_steps_per_revolution_value, steps_per_revolution_text);
     lv_textarea_set_text(ui_settings_bed_moving_speed_value, moving_speed_text);
     lv_textarea_set_text(ui_settings_bed_homing_speed_value, homing_speed_text);
+    lv_textarea_set_text(ui_settings_bed_backoff_distance_value, backoff_distance_text);
 
     // Release bed settings mutex
     RELEASE_MUTEX(bed_settings_mutex)
@@ -84,6 +92,8 @@ static void ui_settings_save_bed_settings() {
         static_cast<uint32_t>(atoi(lv_textarea_get_text(ui_settings_bed_steps_per_revolution_value)));
     bed_settings.moving_speed = static_cast<uint32_t>(atoi(lv_textarea_get_text(ui_settings_bed_moving_speed_value)));
     bed_settings.homing_speed = static_cast<uint32_t>(atoi(lv_textarea_get_text(ui_settings_bed_homing_speed_value)));
+    bed_settings.backoff_distance_um =
+        static_cast<uint32_t>(1000 * atoi(lv_textarea_get_text(ui_settings_bed_backoff_distance_value)));
     settings_schedule_save(SETTINGS_TYPE_BED);
 
     // Release bed settings mutex
@@ -218,7 +228,7 @@ static void ui_settings_field_value_changed_handler(lv_event_t *e) {
     if (code == LV_EVENT_VALUE_CHANGED) {
         if (target == ui_settings_bed_screw_lead_value || target == ui_settings_bed_microstep_multiplier_value ||
             target == ui_settings_bed_steps_per_revolution_value || target == ui_settings_bed_moving_speed_value ||
-            target == ui_settings_bed_homing_speed_value) {
+            target == ui_settings_bed_homing_speed_value || target == ui_settings_bed_backoff_distance_value) {
             ui_settings_save_bed_settings();
         } else if (
             target == ui_settings_probes_cooling_flow_min_value ||
@@ -412,6 +422,8 @@ static void ui_settings_init_screen_content() {
         ui_settings_create_textarea_field(ui_settings_bed_page, "Steps per revolution");
     ui_settings_bed_moving_speed_value = ui_settings_create_textarea_field(ui_settings_bed_page, "Moving speed");
     ui_settings_bed_homing_speed_value = ui_settings_create_textarea_field(ui_settings_bed_page, "Homing speed");
+    ui_settings_bed_backoff_distance_value =
+        ui_settings_create_textarea_field(ui_settings_bed_page, "Backoff distance (mm)");
 
     // Probes page
     ui_settings_probes_cooling_flow_min_value =

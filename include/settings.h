@@ -22,6 +22,7 @@ typedef struct {
     uint32_t moving_speed;
     uint32_t homing_speed;
     BedPosition origin;
+    uint32_t backoff_distance_um;
 } BedSettings;
 
 typedef struct {

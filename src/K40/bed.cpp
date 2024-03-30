@@ -136,7 +136,7 @@ static void bed_run() {
             bed_current_status.current.position_nm = 0;
 
             // Move up to make sure the limit switch is not triggered anymore
-            bed_move_relative(BED_BACKOFF_DISTANCE_NM);
+            bed_move_relative(bed_settings.backoff_distance_um * 1000);
         } else {
             // Go to idling mode
             bed_current_status.state = BED_STATE_IDLE;

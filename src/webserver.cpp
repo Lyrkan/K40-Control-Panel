@@ -19,6 +19,7 @@
 #include "K40/relays.h"
 #include "UI/display.h"
 #include "cpu_monitor.h"
+#include "esp.h"
 #include "macros.h"
 #include "mutex.h"
 #include "queues.h"
@@ -76,6 +77,8 @@ static void handleApiInfoRequest(AsyncWebServerRequest *request) {
         state["system"]["tasks"][task_name]["priority"] = uxTaskPriorityGet(task_handles[task_index]);
         state["system"]["tasks"][task_name]["high_water_mark"] = uxTaskGetStackHighWaterMark(task_handles[task_index]);
     }
+
+    state["system"]["reset_reason"] = esp_reset_reason_as_text();
 
     // Serialize JSON data and send it to the client
     response->setLength();

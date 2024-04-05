@@ -17,12 +17,12 @@ static const char PREFERENCES_KEY_BED_STEPS_PER_REVOLUTION[] = "steps-per-rev";
 static const char PREFERENCES_KEY_BED_MOVE_SPEED[] = "move-speed";
 static const char PREFERENCES_KEY_BED_HOMING_SPEED[] = "homing-speed";
 static const char PREFERENCES_KEY_BED_ORIGIN[] = "origin";
-static const char PREFERENCES_KEY_BED_BACKOFF_DISTANCE_UM[] = "backoff-distance-um";
+static const char PREFERENCES_KEY_BED_BACKOFF_DISTANCE_UM[] = "backoff-dist-um";
 
-static const char PREFERENCES_KEY_PROBES_COOLING_FLOW_MIN[] = "cool_flow_min";
-static const char PREFERENCES_KEY_PROBES_COOLING_FLOW_MAX[] = "cool_flow_max";
-static const char PREFERENCES_KEY_PROBES_COOLING_TEMP_MIN[] = "cool_temp_min";
-static const char PREFERENCES_KEY_PROBES_COOLING_TEMP_MAX[] = "cool_temp_max";
+static const char PREFERENCES_KEY_PROBES_COOLING_FLOW_MIN[] = "cool-flow-min";
+static const char PREFERENCES_KEY_PROBES_COOLING_FLOW_MAX[] = "cool-flow-max";
+static const char PREFERENCES_KEY_PROBES_COOLING_TEMP_MIN[] = "cool-temp-min";
+static const char PREFERENCES_KEY_PROBES_COOLING_TEMP_MAX[] = "cool-temp-max";
 
 static const char PREFERENCES_KEY_OTA_LOGIN[] = "login";
 static const char PREFERENCES_KEY_OTA_PASSWORD[] = "password";
@@ -40,7 +40,7 @@ BedSettings bed_settings = {
     .moving_speed = 4500,
     .homing_speed = 3000,
     .origin = {.is_set = false, .position_nm = 0},
-    .backoff_distance_um = 500};
+    .backoff_distance_um = 3000};
 
 ProbesSettings probes_settings = {
     .cooling_flow_min = 1.0,

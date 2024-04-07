@@ -16,7 +16,7 @@
 
 static GrblSerialStatus grbl_serial_status = GRBL_SERIAL_STATUS_DISCONNECTED;
 static SemaphoreHandle_t grbl_serial_status_mutex = xSemaphoreCreateMutex();
-static QueueHandle_t grbl_tx_msg_queue = xQueueCreate(GRBL_TX_QUEUE_SIZE, sizeof(char *));
+static QueueHandle_t grbl_tx_msg_queue = xQueueCreate(GRBL_TX_QUEUE_SIZE, sizeof(GrblCommand));
 
 static void grbl_rx_task(void *param) {
     char rx_line_buffer[GRBL_MAX_LINE_lENGTH + 1] = {0};
@@ -101,8 +101,7 @@ static void grbl_tx_task(void *param) {
         // Schedule initial messages and then delay a bit
         // to make sure FluidNC had enough time to start
         bool initialized = false;
-        grbl_send_message(GRBL_MESSAGE_REPORT_INTERVAL, true);
-        grbl_send_message(GRBL_MESSAGE_REPORT_FORMAT);
+        grbl_send_init_commands();
         vTaskDelay(pdMS_TO_TICKS(GRBL_INIT_MESSAGES_DELAY_MS));
 
         grbl_set_serial_status(GRBL_SERIAL_STATUS_CONNECTING);
@@ -114,16 +113,16 @@ static void grbl_tx_task(void *param) {
             continue;
         }
 
-        char *msg_pointer = NULL;
+        GrblCommand message;
         while (true) {
-            if (xQueueReceive(grbl_tx_msg_queue, &msg_pointer, portMAX_DELAY) != pdTRUE) {
+            if (xQueueReceive(grbl_tx_msg_queue, &message, portMAX_DELAY) != pdTRUE) {
                 log_e("Could not retrieve message from the TX queue");
                 continue;
             }
 
-            log_d("Sending message from TX queue: %s", msg_pointer);
+            log_d("Sending message from TX queue: %s", message.buffer);
             xTaskNotifyStateClearIndexed(NULL, GRBL_TASK_NOTIFY_ACK_INDEX);
-            if (write(fd, msg_pointer, strnlen(msg_pointer, GRBL_MAX_LINE_lENGTH)) == -1) {
+            if (write(fd, message.buffer, strnlen(message.buffer, GRBL_MAX_LINE_lENGTH)) == -1) {
                 log_e("Could not write buffer to serial: %d", errno);
                 ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, "An error happened when trying to send Grbl message");
             }
@@ -133,13 +132,13 @@ static void grbl_tx_task(void *param) {
                     0x00,
                     ULONG_MAX,
                     NULL,
-                    pdMS_TO_TICKS(GRBL_ACK_TIMEOUT_MS)) != pdTRUE) {
+                    pdMS_TO_TICKS(message.ack_timeout_ms)) != pdTRUE) {
                 if (!initialized) {
                     // Drop current message and the ones that were already in the queue
                     int dropped_messages = 1;
-                    free(msg_pointer);
-                    while (xQueueReceive(grbl_tx_msg_queue, &msg_pointer, 0) != pdFALSE) {
-                        free(msg_pointer);
+                    free(message.buffer);
+                    while (xQueueReceive(grbl_tx_msg_queue, &message, 0) != pdFALSE) {
+                        free(message.buffer);
                         dropped_messages++;
                     }
 
@@ -150,16 +149,16 @@ static void grbl_tx_task(void *param) {
 
                     goto reset;
                 } else {
-                    log_w("No ack received after %d milliseconds", GRBL_ACK_TIMEOUT_MS);
+                    log_w("No ack received after %d milliseconds", message.ack_timeout_ms);
 
                     char flash_message[255];
-                    snprintf(flash_message, ARRAY_SIZE(flash_message), "Grbl command timed-out: %s", msg_pointer);
+                    snprintf(flash_message, ARRAY_SIZE(flash_message), "Grbl command timed-out: %s", message.buffer);
                     flash_message[strnlen(flash_message, ARRAY_SIZE(flash_message)) - 1] = '\0'; // Remove line-ending
                     ui_overlay_add_flash_message(FLASH_LEVEL_WARNING, flash_message);
                 }
             }
 
-            free(msg_pointer);
+            free(message.buffer);
 
             if (!initialized) {
                 initialized = true;
@@ -224,7 +223,7 @@ void grbl_set_serial_status(GrblSerialStatus serial_status) {
     ui_status_notify_update(STATUS_UPDATE_UART);
 }
 
-bool grbl_send_message(const char *message, bool send_to_front) {
+bool grbl_send_message(const char *message, bool send_to_front, uint32_t ack_timeout) {
     size_t message_length = strlen(message);
     if (message_length > GRBL_MAX_LINE_lENGTH) {
         log_e("Message length exceeds GRBL_MAX_LINE_LENGTH: %s", message);
@@ -239,8 +238,13 @@ bool grbl_send_message(const char *message, bool send_to_front) {
     message_copy[message_length] = '\n';
     message_copy[message_length + 1] = '\0';
 
+    GrblCommand command = {
+        .buffer = message_copy,
+        .ack_timeout_ms = ack_timeout,
+    };
+
     if (send_to_front) {
-        if (xQueueSendToFront(grbl_tx_msg_queue, &message_copy, 0) != pdTRUE) {
+        if (xQueueSendToFront(grbl_tx_msg_queue, &command, 0) != pdTRUE) {
             log_w("TX queue seems to be full, a message was dropped");
             ui_overlay_add_flash_message(
                 FLASH_LEVEL_WARNING,
@@ -248,13 +252,33 @@ bool grbl_send_message(const char *message, bool send_to_front) {
             return false;
         }
     } else {
-        if (xQueueSendToBack(grbl_tx_msg_queue, &message_copy, 0) != pdTRUE) {
+        if (xQueueSendToBack(grbl_tx_msg_queue, &command, 0) != pdTRUE) {
             log_w("TX queue seems to be full, a message was dropped");
             ui_overlay_add_flash_message(
                 FLASH_LEVEL_WARNING,
                 "A Grbl message was dropped because the TX queue seemed to be full");
             return false;
         }
+    }
+
+    return true;
+}
+
+bool grbl_send_init_commands() {
+    log_d("Scheduling init commands (status / report interval / report format)");
+    if (!grbl_send_message(GRBL_MESSAGE_STATUS, true)) {
+        log_e("Could not query current status");
+        return false;
+    }
+
+    if (!grbl_send_message(GRBL_MESSAGE_REPORT_INTERVAL)) {
+        log_e("Could not set automatic status report interval");
+        return false;
+    }
+
+    if (!grbl_send_message(GRBL_MESSAGE_REPORT_FORMAT)) {
+        log_e("Could not set status report format");
+        return false;
     }
 
     return true;
@@ -278,7 +302,7 @@ bool grbl_send_home_command(uint8_t axis_flags) {
         snprintf(buffer, ARRAY_SIZE(buffer), "%s%c", buffer, 'Z');
     }
 
-    return grbl_send_message(buffer);
+    return grbl_send_message(buffer, false, GRBL_ACK_HOMING_TIMEOUT_MS);
 }
 
 bool grbl_send_move_command(GrblMoveCoordinates target, GrblMoveMode mode) {

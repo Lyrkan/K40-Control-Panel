@@ -239,6 +239,7 @@ static void grbl_process_feedback(const char *feedback_body) { log_d("Feedback b
 static void grbl_process_welcome(const char *welcome_line) {
     ui_overlay_add_flash_message(FLASH_LEVEL_INFO, welcome_line);
     log_d("Welcome message: %s", welcome_line);
+    grbl_send_init_commands();
 }
 
 void grbl_process_line(char *line) {

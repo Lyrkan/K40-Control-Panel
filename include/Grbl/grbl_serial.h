@@ -12,9 +12,11 @@
 #define GRBL_UART_RX_BUFFER_SIZE 2048
 #define GRBL_UART_TX_BUFFER_SIZE 0
 #define GRBL_MAX_LINE_lENGTH 100
-#define GRBL_ACK_TIMEOUT_MS 5000
+#define GRBL_ACK_DEFAULT_TIMEOUT_MS 5000
+#define GRBL_ACK_HOMING_TIMEOUT_MS 30000
 #define GRBL_TX_QUEUE_SIZE 10
 #define GRBL_INIT_MESSAGES_DELAY_MS 5000
+#define GRBL_MESSAGE_STATUS "?"
 #define GRBL_MESSAGE_REPORT_FORMAT "$Report/Status=2"
 #define GRBL_MESSAGE_REPORT_INTERVAL "$Report/Interval=200"
 
@@ -50,10 +52,17 @@ typedef struct {
     float z;
 } GrblMoveCoordinates;
 
+typedef struct {
+    char *buffer;
+    uint32_t ack_timeout_ms;
+} GrblCommand;
+
 void grbl_serial_init();
 GrblSerialStatus grbl_get_serial_status();
 void grbl_set_serial_status(GrblSerialStatus serial_status);
-bool grbl_send_message(const char *message, bool send_to_front = false);
+bool grbl_send_message(
+    const char *message, bool send_to_front = false, uint32_t ack_timeout = GRBL_ACK_DEFAULT_TIMEOUT_MS);
+bool grbl_send_init_commands();
 bool grbl_send_home_command(uint8_t axis_flags);
 bool grbl_send_move_command(GrblMoveCoordinates target, GrblMoveMode mode = GRBL_MOVE_MODE_UNDEFINED);
 

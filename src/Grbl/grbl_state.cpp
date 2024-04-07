@@ -83,7 +83,7 @@ const char *grbl_state_to_string(GrblState state) {
     case GRBL_STATE_CHECK:
         return "Check";
     case GRBL_STATE_HOME:
-        return "Home";
+        return "Homing";
     case GRBL_STATE_SLEEP:
         return "Sleep";
     default:

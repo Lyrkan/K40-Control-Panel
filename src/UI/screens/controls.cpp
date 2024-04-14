@@ -5,6 +5,7 @@
 #include "Grbl/grbl_report.h"
 #include "K40/relays.h"
 #include "UI/images.h"
+#include "UI/overlay.h"
 #include "UI/utils.h"
 #include "UI/screens/controls.h"
 #include "math.h"
@@ -29,6 +30,20 @@ static lv_obj_t *ui_controls_air_assist_switch;
 static lv_obj_t *ui_controls_lights_switch;
 static lv_obj_t *ui_controls_preview_switch;
 
+static void ui_controls_lock_grbl_controls() {
+    lv_obj_add_state(ui_controls_laser_home_button, LV_STATE_DISABLED);
+    lv_obj_add_state(ui_controls_laser_disable_steppers_button, LV_STATE_DISABLED);
+    lv_btnmatrix_set_btn_ctrl_all(ui_controls_laser_move_x_matrix, LV_BTNMATRIX_CTRL_DISABLED);
+    lv_btnmatrix_set_btn_ctrl_all(ui_controls_laser_move_y_matrix, LV_BTNMATRIX_CTRL_DISABLED);
+}
+
+static void ui_controls_unlock_grbl_controls() {
+    lv_obj_clear_state(ui_controls_laser_home_button, LV_STATE_DISABLED);
+    lv_obj_clear_state(ui_controls_laser_disable_steppers_button, LV_STATE_DISABLED);
+    lv_btnmatrix_clear_btn_ctrl_all(ui_controls_laser_move_x_matrix, LV_BTNMATRIX_CTRL_DISABLED);
+    lv_btnmatrix_clear_btn_ctrl_all(ui_controls_laser_move_y_matrix, LV_BTNMATRIX_CTRL_DISABLED);
+}
+
 static void ui_controls_btnmatrix_handler(lv_event_t *e) {
     lv_event_code_t event_code = lv_event_get_code(e);
     if (event_code != LV_EVENT_VALUE_CHANGED) {
@@ -37,16 +52,34 @@ static void ui_controls_btnmatrix_handler(lv_event_t *e) {
 
     lv_obj_t *event_target = lv_event_get_target(e);
 
+    // Detect when GRBL command are fully process to release UI
+    GrblCommandCallbacks grbl_command_callbacks = GrblCommandCallbacks();
+    grbl_command_callbacks.on_finished = []() -> void {
+        ui_controls_notify_update(CONTROLS_UPDATE_GRBL_COMMMAND_ENDED);
+    };
+
     if (event_target == NULL) {
         // Should never happen
         return;
     } else if (event_target == ui_controls_laser_move_x_matrix || event_target == ui_controls_laser_move_y_matrix) {
         uint32_t btn_id = lv_btnmatrix_get_selected_btn(event_target);
         if (btn_id == 3) { // Home
+            grbl_command_callbacks.on_failure = []() -> void {
+                ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, "Homing failed or timed out");
+            };
+
             if (event_target == ui_controls_laser_move_x_matrix) {
-                grbl_send_home_command(GRBL_AXIS_X);
+                grbl_command_callbacks.on_success = []() -> void {
+                    ui_overlay_add_flash_message(FLASH_LEVEL_SUCCESS, "X axis homed");
+                };
+                ui_controls_lock_grbl_controls();
+                grbl_send_home_command(GRBL_AXIS_X, grbl_command_callbacks);
             } else if (event_target == ui_controls_laser_move_y_matrix) {
-                grbl_send_home_command(GRBL_AXIS_Y);
+                grbl_command_callbacks.on_success = []() -> void {
+                    ui_overlay_add_flash_message(FLASH_LEVEL_SUCCESS, "Y axis homed");
+                };
+                ui_controls_lock_grbl_controls();
+                grbl_send_home_command(GRBL_AXIS_Y, grbl_command_callbacks);
             }
         } else { // Relative move
             float_t move_offset = pow10(abs((int)(btn_id - 3)) - 1) * (btn_id < 3 ? -1 : 1);
@@ -58,7 +91,13 @@ static void ui_controls_btnmatrix_handler(lv_event_t *e) {
                 move_target.axis_flags = GRBL_AXIS_Y;
                 move_target.y = move_offset;
             }
-            grbl_send_move_command(move_target, GRBL_MOVE_MODE_RELATIVE);
+
+            grbl_command_callbacks.on_failure = []() -> void {
+                ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, "Move command failed or timed out");
+            };
+
+            ui_controls_lock_grbl_controls();
+            grbl_send_move_command(move_target, GRBL_MOVE_MODE_RELATIVE, grbl_command_callbacks);
         }
     }
 }
@@ -71,13 +110,37 @@ static void ui_controls_button_handler(lv_event_t *e) {
 
     lv_obj_t *event_target = lv_event_get_target(e);
 
+    // Detect when GRBL command are fully process to release UI
+    GrblCommandCallbacks grbl_command_callbacks = GrblCommandCallbacks();
+    grbl_command_callbacks.on_finished = []() -> void {
+        ui_controls_notify_update(CONTROLS_UPDATE_GRBL_COMMMAND_ENDED);
+    };
+
     if (event_target == NULL) {
         // Should never happen
         return;
     } else if (event_target == ui_controls_laser_home_button) {
-        grbl_send_home_command(GRBL_AXIS_X | GRBL_AXIS_Y);
+        grbl_command_callbacks.on_failure = []() -> void {
+            ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, "Homing failed or timed out");
+        };
+
+        grbl_command_callbacks.on_success = []() -> void {
+            ui_overlay_add_flash_message(FLASH_LEVEL_SUCCESS, "Homing done");
+        };
+
+        ui_controls_lock_grbl_controls();
+        grbl_send_home_command(GRBL_AXIS_X | GRBL_AXIS_Y, grbl_command_callbacks);
     } else if (event_target == ui_controls_laser_disable_steppers_button) {
-        grbl_send_message("$MD");
+        grbl_command_callbacks.on_failure = []() -> void {
+            ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, "Could not disable steppers");
+        };
+
+        grbl_command_callbacks.on_success = []() -> void {
+            ui_overlay_add_flash_message(FLASH_LEVEL_SUCCESS, "Steppers are now disabled");
+        };
+
+        ui_controls_lock_grbl_controls();
+        grbl_send_message("$MD", false, GRBL_ACK_DEFAULT_TIMEOUT_MS, grbl_command_callbacks);
     }
 }
 
@@ -319,6 +382,7 @@ void ui_controls_update(bool initialize) {
 
     uint8_t pending_updates = xEventGroupGetBits(ui_controls_event_group);
     bool pending_grbl_report_update = initialize || ((pending_updates & CONTROLS_UPDATE_GRBL_REPORT) != 0);
+    bool grbl_command_ended_update = initialize || ((pending_updates & CONTROLS_UPDATE_GRBL_COMMMAND_ENDED) != 0);
 
     if (pending_grbl_report_update) {
         TAKE_MUTEX(grbl_last_report_mutex)
@@ -339,6 +403,11 @@ void ui_controls_update(bool initialize) {
         }
 
         xEventGroupClearBits(ui_controls_event_group, CONTROLS_UPDATE_GRBL_REPORT);
+    }
+
+    if (grbl_command_ended_update) {
+        ui_controls_unlock_grbl_controls();
+        xEventGroupClearBits(ui_controls_event_group, CONTROLS_UPDATE_GRBL_COMMMAND_ENDED);
     }
 
     // Update relays state on an interval

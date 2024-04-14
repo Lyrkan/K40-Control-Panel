@@ -21,6 +21,8 @@
 #define GRBL_MESSAGE_REPORT_INTERVAL "$Report/Interval=200"
 
 #define GRBL_TASK_NOTIFY_ACK_INDEX 0
+#define GRBL_TASK_NOTIFY_ACK_SUCCESS 0
+#define GRBL_TASK_NOTIFY_ACK_ERROR 1
 
 typedef enum {
     PIN_GRBL_TX = 5,
@@ -53,17 +55,30 @@ typedef struct {
 } GrblMoveCoordinates;
 
 typedef struct {
+    void (*on_success)() = NULL;
+    void (*on_failure)() = NULL;
+    void (*on_finished)() = NULL;
+} GrblCommandCallbacks;
+
+typedef struct {
     char *buffer;
     uint32_t ack_timeout_ms;
+    GrblCommandCallbacks callbacks;
 } GrblCommand;
 
 void grbl_serial_init();
 GrblSerialStatus grbl_get_serial_status();
 void grbl_set_serial_status(GrblSerialStatus serial_status);
 bool grbl_send_message(
-    const char *message, bool send_to_front = false, uint32_t ack_timeout = GRBL_ACK_DEFAULT_TIMEOUT_MS);
+    const char *message,
+    bool send_to_front = false,
+    uint32_t ack_timeout = GRBL_ACK_DEFAULT_TIMEOUT_MS,
+    GrblCommandCallbacks callbacks = GrblCommandCallbacks());
 bool grbl_send_init_commands();
-bool grbl_send_home_command(uint8_t axis_flags);
-bool grbl_send_move_command(GrblMoveCoordinates target, GrblMoveMode mode = GRBL_MOVE_MODE_UNDEFINED);
+bool grbl_send_home_command(uint8_t axis_flags, GrblCommandCallbacks callbacks = GrblCommandCallbacks());
+bool grbl_send_move_command(
+    GrblMoveCoordinates target,
+    GrblMoveMode mode = GRBL_MOVE_MODE_UNDEFINED,
+    GrblCommandCallbacks callbacks = GrblCommandCallbacks());
 
 #endif

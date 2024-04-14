@@ -44,6 +44,9 @@ static void ui_overlay_display_flash_message(FlashMessage *flash) {
     lv_obj_set_style_bg_opa(flash->ui_element, 200, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     switch (flash->level) {
+    case FLASH_LEVEL_SUCCESS:
+        lv_obj_set_style_bg_color(flash->ui_element, lv_color_hex(0x00db66), LV_PART_MAIN | LV_STATE_DEFAULT);
+        break;
     case FLASH_LEVEL_INFO:
         lv_obj_set_style_bg_color(flash->ui_element, lv_color_hex(0x007bff), LV_PART_MAIN | LV_STATE_DEFAULT);
         break;

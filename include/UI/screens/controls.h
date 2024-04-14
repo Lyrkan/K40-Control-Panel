@@ -7,6 +7,7 @@
 
 typedef enum {
     CONTROLS_UPDATE_GRBL_REPORT = 1 << 0,
+    CONTROLS_UPDATE_GRBL_COMMMAND_ENDED = 1 << 1,
 } ControlsScreenUpdateType;
 
 extern lv_obj_t *ui_controls_screen;

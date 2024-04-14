@@ -43,7 +43,7 @@ static void grbl_process_ack() {
 
     // Notify the TX task that its previous message has been acknowledged
     if (grbl_tx_task_handle != NULL) {
-        xTaskNotifyIndexed(grbl_tx_task_handle, GRBL_TASK_NOTIFY_ACK_INDEX, 0, eNoAction);
+        xTaskNotifyIndexed(grbl_tx_task_handle, GRBL_TASK_NOTIFY_ACK_INDEX, GRBL_TASK_NOTIFY_ACK_SUCCESS, eNoAction);
     }
 }
 
@@ -57,7 +57,7 @@ static void grbl_process_error(const char *error_code) {
     // Notify the TX task that its previous message has been acknowledged
     // TODO Differenciate acks from errors in the TX task
     if (grbl_tx_task_handle != NULL) {
-        xTaskNotifyIndexed(grbl_tx_task_handle, GRBL_TASK_NOTIFY_ACK_INDEX, 0, eNoAction);
+        xTaskNotifyIndexed(grbl_tx_task_handle, GRBL_TASK_NOTIFY_ACK_INDEX, GRBL_TASK_NOTIFY_ACK_ERROR, eNoAction);
     }
 }
 

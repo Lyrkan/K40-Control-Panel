@@ -127,17 +127,36 @@ static void grbl_tx_task(void *param) {
                 ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, "An error happened when trying to send Grbl message");
             }
 
+            uint32_t ack_notification_value;
             if (xTaskNotifyWaitIndexed(
                     GRBL_TASK_NOTIFY_ACK_INDEX,
                     0x00,
                     ULONG_MAX,
-                    NULL,
+                    &ack_notification_value,
                     pdMS_TO_TICKS(message.ack_timeout_ms)) != pdTRUE) {
                 if (!initialized) {
-                    // Drop current message and the ones that were already in the queue
+                    // Drop current message
                     int dropped_messages = 1;
+                    if (message.callbacks.on_failure != NULL) {
+                        message.callbacks.on_failure();
+                    }
+
+                    if (message.callbacks.on_finished != NULL) {
+                        message.callbacks.on_finished();
+                    }
+
                     free(message.buffer);
+
+                    // Drop remaining messages from the queue
                     while (xQueueReceive(grbl_tx_msg_queue, &message, 0) != pdFALSE) {
+                        if (message.callbacks.on_failure != NULL) {
+                            message.callbacks.on_failure();
+                        }
+
+                        if (message.callbacks.on_finished != NULL) {
+                            message.callbacks.on_finished();
+                        }
+
                         free(message.buffer);
                         dropped_messages++;
                     }
@@ -156,6 +175,24 @@ static void grbl_tx_task(void *param) {
                     flash_message[strnlen(flash_message, ARRAY_SIZE(flash_message)) - 1] = '\0'; // Remove line-ending
                     ui_overlay_add_flash_message(FLASH_LEVEL_WARNING, flash_message);
                 }
+
+                // Notify sender that a timeout occurred
+                if (message.callbacks.on_failure != NULL) {
+                    message.callbacks.on_failure();
+                }
+            } else {
+                // If we received a ack or an error for this message
+                if (ack_notification_value == GRBL_TASK_NOTIFY_ACK_SUCCESS && message.callbacks.on_success != NULL) {
+                    message.callbacks.on_success();
+                } else if (
+                    ack_notification_value == GRBL_TASK_NOTIFY_ACK_ERROR && message.callbacks.on_failure != NULL) {
+                    message.callbacks.on_failure();
+                }
+            }
+
+            // Notify sender that the command has been processed (doesn't matter if it succeeded or not)
+            if (message.callbacks.on_finished != NULL) {
+                message.callbacks.on_finished();
             }
 
             free(message.buffer);
@@ -223,7 +260,7 @@ void grbl_set_serial_status(GrblSerialStatus serial_status) {
     ui_status_notify_update(STATUS_UPDATE_UART);
 }
 
-bool grbl_send_message(const char *message, bool send_to_front, uint32_t ack_timeout) {
+bool grbl_send_message(const char *message, bool send_to_front, uint32_t ack_timeout, GrblCommandCallbacks callbacks) {
     size_t message_length = strlen(message);
     if (message_length > GRBL_MAX_LINE_lENGTH) {
         log_e("Message length exceeds GRBL_MAX_LINE_LENGTH: %s", message);
@@ -241,6 +278,7 @@ bool grbl_send_message(const char *message, bool send_to_front, uint32_t ack_tim
     GrblCommand command = {
         .buffer = message_copy,
         .ack_timeout_ms = ack_timeout,
+        .callbacks = callbacks,
     };
 
     if (send_to_front) {
@@ -284,7 +322,7 @@ bool grbl_send_init_commands() {
     return true;
 }
 
-bool grbl_send_home_command(uint8_t axis_flags) {
+bool grbl_send_home_command(uint8_t axis_flags, GrblCommandCallbacks callbacks) {
     log_d(
         "Sending a homing command for axis: %s%s%s",
         (axis_flags & GRBL_AXIS_X) != 0 ? "X" : "",
@@ -302,10 +340,10 @@ bool grbl_send_home_command(uint8_t axis_flags) {
         snprintf(buffer, ARRAY_SIZE(buffer), "%s%c", buffer, 'Z');
     }
 
-    return grbl_send_message(buffer, false, GRBL_ACK_HOMING_TIMEOUT_MS);
+    return grbl_send_message(buffer, false, GRBL_ACK_HOMING_TIMEOUT_MS, callbacks);
 }
 
-bool grbl_send_move_command(GrblMoveCoordinates target, GrblMoveMode mode) {
+bool grbl_send_move_command(GrblMoveCoordinates target, GrblMoveMode mode, GrblCommandCallbacks callbacks) {
     log_i(
         "Sending a%s move command for axis %s%s%s with coordinates (%.2f, %.2f, %.2f)",
         mode == GRBL_MOVE_MODE_ABSOLUTE ? "n absolute"
@@ -322,11 +360,17 @@ bool grbl_send_move_command(GrblMoveCoordinates target, GrblMoveMode mode) {
         switch (mode) {
         case GRBL_MOVE_MODE_ABSOLUTE:
             if (!grbl_send_message("G90")) {
+                if (callbacks.on_failure != NULL) {
+                    callbacks.on_failure();
+                }
                 return false;
             }
             break;
         case GRBL_MOVE_MODE_RELATIVE:
             if (!grbl_send_message("G91")) {
+                if (callbacks.on_failure != NULL) {
+                    callbacks.on_failure();
+                }
                 return false;
             }
             break;
@@ -344,5 +388,5 @@ bool grbl_send_move_command(GrblMoveCoordinates target, GrblMoveMode mode) {
         snprintf(buffer, ARRAY_SIZE(buffer), "%s Z%.2f", buffer, target.z);
     }
 
-    return grbl_send_message(buffer);
+    return grbl_send_message(buffer, false, GRBL_ACK_DEFAULT_TIMEOUT_MS, callbacks);
 }

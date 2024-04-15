@@ -63,9 +63,9 @@ GrblState grbl_state_from_string(char *state) {
 const char *grbl_state_to_string(GrblState state) {
     switch (state) {
     case GRBL_STATE_IDLE:
-        return "Idle";
+        return "Idling";
     case GRBL_STATE_RUN:
-        return "Run";
+        return "Running";
     case GRBL_STATE_HOLD_0:
         return "Hold: complete";
     case GRBL_STATE_HOLD_1:
@@ -85,7 +85,7 @@ const char *grbl_state_to_string(GrblState state) {
     case GRBL_STATE_HOME:
         return "Homing";
     case GRBL_STATE_SLEEP:
-        return "Sleep";
+        return "Sleeping";
     default:
         return "Invalid/unknown Grbl state";
     }

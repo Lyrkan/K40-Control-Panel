@@ -499,7 +499,7 @@
 
 #define LV_USE_CANVAS     0
 
-#define LV_USE_CHECKBOX   0
+#define LV_USE_CHECKBOX   1
 
 #define LV_USE_DROPDOWN   0   /*Requires: lv_label*/
 

@@ -22,6 +22,8 @@ static lv_obj_t *ui_settings_wifi_page;
 static lv_obj_t *ui_settings_bed_page;
 static lv_obj_t *ui_settings_probes_page;
 static lv_obj_t *ui_settings_ota_page;
+static lv_obj_t *ui_settings_alarm_page;
+static lv_obj_t *ui_settings_interlock_page;
 
 static lv_obj_t *ui_settings_keyboard;
 
@@ -46,6 +48,16 @@ static lv_obj_t *ui_settings_probes_cooling_temp_max_value;
 
 static lv_obj_t *ui_settings_ota_login_value;
 static lv_obj_t *ui_settings_ota_password_value;
+
+static lv_obj_t *ui_settings_alarm_enable_when_running_value;
+static lv_obj_t *ui_settings_alarm_enable_when_not_idling_value;
+static lv_obj_t *ui_settings_alarm_enable_when_flame_sensor_triggered_value;
+static lv_obj_t *ui_settings_alarm_enable_when_cooling_issue_value;
+static lv_obj_t *ui_settings_alarm_enable_when_lid_opened_value;
+
+static lv_obj_t *ui_settings_interlock_disable_when_lid_opened_value;
+static lv_obj_t *ui_settings_interlock_disable_when_cooling_issue_value;
+static lv_obj_t *ui_settings_interlock_disable_when_flame_sensor_triggered_value;
 
 static void ui_settings_load_bed_settings() {
     // Acquire bed settings mutex
@@ -267,6 +279,20 @@ static lv_obj_t *ui_settings_create_textarea_field(lv_obj_t *parent, const char 
     return textarea;
 }
 
+static lv_obj_t *ui_settings_create_checkbox_field(lv_obj_t *parent, const char *label) {
+    lv_obj_t *cont = lv_menu_cont_create(parent);
+    lv_obj_set_style_pad_ver(cont, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_t *checkbox = lv_checkbox_create(cont);
+    lv_obj_set_width(checkbox, lv_pct(100));
+    lv_checkbox_set_text(checkbox, label);
+
+    // Handle change events
+    lv_obj_add_event_cb(checkbox, ui_settings_field_value_changed_handler, LV_EVENT_VALUE_CHANGED, NULL);
+
+    return checkbox;
+}
+
 static void ui_settings_init_screen_content() {
     // Make sure the screen is empty
     lv_obj_clean(ui_settings_screen);
@@ -296,11 +322,15 @@ static void ui_settings_init_screen_content() {
     char bed_page_name[] = "Bed";
     char probes_page_name[] = "Probes";
     char ota_page_name[] = "OTA Updates";
+    char alarm_page_name[] = "Alarm behavior";
+    char interlock_page_name[] = "Interlock behavior";
 
     ui_settings_wifi_page = lv_menu_page_create(ui_settings_menu, wifi_page_name);
     ui_settings_bed_page = lv_menu_page_create(ui_settings_menu, bed_page_name);
     ui_settings_probes_page = lv_menu_page_create(ui_settings_menu, probes_page_name);
     ui_settings_ota_page = lv_menu_page_create(ui_settings_menu, ota_page_name);
+    ui_settings_alarm_page = lv_menu_page_create(ui_settings_menu, alarm_page_name);
+    ui_settings_interlock_page = lv_menu_page_create(ui_settings_menu, interlock_page_name);
 
     // Disable scroll momentum/elasticity
     lv_obj_clear_flag(ui_settings_wifi_page, LV_OBJ_FLAG_SCROLL_MOMENTUM);
@@ -311,6 +341,10 @@ static void ui_settings_init_screen_content() {
     lv_obj_clear_flag(ui_settings_probes_page, LV_OBJ_FLAG_SCROLL_ELASTIC);
     lv_obj_clear_flag(ui_settings_ota_page, LV_OBJ_FLAG_SCROLL_MOMENTUM);
     lv_obj_clear_flag(ui_settings_ota_page, LV_OBJ_FLAG_SCROLL_ELASTIC);
+    lv_obj_clear_flag(ui_settings_alarm_page, LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    lv_obj_clear_flag(ui_settings_alarm_page, LV_OBJ_FLAG_SCROLL_ELASTIC);
+    lv_obj_clear_flag(ui_settings_interlock_page, LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    lv_obj_clear_flag(ui_settings_interlock_page, LV_OBJ_FLAG_SCROLL_ELASTIC);
 
     // Root page
     ui_settings_root_page = lv_menu_page_create(ui_settings_menu, NULL);
@@ -337,6 +371,16 @@ static void ui_settings_init_screen_content() {
     item_label = lv_label_create(item_cont);
     lv_label_set_text(item_label, LV_SYMBOL_CODE_PULL_REQUEST " OTA Updates");
     lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_ota_page);
+
+    item_cont = lv_menu_cont_create(ui_settings_root_page);
+    item_label = lv_label_create(item_cont);
+    lv_label_set_text(item_label, LV_SYMBOL_WARNING " Alarm behavior");
+    lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_alarm_page);
+
+    item_cont = lv_menu_cont_create(ui_settings_root_page);
+    item_label = lv_label_create(item_cont);
+    lv_label_set_text(item_label, LV_SYMBOL_UNLOCK " Interlock behavior");
+    lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_interlock_page);
 
     // Keyboard
     ui_settings_keyboard = lv_keyboard_create(ui_settings_screen);
@@ -438,6 +482,29 @@ static void ui_settings_init_screen_content() {
     // OTA page
     ui_settings_ota_login_value = ui_settings_create_textarea_field(ui_settings_ota_page, "Login");
     ui_settings_ota_password_value = ui_settings_create_textarea_field(ui_settings_ota_page, "Password");
+
+    // Alarm page
+    ui_settings_alarm_enable_when_running_value =
+        ui_settings_create_checkbox_field(ui_settings_alarm_page, "Enable alarm when Grbl status is 'Running'");
+    ui_settings_alarm_enable_when_not_idling_value = ui_settings_create_checkbox_field(
+        ui_settings_alarm_page,
+        "Enable alarm when Grbl status is different from 'Idling'");
+    ui_settings_alarm_enable_when_flame_sensor_triggered_value =
+        ui_settings_create_checkbox_field(ui_settings_alarm_page, "Enable alarm when flame sensor is triggered");
+    ui_settings_alarm_enable_when_cooling_issue_value =
+        ui_settings_create_checkbox_field(ui_settings_alarm_page, "Enable alarm when a cooling issue is detected");
+    ui_settings_alarm_enable_when_lid_opened_value =
+        ui_settings_create_checkbox_field(ui_settings_alarm_page, "Enable alarm when a lid is opened");
+
+    // Interlock page
+    ui_settings_interlock_disable_when_lid_opened_value =
+        ui_settings_create_checkbox_field(ui_settings_interlock_page, "Prevent laser from firing when a lid is opened");
+    ui_settings_interlock_disable_when_cooling_issue_value = ui_settings_create_checkbox_field(
+        ui_settings_interlock_page,
+        "Prevent laser from firing when a cooling issue is detected");
+    ui_settings_interlock_disable_when_flame_sensor_triggered_value = ui_settings_create_checkbox_field(
+        ui_settings_interlock_page,
+        "Prevent laser from firing when flame sensor is triggered");
 
     // Init fields with current settings
     ui_settings_load_bed_settings();

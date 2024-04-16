@@ -43,7 +43,11 @@ static void grbl_process_ack() {
 
     // Notify the TX task that its previous message has been acknowledged
     if (grbl_tx_task_handle != NULL) {
-        xTaskNotifyIndexed(grbl_tx_task_handle, GRBL_TASK_NOTIFY_ACK_INDEX, GRBL_TASK_NOTIFY_ACK_SUCCESS, eNoAction);
+        xTaskNotifyIndexed(
+            grbl_tx_task_handle,
+            GRBL_TASK_NOTIFY_ACK_INDEX,
+            GRBL_TASK_NOTIFY_ACK_SUCCESS,
+            eSetValueWithOverwrite);
     }
 }
 
@@ -55,9 +59,12 @@ static void grbl_process_error(const char *error_code) {
     ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, error_description);
 
     // Notify the TX task that its previous message has been acknowledged
-    // TODO Differenciate acks from errors in the TX task
     if (grbl_tx_task_handle != NULL) {
-        xTaskNotifyIndexed(grbl_tx_task_handle, GRBL_TASK_NOTIFY_ACK_INDEX, GRBL_TASK_NOTIFY_ACK_ERROR, eNoAction);
+        xTaskNotifyIndexed(
+            grbl_tx_task_handle,
+            GRBL_TASK_NOTIFY_ACK_INDEX,
+            GRBL_TASK_NOTIFY_ACK_ERROR,
+            eSetValueWithOverwrite);
     }
 }
 

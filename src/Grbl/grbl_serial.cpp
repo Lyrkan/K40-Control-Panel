@@ -343,49 +343,44 @@ bool grbl_send_home_command(uint8_t axis_flags, GrblCommandCallbacks callbacks) 
     return grbl_send_message(buffer, false, GRBL_ACK_HOMING_TIMEOUT_MS, callbacks);
 }
 
-bool grbl_send_move_command(GrblMoveCoordinates target, GrblMoveMode mode, GrblCommandCallbacks callbacks) {
+bool grbl_send_move_command(GrblMoveCommand command, GrblCommandCallbacks callbacks) {
     log_i(
-        "Sending a%s move command for axis %s%s%s with coordinates (%.2f, %.2f, %.2f)",
-        mode == GRBL_MOVE_MODE_ABSOLUTE ? "n absolute"
-                                        : (mode == GRBL_MOVE_MODE_RELATIVE ? " relative" : "n undefined"),
-        (target.axis_flags & GRBL_AXIS_X) != 0 ? "X" : "",
-        (target.axis_flags & GRBL_AXIS_Y) != 0 ? "Y" : "",
-        (target.axis_flags & GRBL_AXIS_Z) != 0 ? "Z" : "",
-        (target.axis_flags & GRBL_AXIS_X) != 0 ? target.x : 0,
-        (target.axis_flags & GRBL_AXIS_Y) != 0 ? target.y : 0,
-        (target.axis_flags & GRBL_AXIS_Z) != 0 ? target.z : 0);
+        "Sending a%s move command for axis %s%s%s with coordinates (%.2f, %.2f, %.2f) at %.2fmm/s",
+        command.move_mode == GRBL_MOVE_MODE_ABSOLUTE
+            ? "n absolute"
+            : (command.move_mode == GRBL_MOVE_MODE_RELATIVE ? " relative" : "n undefined"),
+        (command.axis_flags & GRBL_AXIS_X) != 0 ? "X" : "",
+        (command.axis_flags & GRBL_AXIS_Y) != 0 ? "Y" : "",
+        (command.axis_flags & GRBL_AXIS_Z) != 0 ? "Z" : "",
+        (command.axis_flags & GRBL_AXIS_X) != 0 ? command.x : 0,
+        (command.axis_flags & GRBL_AXIS_Y) != 0 ? command.y : 0,
+        (command.axis_flags & GRBL_AXIS_Z) != 0 ? command.z : 0,
+        command.feed_rate);
 
-    if (mode == GRBL_MOVE_MODE_ABSOLUTE || mode == GRBL_MOVE_MODE_RELATIVE) {
-        bool switch_mode_scheduled = false;
-        switch (mode) {
-        case GRBL_MOVE_MODE_ABSOLUTE:
-            if (!grbl_send_message("G90")) {
-                if (callbacks.on_failure != NULL) {
-                    callbacks.on_failure();
-                }
-                return false;
-            }
-            break;
-        case GRBL_MOVE_MODE_RELATIVE:
-            if (!grbl_send_message("G91")) {
-                if (callbacks.on_failure != NULL) {
-                    callbacks.on_failure();
-                }
-                return false;
-            }
-            break;
-        }
+    char buffer[ARRAY_SIZE("$J=G21 G90 F0000.0 X000.00 Y000.00 Z000.00")] = "$J=G21\0";
+
+    // Set absolute/relative mode
+    switch (command.move_mode) {
+    case GRBL_MOVE_MODE_ABSOLUTE:
+        snprintf(buffer, ARRAY_SIZE(buffer), "%s G90");
+        break;
+    case GRBL_MOVE_MODE_RELATIVE:
+        snprintf(buffer, ARRAY_SIZE(buffer), "%s G91");
+        break;
     }
 
-    char buffer[ARRAY_SIZE("G0 X000.00 Y000.00 Z000.00")] = "G0\0";
-    if ((target.axis_flags & GRBL_AXIS_X) != 0) {
-        snprintf(buffer, ARRAY_SIZE(buffer), "%s X%.2f", buffer, target.x);
+    // Set feed rate
+    snprintf(buffer, ARRAY_SIZE(buffer), "%s F%.1f", buffer, command.feed_rate);
+
+    // Set target
+    if ((command.axis_flags & GRBL_AXIS_X) != 0) {
+        snprintf(buffer, ARRAY_SIZE(buffer), "%s X%.2f", buffer, command.x);
     }
-    if ((target.axis_flags & GRBL_AXIS_Y) != 0) {
-        snprintf(buffer, ARRAY_SIZE(buffer), "%s Y%.2f", buffer, target.y);
+    if ((command.axis_flags & GRBL_AXIS_Y) != 0) {
+        snprintf(buffer, ARRAY_SIZE(buffer), "%s Y%.2f", buffer, command.y);
     }
-    if ((target.axis_flags & GRBL_AXIS_Z) != 0) {
-        snprintf(buffer, ARRAY_SIZE(buffer), "%s Z%.2f", buffer, target.z);
+    if ((command.axis_flags & GRBL_AXIS_Z) != 0) {
+        snprintf(buffer, ARRAY_SIZE(buffer), "%s Z%.2f", buffer, command.z);
     }
 
     return grbl_send_message(buffer, false, GRBL_ACK_DEFAULT_TIMEOUT_MS, callbacks);

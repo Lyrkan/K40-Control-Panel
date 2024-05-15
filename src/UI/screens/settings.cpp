@@ -22,6 +22,7 @@ static lv_obj_t *ui_settings_wifi_page;
 static lv_obj_t *ui_settings_bed_page;
 static lv_obj_t *ui_settings_probes_page;
 static lv_obj_t *ui_settings_ota_page;
+static lv_obj_t *ui_settings_grbl_page;
 static lv_obj_t *ui_settings_alarm_page;
 static lv_obj_t *ui_settings_interlock_page;
 
@@ -48,6 +49,8 @@ static lv_obj_t *ui_settings_probes_cooling_temp_max_value;
 
 static lv_obj_t *ui_settings_ota_login_value;
 static lv_obj_t *ui_settings_ota_password_value;
+
+static lv_obj_t *ui_settings_grbl_jog_speed_value;
 
 static lv_obj_t *ui_settings_alarm_enable_when_running_value;
 static lv_obj_t *ui_settings_alarm_enable_when_not_idling_value;
@@ -179,6 +182,31 @@ static void ui_settings_save_ota_settings() {
     RELEASE_MUTEX(ota_settings_mutex)
 }
 
+static void ui_settings_load_grbl_settings() {
+    // Acquire GRBL settings mutex
+    TAKE_MUTEX(grbl_settings_mutex)
+
+    static char jog_speed_text[10];
+
+    snprintf(jog_speed_text, ARRAY_SIZE(jog_speed_text), "%.1f", grbl_settings.jog_speed);
+
+    lv_textarea_set_text(ui_settings_grbl_jog_speed_value, jog_speed_text);
+
+    // Release GRBL settings mutex
+    RELEASE_MUTEX(grbl_settings_mutex)
+}
+
+static void ui_settings_save_grbl_settings() {
+    // Acquire GRBL settings mutex
+    TAKE_MUTEX(grbl_settings_mutex)
+
+    grbl_settings.jog_speed = static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_grbl_jog_speed_value)));
+    settings_schedule_save(SETTINGS_TYPE_GRBL);
+
+    // Release GRBL settings mutex
+    RELEASE_MUTEX(grbl_settings_mutex)
+}
+
 static void ui_settings_wifi_buttons_handler(lv_event_t *e) {
     lv_event_code_t event_code = lv_event_get_code(e);
     if (event_code != LV_EVENT_CLICKED) {
@@ -250,6 +278,8 @@ static void ui_settings_field_value_changed_handler(lv_event_t *e) {
             ui_settings_save_probes_settings();
         } else if (target == ui_settings_ota_login_value || target == ui_settings_ota_password_value) {
             ui_settings_save_ota_settings();
+        } else if (target == ui_settings_grbl_jog_speed_value) {
+            ui_settings_save_grbl_settings();
         }
     }
 }
@@ -322,6 +352,7 @@ static void ui_settings_init_screen_content() {
     char bed_page_name[] = "Bed";
     char probes_page_name[] = "Probes";
     char ota_page_name[] = "OTA Updates";
+    char grbl_page_name[] = "GRBL";
     char alarm_page_name[] = "Alarm behavior";
     char interlock_page_name[] = "Interlock behavior";
 
@@ -329,6 +360,7 @@ static void ui_settings_init_screen_content() {
     ui_settings_bed_page = lv_menu_page_create(ui_settings_menu, bed_page_name);
     ui_settings_probes_page = lv_menu_page_create(ui_settings_menu, probes_page_name);
     ui_settings_ota_page = lv_menu_page_create(ui_settings_menu, ota_page_name);
+    ui_settings_grbl_page = lv_menu_page_create(ui_settings_menu, grbl_page_name);
     ui_settings_alarm_page = lv_menu_page_create(ui_settings_menu, alarm_page_name);
     ui_settings_interlock_page = lv_menu_page_create(ui_settings_menu, interlock_page_name);
 
@@ -341,6 +373,8 @@ static void ui_settings_init_screen_content() {
     lv_obj_clear_flag(ui_settings_probes_page, LV_OBJ_FLAG_SCROLL_ELASTIC);
     lv_obj_clear_flag(ui_settings_ota_page, LV_OBJ_FLAG_SCROLL_MOMENTUM);
     lv_obj_clear_flag(ui_settings_ota_page, LV_OBJ_FLAG_SCROLL_ELASTIC);
+    lv_obj_clear_flag(ui_settings_grbl_page, LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    lv_obj_clear_flag(ui_settings_grbl_page, LV_OBJ_FLAG_SCROLL_ELASTIC);
     lv_obj_clear_flag(ui_settings_alarm_page, LV_OBJ_FLAG_SCROLL_MOMENTUM);
     lv_obj_clear_flag(ui_settings_alarm_page, LV_OBJ_FLAG_SCROLL_ELASTIC);
     lv_obj_clear_flag(ui_settings_interlock_page, LV_OBJ_FLAG_SCROLL_MOMENTUM);
@@ -371,6 +405,11 @@ static void ui_settings_init_screen_content() {
     item_label = lv_label_create(item_cont);
     lv_label_set_text(item_label, LV_SYMBOL_CODE_PULL_REQUEST " OTA Updates");
     lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_ota_page);
+
+    item_cont = lv_menu_cont_create(ui_settings_root_page);
+    item_label = lv_label_create(item_cont);
+    lv_label_set_text(item_label, LV_SYMBOL_ARROWS_TO_DOT " GRBL");
+    lv_menu_set_load_page_event(ui_settings_menu, item_cont, ui_settings_grbl_page);
 
     item_cont = lv_menu_cont_create(ui_settings_root_page);
     item_label = lv_label_create(item_cont);
@@ -483,6 +522,9 @@ static void ui_settings_init_screen_content() {
     ui_settings_ota_login_value = ui_settings_create_textarea_field(ui_settings_ota_page, "Login");
     ui_settings_ota_password_value = ui_settings_create_textarea_field(ui_settings_ota_page, "Password");
 
+    // GRBL page
+    ui_settings_grbl_jog_speed_value = ui_settings_create_textarea_field(ui_settings_grbl_page, "Jog speed (mm/s)");
+
     // Alarm page
     ui_settings_alarm_enable_when_running_value =
         ui_settings_create_checkbox_field(ui_settings_alarm_page, "Enable alarm when Grbl status is 'Running'");
@@ -510,6 +552,7 @@ static void ui_settings_init_screen_content() {
     ui_settings_load_bed_settings();
     ui_settings_load_probes_settings();
     ui_settings_load_ota_settings();
+    ui_settings_load_grbl_settings();
     settings_loaded = true;
 
     // Force the first update

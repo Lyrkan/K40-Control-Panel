@@ -10,6 +10,7 @@
 static const char PREFERENCES_NAMESPACE_BED[] = "bed-settings";
 static const char PREFERENCES_NAMESPACE_PROBES[] = "probes-settings";
 static const char PREFERENCES_NAMESPACE_OTA[] = "ota-settings";
+static const char PREFERENCES_NAMESPACE_GRBL[] = "grbl-settings";
 
 static const char PREFERENCES_KEY_BED_SCREW_LEAD[] = "screw-lead-um";
 static const char PREFERENCES_KEY_BED_MICROSTEP_MULTIPLIER[] = "microstep-mul";
@@ -27,11 +28,14 @@ static const char PREFERENCES_KEY_PROBES_COOLING_TEMP_MAX[] = "cool-temp-max";
 static const char PREFERENCES_KEY_OTA_LOGIN[] = "login";
 static const char PREFERENCES_KEY_OTA_PASSWORD[] = "password";
 
+static const char PREFERENCES_KEY_GRBL_JOG_SPEED[] = "jog-speed";
+
 static Preferences preferences;
 
 SemaphoreHandle_t bed_settings_mutex = xSemaphoreCreateMutex();
 SemaphoreHandle_t probes_settings_mutex = xSemaphoreCreateMutex();
 SemaphoreHandle_t ota_settings_mutex = xSemaphoreCreateMutex();
+SemaphoreHandle_t grbl_settings_mutex = xSemaphoreCreateMutex();
 
 BedSettings bed_settings = {
     .screw_lead_um = 8000,
@@ -52,6 +56,10 @@ ProbesSettings probes_settings = {
 OTASettings ota_settings = {
     .login = {0},
     .password = {0},
+};
+
+GrblSettings grbl_settings = {
+    .jog_speed = 100.0,
 };
 
 static void settings_save_task_func(void *params) {
@@ -114,6 +122,20 @@ static void settings_save_task_func(void *params) {
 
             // Release OTA settings lock
             RELEASE_MUTEX(ota_settings_mutex)
+        }
+
+        if ((settings_types & SETTINGS_TYPE_GRBL) != 0) {
+            log_i("GRBL settings have changed, saving new values...");
+
+            // Acquire GRBL settings lock
+            TAKE_MUTEX(grbl_settings_mutex)
+
+            preferences.begin(PREFERENCES_NAMESPACE_GRBL, false);
+            preferences.putFloat(PREFERENCES_KEY_GRBL_JOG_SPEED, grbl_settings.jog_speed);
+            preferences.end();
+
+            // Release OTA settings lock
+            RELEASE_MUTEX(grbl_settings_mutex)
         }
 
         // Wait a little bit before the next check
@@ -201,8 +223,26 @@ void settings_init() {
     log_d("  login: %s", ota_settings.login);
     log_d("  password: %s", ota_settings.password);
 
-    // Release probes settings lock
+    // Release OTA settings lock
     RELEASE_MUTEX(ota_settings_mutex)
+
+    // Acquire GRBL settings lock
+    TAKE_MUTEX(grbl_settings_mutex)
+    log_i("Loading GRBL settings... ");
+    preferences.begin(PREFERENCES_NAMESPACE_GRBL, true);
+
+    // clang-format off
+    grbl_settings = {
+        .jog_speed = preferences.getFloat(PREFERENCES_KEY_GRBL_JOG_SPEED, grbl_settings.jog_speed),
+    };
+    //  clang-format on
+
+    preferences.end();
+
+    log_d("  jog speed: %.1f", grbl_settings.jog_speed);
+
+    // Release GRBL settings lock
+    RELEASE_MUTEX(grbl_settings_mutex)
 
     // Start saving task
     xTaskCreatePinnedToCore(

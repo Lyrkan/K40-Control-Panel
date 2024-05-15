@@ -48,11 +48,13 @@ typedef enum {
 } GrblAxis;
 
 typedef struct {
+    GrblMoveMode move_mode;
+    float feed_rate;
     uint8_t axis_flags;
     float x;
     float y;
     float z;
-} GrblMoveCoordinates;
+} GrblMoveCommand;
 
 typedef struct {
     void (*on_success)() = NULL;
@@ -76,9 +78,6 @@ bool grbl_send_message(
     GrblCommandCallbacks callbacks = GrblCommandCallbacks());
 bool grbl_send_init_commands();
 bool grbl_send_home_command(uint8_t axis_flags, GrblCommandCallbacks callbacks = GrblCommandCallbacks());
-bool grbl_send_move_command(
-    GrblMoveCoordinates target,
-    GrblMoveMode mode = GRBL_MOVE_MODE_UNDEFINED,
-    GrblCommandCallbacks callbacks = GrblCommandCallbacks());
+bool grbl_send_move_command(GrblMoveCommand command, GrblCommandCallbacks callbacks = GrblCommandCallbacks());
 
 #endif

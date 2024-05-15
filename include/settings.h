@@ -13,6 +13,7 @@ typedef enum {
     SETTINGS_TYPE_BED = 0x01,
     SETTINGS_TYPE_PROBES = 0x02,
     SETTINGS_TYPE_OTA = 0x04,
+    SETTINGS_TYPE_GRBL = 0x08,
 } SettingsType;
 
 typedef struct {
@@ -37,13 +38,19 @@ typedef struct {
     char password[250];
 } OTASettings;
 
+typedef struct {
+    float jog_speed;
+} GrblSettings;
+
 extern SemaphoreHandle_t bed_settings_mutex;
 extern SemaphoreHandle_t probes_settings_mutex;
 extern SemaphoreHandle_t ota_settings_mutex;
+extern SemaphoreHandle_t grbl_settings_mutex;
 
 extern BedSettings bed_settings;
 extern ProbesSettings probes_settings;
 extern OTASettings ota_settings;
+extern GrblSettings grbl_settings;
 
 void settings_init();
 void settings_schedule_save(uint32_t settings_types);

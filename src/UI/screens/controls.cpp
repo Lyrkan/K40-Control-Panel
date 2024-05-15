@@ -12,6 +12,7 @@
 #include "macros.h"
 #include "mutex.h"
 #include "queues.h"
+#include "settings.h"
 
 lv_obj_t *ui_controls_screen;
 
@@ -82,14 +83,23 @@ static void ui_controls_btnmatrix_handler(lv_event_t *e) {
                 grbl_send_home_command(GRBL_AXIS_Y, grbl_command_callbacks);
             }
         } else { // Relative move
+            TAKE_MUTEX(grbl_settings_mutex);
+
+            GrblMoveCommand move_command = {
+                .move_mode = GRBL_MOVE_MODE_RELATIVE,
+                .feed_rate = grbl_settings.jog_speed,
+                .axis_flags = 0,
+            };
+
+            RELEASE_MUTEX(grbl_settings_mutex);
+
             float_t move_offset = pow10(abs((int)(btn_id - 3)) - 1) * (btn_id < 3 ? -1 : 1);
-            GrblMoveCoordinates move_target = {.axis_flags = 0};
             if (event_target == ui_controls_laser_move_x_matrix) {
-                move_target.axis_flags = GRBL_AXIS_X;
-                move_target.x = move_offset;
+                move_command.axis_flags = GRBL_AXIS_X;
+                move_command.x = move_offset;
             } else if (event_target == ui_controls_laser_move_y_matrix) {
-                move_target.axis_flags = GRBL_AXIS_Y;
-                move_target.y = move_offset;
+                move_command.axis_flags = GRBL_AXIS_Y;
+                move_command.y = move_offset;
             }
 
             grbl_command_callbacks.on_failure = []() -> void {
@@ -97,7 +107,7 @@ static void ui_controls_btnmatrix_handler(lv_event_t *e) {
             };
 
             ui_controls_lock_grbl_controls();
-            grbl_send_move_command(move_target, GRBL_MOVE_MODE_RELATIVE, grbl_command_callbacks);
+            grbl_send_move_command(move_command, grbl_command_callbacks);
         }
     }
 }

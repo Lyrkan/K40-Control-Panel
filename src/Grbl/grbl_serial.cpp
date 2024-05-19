@@ -12,6 +12,7 @@
 #include "UI/screens/status.h"
 #include "macros.h"
 #include "queues.h"
+#include "settings.h"
 #include "tasks.h"
 
 static GrblSerialStatus grbl_serial_status = GRBL_SERIAL_STATUS_DISCONNECTED;
@@ -260,7 +261,16 @@ void grbl_set_serial_status(GrblSerialStatus serial_status) {
     ui_status_notify_update(STATUS_UPDATE_UART);
 }
 
-bool grbl_send_message(const char *message, bool send_to_front, uint32_t ack_timeout, GrblCommandCallbacks callbacks) {
+bool grbl_send_message(const char *message, GrblCommandCallbacks callbacks, bool send_to_front) {
+    TAKE_MUTEX(grbl_settings_mutex)
+    uint32_t timeout_ms = grbl_settings.default_timeout_ms;
+    RELEASE_MUTEX(grbl_settings_mutex);
+
+    return grbl_send_message(message, timeout_ms, callbacks, send_to_front);
+}
+
+bool grbl_send_message(
+    const char *message, uint32_t ack_timeout_ms, GrblCommandCallbacks callbacks, bool send_to_front) {
     size_t message_length = strlen(message);
     if (message_length > GRBL_MAX_LINE_lENGTH) {
         log_e("Message length exceeds GRBL_MAX_LINE_LENGTH: %s", message);
@@ -277,11 +287,12 @@ bool grbl_send_message(const char *message, bool send_to_front, uint32_t ack_tim
 
     GrblCommand command = {
         .buffer = message_copy,
-        .ack_timeout_ms = ack_timeout,
+        .ack_timeout_ms = ack_timeout_ms,
         .callbacks = callbacks,
     };
 
     if (send_to_front) {
+        log_d("Scheduling Grbl message with high priority (timeout: %dms): %s", command.ack_timeout_ms, command.buffer);
         if (xQueueSendToFront(grbl_tx_msg_queue, &command, 0) != pdTRUE) {
             log_w("TX queue seems to be full, a message was dropped");
             ui_overlay_add_flash_message(
@@ -290,6 +301,7 @@ bool grbl_send_message(const char *message, bool send_to_front, uint32_t ack_tim
             return false;
         }
     } else {
+        log_d("Scheduling Grbl message with low priority (timeout: %dms): %s", command.ack_timeout_ms, command.buffer);
         if (xQueueSendToBack(grbl_tx_msg_queue, &command, 0) != pdTRUE) {
             log_w("TX queue seems to be full, a message was dropped");
             ui_overlay_add_flash_message(
@@ -304,7 +316,8 @@ bool grbl_send_message(const char *message, bool send_to_front, uint32_t ack_tim
 
 bool grbl_send_init_commands() {
     log_d("Scheduling init commands (status / report interval / report format)");
-    if (!grbl_send_message(GRBL_MESSAGE_STATUS, true)) {
+
+    if (!grbl_send_message(GRBL_MESSAGE_STATUS, {}, true)) {
         log_e("Could not query current status");
         return false;
     }
@@ -340,7 +353,11 @@ bool grbl_send_home_command(uint8_t axis_flags, GrblCommandCallbacks callbacks) 
         snprintf(buffer, ARRAY_SIZE(buffer), "%s%c", buffer, 'Z');
     }
 
-    return grbl_send_message(buffer, false, GRBL_ACK_HOMING_TIMEOUT_MS, callbacks);
+    TAKE_MUTEX(grbl_settings_mutex)
+    uint32_t homing_timeout_ms = grbl_settings.homing_timeout_ms;
+    RELEASE_MUTEX(grbl_settings_mutex);
+
+    return grbl_send_message(buffer, homing_timeout_ms, callbacks);
 }
 
 bool grbl_send_move_command(GrblMoveCommand command, GrblCommandCallbacks callbacks) {
@@ -362,10 +379,10 @@ bool grbl_send_move_command(GrblMoveCommand command, GrblCommandCallbacks callba
     // Set absolute/relative mode
     switch (command.move_mode) {
     case GRBL_MOVE_MODE_ABSOLUTE:
-        snprintf(buffer, ARRAY_SIZE(buffer), "%s G90");
+        snprintf(buffer, ARRAY_SIZE(buffer), "%s G90", buffer);
         break;
     case GRBL_MOVE_MODE_RELATIVE:
-        snprintf(buffer, ARRAY_SIZE(buffer), "%s G91");
+        snprintf(buffer, ARRAY_SIZE(buffer), "%s G91", buffer);
         break;
     }
 
@@ -383,5 +400,5 @@ bool grbl_send_move_command(GrblMoveCommand command, GrblCommandCallbacks callba
         snprintf(buffer, ARRAY_SIZE(buffer), "%s Z%.2f", buffer, command.z);
     }
 
-    return grbl_send_message(buffer, false, GRBL_ACK_DEFAULT_TIMEOUT_MS, callbacks);
+    return grbl_send_message(buffer, callbacks);
 }

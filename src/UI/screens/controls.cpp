@@ -150,7 +150,7 @@ static void ui_controls_button_handler(lv_event_t *e) {
         };
 
         ui_controls_lock_grbl_controls();
-        grbl_send_message("$MD", false, GRBL_ACK_DEFAULT_TIMEOUT_MS, grbl_command_callbacks);
+        grbl_send_message("$MD", grbl_command_callbacks);
     }
 }
 

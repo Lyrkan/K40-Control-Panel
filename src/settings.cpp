@@ -29,6 +29,8 @@ static const char PREFERENCES_KEY_OTA_LOGIN[] = "login";
 static const char PREFERENCES_KEY_OTA_PASSWORD[] = "password";
 
 static const char PREFERENCES_KEY_GRBL_JOG_SPEED[] = "jog-speed";
+static const char PREFERENCES_KEY_GRBL_DEFAULT_TIMEOUT[] = "default-timeout";
+static const char PREFERENCES_KEY_GRBL_HOMING_TIMEOUT[] = "homing-timeout";
 
 static Preferences preferences;
 
@@ -60,6 +62,8 @@ OTASettings ota_settings = {
 
 GrblSettings grbl_settings = {
     .jog_speed = 100.0,
+    .default_timeout_ms = 5000,
+    .homing_timeout_ms = 30000,
 };
 
 static void settings_save_task_func(void *params) {
@@ -132,6 +136,8 @@ static void settings_save_task_func(void *params) {
 
             preferences.begin(PREFERENCES_NAMESPACE_GRBL, false);
             preferences.putFloat(PREFERENCES_KEY_GRBL_JOG_SPEED, grbl_settings.jog_speed);
+            preferences.putUInt(PREFERENCES_KEY_GRBL_DEFAULT_TIMEOUT, grbl_settings.default_timeout_ms);
+            preferences.putUInt(PREFERENCES_KEY_GRBL_HOMING_TIMEOUT, grbl_settings.homing_timeout_ms);
             preferences.end();
 
             // Release OTA settings lock
@@ -234,12 +240,16 @@ void settings_init() {
     // clang-format off
     grbl_settings = {
         .jog_speed = preferences.getFloat(PREFERENCES_KEY_GRBL_JOG_SPEED, grbl_settings.jog_speed),
+        .default_timeout_ms = preferences.getUInt(PREFERENCES_KEY_GRBL_DEFAULT_TIMEOUT, grbl_settings.default_timeout_ms),
+        .homing_timeout_ms = preferences.getUInt(PREFERENCES_KEY_GRBL_HOMING_TIMEOUT, grbl_settings.homing_timeout_ms),
     };
     //  clang-format on
 
     preferences.end();
 
     log_d("  jog speed: %.1f", grbl_settings.jog_speed);
+    log_d("  default timeout: %d", grbl_settings.default_timeout_ms);
+    log_d("  homing timeoutd: %d", grbl_settings.homing_timeout_ms);
 
     // Release GRBL settings lock
     RELEASE_MUTEX(grbl_settings_mutex)

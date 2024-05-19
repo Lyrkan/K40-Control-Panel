@@ -51,6 +51,8 @@ static lv_obj_t *ui_settings_ota_login_value;
 static lv_obj_t *ui_settings_ota_password_value;
 
 static lv_obj_t *ui_settings_grbl_jog_speed_value;
+static lv_obj_t *ui_settings_grbl_default_timeout_value;
+static lv_obj_t *ui_settings_grbl_homing_timeout_value;
 
 static lv_obj_t *ui_settings_alarm_enable_when_running_value;
 static lv_obj_t *ui_settings_alarm_enable_when_not_idling_value;
@@ -187,10 +189,16 @@ static void ui_settings_load_grbl_settings() {
     TAKE_MUTEX(grbl_settings_mutex)
 
     static char jog_speed_text[10];
+    static char default_timeout_text[10];
+    static char homing_timeout_text[10];
 
     snprintf(jog_speed_text, ARRAY_SIZE(jog_speed_text), "%.1f", grbl_settings.jog_speed);
+    snprintf(default_timeout_text, ARRAY_SIZE(default_timeout_text), "%d", grbl_settings.default_timeout_ms);
+    snprintf(homing_timeout_text, ARRAY_SIZE(homing_timeout_text), "%d", grbl_settings.homing_timeout_ms);
 
     lv_textarea_set_text(ui_settings_grbl_jog_speed_value, jog_speed_text);
+    lv_textarea_set_text(ui_settings_grbl_default_timeout_value, default_timeout_text);
+    lv_textarea_set_text(ui_settings_grbl_homing_timeout_value, homing_timeout_text);
 
     // Release GRBL settings mutex
     RELEASE_MUTEX(grbl_settings_mutex)
@@ -201,6 +209,10 @@ static void ui_settings_save_grbl_settings() {
     TAKE_MUTEX(grbl_settings_mutex)
 
     grbl_settings.jog_speed = static_cast<float_t>(atof(lv_textarea_get_text(ui_settings_grbl_jog_speed_value)));
+    grbl_settings.default_timeout_ms =
+        static_cast<uint32_t>(atof(lv_textarea_get_text(ui_settings_grbl_default_timeout_value)));
+    grbl_settings.homing_timeout_ms =
+        static_cast<uint32_t>(atof(lv_textarea_get_text(ui_settings_grbl_homing_timeout_value)));
     settings_schedule_save(SETTINGS_TYPE_GRBL);
 
     // Release GRBL settings mutex
@@ -278,7 +290,9 @@ static void ui_settings_field_value_changed_handler(lv_event_t *e) {
             ui_settings_save_probes_settings();
         } else if (target == ui_settings_ota_login_value || target == ui_settings_ota_password_value) {
             ui_settings_save_ota_settings();
-        } else if (target == ui_settings_grbl_jog_speed_value) {
+        } else if (
+            target == ui_settings_grbl_jog_speed_value || target == ui_settings_grbl_default_timeout_value ||
+            target == ui_settings_grbl_homing_timeout_value) {
             ui_settings_save_grbl_settings();
         }
     }
@@ -524,6 +538,10 @@ static void ui_settings_init_screen_content() {
 
     // GRBL page
     ui_settings_grbl_jog_speed_value = ui_settings_create_textarea_field(ui_settings_grbl_page, "Jog speed (mm/s)");
+    ui_settings_grbl_default_timeout_value =
+        ui_settings_create_textarea_field(ui_settings_grbl_page, "Default timeout (ms)");
+    ui_settings_grbl_homing_timeout_value =
+        ui_settings_create_textarea_field(ui_settings_grbl_page, "Homing timeout (ms)");
 
     // Alarm page
     ui_settings_alarm_enable_when_running_value =

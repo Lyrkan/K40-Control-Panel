@@ -39,7 +39,9 @@ typedef struct {
 } OTASettings;
 
 typedef struct {
-    float jog_speed;
+    float_t jog_speed;
+    uint32_t default_timeout_ms;
+    uint32_t homing_timeout_ms;
 } GrblSettings;
 
 extern SemaphoreHandle_t bed_settings_mutex;

@@ -11,6 +11,7 @@ static const char PREFERENCES_NAMESPACE_BED[] = "bed-settings";
 static const char PREFERENCES_NAMESPACE_PROBES[] = "probes-settings";
 static const char PREFERENCES_NAMESPACE_OTA[] = "ota-settings";
 static const char PREFERENCES_NAMESPACE_GRBL[] = "grbl-settings";
+static const char PREFERENCES_NAMESPACE_RELAYS[] = "relays-settings";
 
 static const char PREFERENCES_KEY_BED_SCREW_LEAD[] = "screw-lead-um";
 static const char PREFERENCES_KEY_BED_MICROSTEP_MULTIPLIER[] = "microstep-mul";
@@ -32,12 +33,16 @@ static const char PREFERENCES_KEY_GRBL_JOG_SPEED[] = "jog-speed";
 static const char PREFERENCES_KEY_GRBL_DEFAULT_TIMEOUT[] = "default-timeout";
 static const char PREFERENCES_KEY_GRBL_HOMING_TIMEOUT[] = "homing-timeout";
 
+static const char PREFERENCES_KEY_RELAYS_ALARM_BEHAVIOR[] = "alarm-flags";
+static const char PREFERENCES_KEY_RELAYS_INTERLOCK_BEHAVIOR[] = "interlock-flags";
+
 static Preferences preferences;
 
 SemaphoreHandle_t bed_settings_mutex = xSemaphoreCreateMutex();
 SemaphoreHandle_t probes_settings_mutex = xSemaphoreCreateMutex();
 SemaphoreHandle_t ota_settings_mutex = xSemaphoreCreateMutex();
 SemaphoreHandle_t grbl_settings_mutex = xSemaphoreCreateMutex();
+SemaphoreHandle_t relays_settings_mutex = xSemaphoreCreateMutex();
 
 BedSettings bed_settings = {
     .screw_lead_um = 8000,
@@ -64,6 +69,12 @@ GrblSettings grbl_settings = {
     .jog_speed = 100.0,
     .default_timeout_ms = 5000,
     .homing_timeout_ms = 30000,
+};
+
+RelaysSettings relays_settings = {
+    .alarm_behavior =
+        ALARM_ENABLE_WHEN_COOLING_ISSUE | ALARM_ENABLE_WHEN_FLAME_SENSOR_TRIGGERED | ALARM_ENABLE_WHEN_LID_OPENED,
+    .interlock_behavior = INTERLOCK_DISABLE_WHEN_COOLING_ISSUE | INTERLOCK_DISABLE_WHEN_LID_OPENED,
 };
 
 static void settings_save_task_func(void *params) {
@@ -140,8 +151,23 @@ static void settings_save_task_func(void *params) {
             preferences.putUInt(PREFERENCES_KEY_GRBL_HOMING_TIMEOUT, grbl_settings.homing_timeout_ms);
             preferences.end();
 
-            // Release OTA settings lock
+            // Release GRBL settings lock
             RELEASE_MUTEX(grbl_settings_mutex)
+        }
+
+        if ((settings_types & SETTINGS_TYPE_RELAYS) != 0) {
+            log_i("Relays settings have changed, saving new values...");
+
+            // Acquire relays settings lock
+            TAKE_MUTEX(relays_settings_mutex)
+
+            preferences.begin(PREFERENCES_NAMESPACE_RELAYS, false);
+            preferences.putUInt(PREFERENCES_KEY_RELAYS_ALARM_BEHAVIOR, relays_settings.alarm_behavior);
+            preferences.putUInt(PREFERENCES_KEY_RELAYS_INTERLOCK_BEHAVIOR, relays_settings.interlock_behavior);
+            preferences.end();
+
+            // Release relays settings lock
+            RELEASE_MUTEX(relays_settings_mutex)
         }
 
         // Wait a little bit before the next check
@@ -249,10 +275,30 @@ void settings_init() {
 
     log_d("  jog speed: %.1f", grbl_settings.jog_speed);
     log_d("  default timeout: %d", grbl_settings.default_timeout_ms);
-    log_d("  homing timeoutd: %d", grbl_settings.homing_timeout_ms);
+    log_d("  homing timeout: %d", grbl_settings.homing_timeout_ms);
 
     // Release GRBL settings lock
     RELEASE_MUTEX(grbl_settings_mutex)
+
+    // Acquire relays settings lock
+    TAKE_MUTEX(relays_settings_mutex)
+    log_i("Loading relays settings... ");
+    preferences.begin(PREFERENCES_NAMESPACE_RELAYS, true);
+
+    // clang-format off
+    relays_settings = {
+        .alarm_behavior = preferences.getUInt(PREFERENCES_KEY_RELAYS_ALARM_BEHAVIOR, relays_settings.alarm_behavior),
+        .interlock_behavior = preferences.getUInt(PREFERENCES_KEY_RELAYS_INTERLOCK_BEHAVIOR, relays_settings.interlock_behavior),
+    };
+    //  clang-format on
+
+    preferences.end();
+
+    log_d("  alarm behavior: 0x%x", relays_settings.alarm_behavior);
+    log_d("  interlock behavior: 0x%x", relays_settings.interlock_behavior);
+
+    // Release relays settings lock
+    RELEASE_MUTEX(relays_settings_mutex)
 
     // Start saving task
     xTaskCreatePinnedToCore(

@@ -1,9 +1,13 @@
 #include <Arduino.h>
 
+#include "Grbl/grbl_report.h"
+#include "Grbl/grbl_state.h"
 #include "K40/alerts.h"
 #include "K40/relays.h"
 #include "macros.h"
+#include "mutex.h"
 #include "queues.h"
+#include "settings.h"
 
 static RelayPin relay_pins[] = {
     RELAY_PIN_INTERLOCK, RELAY_PIN_AIR_ASSIST, RELAY_PIN_ALARM, RELAY_PIN_LIGHTS, RELAY_PIN_BEAM_PREVIEW};
@@ -41,14 +45,70 @@ bool relays_is_disabled(RelayPin pin) {
         return false;
     }
 
+    // Retrieve behaviors from settings
+    TAKE_MUTEX(relays_settings_mutex)
+    uint32_t interlock_behavior = relays_settings.interlock_behavior;
+    RELEASE_MUTEX(relays_settings_mutex)
+
     uint8_t alerts_status = alerts_get_current_alerts();
-    return (alerts_status & (ALERT_TYPE_COOLING | ALERT_TYPE_LIDS)) != 0;
+    if ((bool)(interlock_behavior & INTERLOCK_DISABLE_WHEN_COOLING_ISSUE) && (alerts_status & (ALERT_TYPE_COOLING))) {
+        return true;
+    }
+
+    if ((bool)(interlock_behavior & INTERLOCK_DISABLE_WHEN_LID_OPENED) && (alerts_status & (ALERT_TYPE_LIDS))) {
+        return true;
+    }
+
+    if ((bool)(interlock_behavior & INTERLOCK_DISABLE_WHEN_FLAME_SENSOR_TRIGGERED) &&
+        (alerts_status & (ALERT_TYPE_FLAME_SENSOR))) {
+        return true;
+    }
+
+    return false;
 }
 
 void relays_update() {
     // Holds the indexes of force disabled relays as a bit mask
     // Those relays should be re-activated automatically when they are not disabled anymore.
     static int8_t force_disabled_indexes = 0;
+
+    // Retrieve alarm behavior from settings
+    TAKE_MUTEX(relays_settings_mutex)
+    uint32_t alarm_behavior = relays_settings.alarm_behavior;
+    RELEASE_MUTEX(relays_settings_mutex)
+
+    // Check if the alarm relay should be enabled
+    bool enable_alarm_relay = false;
+    uint8_t alerts_status = alerts_get_current_alerts();
+
+    TAKE_MUTEX(grbl_last_report_mutex)
+    GrblState grbl_state = grbl_last_report.state;
+    RELEASE_MUTEX(grbl_last_report_mutex)
+
+    if (((bool)alarm_behavior & ALARM_ENABLE_WHEN_COOLING_ISSUE) && (alerts_status & (ALERT_TYPE_COOLING))) {
+        enable_alarm_relay = true;
+    }
+
+    if (((bool)alarm_behavior & ALARM_ENABLE_WHEN_FLAME_SENSOR_TRIGGERED) &&
+        (alerts_status & (ALERT_TYPE_FLAME_SENSOR))) {
+        enable_alarm_relay = true;
+    }
+
+    if (((bool)alarm_behavior & ALARM_ENABLE_WHEN_LID_OPENED) && (alerts_status & (ALERT_TYPE_LIDS))) {
+        enable_alarm_relay = true;
+    }
+
+    if (((bool)alarm_behavior & ALARM_ENABLE_WHEN_RUNNING) && grbl_state == GRBL_STATE_RUN) {
+        enable_alarm_relay = true;
+    }
+
+    if (((bool)alarm_behavior & ALARM_ENABLE_WHEN_NOT_IDLING) && grbl_state != GRBL_STATE_IDLE) {
+        enable_alarm_relay = true;
+    }
+
+    digitalWrite(
+        RELAY_PIN_ALARM,
+        relays_get_pin_state_value(RELAY_PIN_ALARM, enable_alarm_relay ? RELAY_STATE_ENABLED : RELAY_STATE_DISABLED));
 
     // Process new command if there is one
     static RelaysCommand relays_command;

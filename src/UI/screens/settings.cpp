@@ -184,6 +184,52 @@ static void ui_settings_save_ota_settings() {
     RELEASE_MUTEX(ota_settings_mutex)
 }
 
+static void ui_settings_load_relays_settings() {
+    // Acquire relays settings mutex
+    TAKE_MUTEX(relays_settings_mutex)
+
+    // clang-format off
+    // Alarm behavior
+    ui_utils_toggle_state(ui_settings_alarm_enable_when_running_value, LV_STATE_CHECKED, (bool)(relays_settings.alarm_behavior & ALARM_ENABLE_WHEN_RUNNING));
+    ui_utils_toggle_state(ui_settings_alarm_enable_when_not_idling_value, LV_STATE_CHECKED, (bool)(relays_settings.alarm_behavior & ALARM_ENABLE_WHEN_NOT_IDLING));
+    ui_utils_toggle_state(ui_settings_alarm_enable_when_flame_sensor_triggered_value, LV_STATE_CHECKED, (bool)(relays_settings.alarm_behavior & ALARM_ENABLE_WHEN_FLAME_SENSOR_TRIGGERED));
+    ui_utils_toggle_state(ui_settings_alarm_enable_when_cooling_issue_value, LV_STATE_CHECKED, (bool)(relays_settings.alarm_behavior & ALARM_ENABLE_WHEN_COOLING_ISSUE));
+    ui_utils_toggle_state(ui_settings_alarm_enable_when_lid_opened_value, LV_STATE_CHECKED, (bool)(relays_settings.alarm_behavior & ALARM_ENABLE_WHEN_LID_OPENED));
+
+    // Interlock behavior
+    ui_utils_toggle_state(ui_settings_interlock_disable_when_lid_opened_value, LV_STATE_CHECKED, (bool)(relays_settings.interlock_behavior & INTERLOCK_DISABLE_WHEN_LID_OPENED));
+    ui_utils_toggle_state(ui_settings_interlock_disable_when_cooling_issue_value, LV_STATE_CHECKED,  (bool)(relays_settings.interlock_behavior & INTERLOCK_DISABLE_WHEN_COOLING_ISSUE));
+    ui_utils_toggle_state(ui_settings_interlock_disable_when_flame_sensor_triggered_value, LV_STATE_CHECKED,  (bool)(relays_settings.interlock_behavior & INTERLOCK_DISABLE_WHEN_FLAME_SENSOR_TRIGGERED));
+    // clang-format on
+
+    // Release relays settings mutex
+    RELEASE_MUTEX(relays_settings_mutex)
+}
+
+static void ui_settings_save_relays_settings() {
+    // Acquire relays settings mutex
+    TAKE_MUTEX(relays_settings_mutex)
+
+    // clang-format off
+    relays_settings.alarm_behavior =
+        (ALARM_ENABLE_WHEN_COOLING_ISSUE * (int) lv_obj_has_state(ui_settings_alarm_enable_when_cooling_issue_value, LV_STATE_CHECKED)) +
+        (ALARM_ENABLE_WHEN_FLAME_SENSOR_TRIGGERED * (int) lv_obj_has_state(ui_settings_alarm_enable_when_flame_sensor_triggered_value, LV_STATE_CHECKED)) +
+        (ALARM_ENABLE_WHEN_LID_OPENED * (int) lv_obj_has_state(ui_settings_alarm_enable_when_lid_opened_value, LV_STATE_CHECKED)) +
+        (ALARM_ENABLE_WHEN_NOT_IDLING * (int) lv_obj_has_state(ui_settings_alarm_enable_when_not_idling_value, LV_STATE_CHECKED)) +
+        (ALARM_ENABLE_WHEN_RUNNING * (int) lv_obj_has_state(ui_settings_alarm_enable_when_running_value, LV_STATE_CHECKED));
+
+    relays_settings.interlock_behavior =
+        (INTERLOCK_DISABLE_WHEN_COOLING_ISSUE * (int) lv_obj_has_state(ui_settings_interlock_disable_when_cooling_issue_value, LV_STATE_CHECKED)) +
+        (INTERLOCK_DISABLE_WHEN_FLAME_SENSOR_TRIGGERED * (int) lv_obj_has_state(ui_settings_interlock_disable_when_flame_sensor_triggered_value, LV_STATE_CHECKED)) +
+        (INTERLOCK_DISABLE_WHEN_LID_OPENED * (int) lv_obj_has_state(ui_settings_interlock_disable_when_lid_opened_value, LV_STATE_CHECKED));
+    // clang-format on
+
+    settings_schedule_save(SETTINGS_TYPE_RELAYS);
+
+    // Release GRBL settings mutex
+    RELEASE_MUTEX(relays_settings_mutex)
+}
+
 static void ui_settings_load_grbl_settings() {
     // Acquire GRBL settings mutex
     TAKE_MUTEX(grbl_settings_mutex)
@@ -294,6 +340,16 @@ static void ui_settings_field_value_changed_handler(lv_event_t *e) {
             target == ui_settings_grbl_jog_speed_value || target == ui_settings_grbl_default_timeout_value ||
             target == ui_settings_grbl_homing_timeout_value) {
             ui_settings_save_grbl_settings();
+        } else if (
+            target == ui_settings_alarm_enable_when_running_value ||
+            target == ui_settings_alarm_enable_when_not_idling_value ||
+            target == ui_settings_alarm_enable_when_flame_sensor_triggered_value ||
+            target == ui_settings_alarm_enable_when_cooling_issue_value ||
+            target == ui_settings_alarm_enable_when_lid_opened_value ||
+            target == ui_settings_interlock_disable_when_lid_opened_value ||
+            target == ui_settings_interlock_disable_when_cooling_issue_value ||
+            target == ui_settings_interlock_disable_when_flame_sensor_triggered_value) {
+            ui_settings_save_relays_settings();
         }
     }
 }
@@ -571,6 +627,7 @@ static void ui_settings_init_screen_content() {
     ui_settings_load_probes_settings();
     ui_settings_load_ota_settings();
     ui_settings_load_grbl_settings();
+    ui_settings_load_relays_settings();
     settings_loaded = true;
 
     // Force the first update

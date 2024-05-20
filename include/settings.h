@@ -10,10 +10,11 @@
 #define SETTINGS_UPDATE_INTERVAL 1000
 
 typedef enum {
-    SETTINGS_TYPE_BED = 0x01,
-    SETTINGS_TYPE_PROBES = 0x02,
-    SETTINGS_TYPE_OTA = 0x04,
-    SETTINGS_TYPE_GRBL = 0x08,
+    SETTINGS_TYPE_BED = 1 << 0,
+    SETTINGS_TYPE_PROBES = 1 << 1,
+    SETTINGS_TYPE_OTA = 1 << 2,
+    SETTINGS_TYPE_GRBL = 1 << 3,
+    SETTINGS_TYPE_RELAYS = 1 << 4,
 } SettingsType;
 
 typedef struct {
@@ -44,15 +45,36 @@ typedef struct {
     uint32_t homing_timeout_ms;
 } GrblSettings;
 
+typedef struct {
+    uint32_t alarm_behavior;
+    uint32_t interlock_behavior;
+} RelaysSettings;
+
+typedef enum {
+    ALARM_ENABLE_WHEN_RUNNING = 1 << 0,
+    ALARM_ENABLE_WHEN_NOT_IDLING = 1 << 1,
+    ALARM_ENABLE_WHEN_FLAME_SENSOR_TRIGGERED = 1 << 2,
+    ALARM_ENABLE_WHEN_COOLING_ISSUE = 1 << 3,
+    ALARM_ENABLE_WHEN_LID_OPENED = 1 << 4
+} AlarmBehaviorFlag;
+
+typedef enum {
+    INTERLOCK_DISABLE_WHEN_LID_OPENED = 1 << 0,
+    INTERLOCK_DISABLE_WHEN_COOLING_ISSUE = 1 << 1,
+    INTERLOCK_DISABLE_WHEN_FLAME_SENSOR_TRIGGERED = 1 << 2,
+} InterlockBehaviorFlag;
+
 extern SemaphoreHandle_t bed_settings_mutex;
 extern SemaphoreHandle_t probes_settings_mutex;
 extern SemaphoreHandle_t ota_settings_mutex;
 extern SemaphoreHandle_t grbl_settings_mutex;
+extern SemaphoreHandle_t relays_settings_mutex;
 
 extern BedSettings bed_settings;
 extern ProbesSettings probes_settings;
 extern OTASettings ota_settings;
 extern GrblSettings grbl_settings;
+extern RelaysSettings relays_settings;
 
 void settings_init();
 void settings_schedule_save(uint32_t settings_types);

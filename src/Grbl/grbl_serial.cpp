@@ -387,7 +387,7 @@ bool grbl_send_move_command(GrblMoveCommand command, GrblCommandCallbacks callba
     }
 
     // Set feed rate
-    snprintf(buffer, ARRAY_SIZE(buffer), "%s F%.1f", buffer, command.feed_rate);
+    snprintf(buffer, ARRAY_SIZE(buffer), "%s F%.1f", buffer, command.feed_rate * 60);
 
     // Set target
     if ((command.axis_flags & GRBL_AXIS_X) != 0) {

@@ -408,7 +408,7 @@ void ui_controls_update(bool initialize) {
         }
 
         if (feed.is_set) {
-            snprintf(laser_speed_formatted_value, ARRAY_SIZE(laser_speed_formatted_value), "%d", feed.rate);
+            snprintf(laser_speed_formatted_value, ARRAY_SIZE(laser_speed_formatted_value), "%d", feed.rate / 60);
             lv_textarea_set_text(ui_controls_laser_speed_textarea, laser_speed_formatted_value);
         }
 

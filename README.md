@@ -35,14 +35,12 @@ What it **CAN** do:
 -   Expose sensors/state data through an API
 -   Retrieve the current state of the machine and move the laser head through UART if you're using a FluidNC controller board (WIP)
 
-Don't expect an ultra smooth experience, the ESP32 being a bit underpowered for a screen of that size the user interface can be a bit laggy sometimes (eg. during screen transitions or scrolling). It should still be fully usable though.
-
 ## BOM
 
 For the control panel:
 
 -   1x NodeMCU-32 (38 pins)
--   1x ILI9488 3.95" LCD screen
+-   1x ST7796 (recommended) or ILI9488 (slower) 3.95" LCD screen
 -   1x DRV8825 stepper driver
 -   1x L7805CV 5V regulator
 -   2x IRLML6244 N-channel MOSFETs
@@ -77,7 +75,7 @@ Make sure you have Python 3.x installed on your system, then run:
 # Install/update Platform.io
 pip install --upgrade platformio
 
-# Build the firmware
+# Build the firmware (default LCD driver: ST7796)
 pio build
 ```
 

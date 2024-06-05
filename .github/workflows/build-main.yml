@@ -29,7 +29,11 @@ jobs:
             - name: ClangFormat check
               run: find ./src ./include -regex '.*\.\(cpp\|hpp\|cu\|c\|h\)' -exec clang-format --dry-run -Werror -style=file -i {} \;
             - name: Build PlatformIO Project
-              run: pio run
+              run: |
+                pio run -e ILI9488
+                pio run -e ST7796
+                mv .pio/build/ILI9488/firmware.bin .pio/build/ILI9488/firmware-ILI9488.bin
+                mv .pio/build/ST7796/firmware.bin .pio/build/ST7796/firmware-ST7796.bin
             - name: "Update experimental tag"
               uses: rickstaa/action-create-tag@v1
               with:
@@ -46,5 +50,6 @@ jobs:
                   draft: false
                   fail_on_unmatched_files: true
                   files: |
-                      .pio/build/nodemcu-32s/firmware.bin
+                      .pio/build/ILI9488/firmware-ILI9488.bin
+                      .pio/build/ST7796/firmware-ST7796.bin
                       gerber/Gerber_K40-Control-Panel.zip

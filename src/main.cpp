@@ -31,7 +31,7 @@ void display_flush_cb(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *co
 
     tft.startWrite();
     tft.setAddrWindow(area->x1, area->y1, w, h);
-    tft.writePixels((lgfx::argb8888_t *)&color_p->full, w * h);
+    tft.writePixels((lgfx::rgb565_t *)&color_p->full, w * h);
     tft.endWrite();
 
     lv_disp_flush_ready(disp);
@@ -121,7 +121,7 @@ void display_update_task_func(void *params) {
 
 void setup() {
     static lv_disp_draw_buf_t draw_buf;
-    static lv_color_t buf[DISPLAY_SCREEN_WIDTH * 10];
+    static lv_color_t buf[DISPLAY_SCREEN_WIDTH * 20];
     static lv_disp_drv_t disp_drv;
     static lv_indev_drv_t indev_drv;
 
@@ -133,12 +133,11 @@ void setup() {
 
     /* Initialize LGFX/LVGL */
     tft.begin();
-    tft.setRotation(1);
     tft.setTouchCalibrate(touch_calibration_data);
-    tft.setColorDepth(24);
+    tft.setColorDepth(16);
 
     lv_init();
-    lv_disp_draw_buf_init(&draw_buf, buf, NULL, DISPLAY_SCREEN_WIDTH * 10);
+    lv_disp_draw_buf_init(&draw_buf, buf, NULL, DISPLAY_SCREEN_WIDTH * 20);
     lv_disp_drv_init(&disp_drv);
     disp_drv.hor_res = DISPLAY_SCREEN_WIDTH;
     disp_drv.ver_res = DISPLAY_SCREEN_HEIGHT;

@@ -4,6 +4,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <math.h>
+#include "LGFX/LGFX.h"
 
 #include "K40/bed.h"
 
@@ -78,5 +79,6 @@ extern RelaysSettings relays_settings;
 
 void settings_init();
 void settings_schedule_save(uint32_t settings_types);
+void settings_load_touchscreen_calibration_data(LGFX *tft);
 
 #endif

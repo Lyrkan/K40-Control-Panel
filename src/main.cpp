@@ -23,7 +23,6 @@
 #include "wifi.h"
 
 static LGFX tft;
-static uint16_t touch_calibration_data[] = {274, 3922, 312, 255, 3845, 3918, 3814, 242};
 
 void display_flush_cb(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
     uint32_t w = (area->x2 - area->x1 + 1);
@@ -133,8 +132,8 @@ void setup() {
 
     /* Initialize LGFX/LVGL */
     tft.begin();
-    tft.setTouchCalibrate(touch_calibration_data);
     tft.setColorDepth(16);
+    settings_load_touchscreen_calibration_data(&tft);
 
     lv_init();
     lv_disp_draw_buf_init(&draw_buf, buf, NULL, DISPLAY_SCREEN_WIDTH * 20);

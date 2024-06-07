@@ -2,6 +2,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <Preferences.h>
+#include "LGFX/LGFX.h"
 
 #include "macros.h"
 #include "settings.h"
@@ -12,6 +13,7 @@ static const char PREFERENCES_NAMESPACE_PROBES[] = "probes-settings";
 static const char PREFERENCES_NAMESPACE_OTA[] = "ota-settings";
 static const char PREFERENCES_NAMESPACE_GRBL[] = "grbl-settings";
 static const char PREFERENCES_NAMESPACE_RELAYS[] = "relays-settings";
+static const char PREFERENCES_NAMESPACE_SCREEN[] = "screen-settings";
 
 static const char PREFERENCES_KEY_BED_SCREW_LEAD[] = "screw-lead-um";
 static const char PREFERENCES_KEY_BED_MICROSTEP_MULTIPLIER[] = "microstep-mul";
@@ -35,6 +37,8 @@ static const char PREFERENCES_KEY_GRBL_HOMING_TIMEOUT[] = "homing-timeout";
 
 static const char PREFERENCES_KEY_RELAYS_ALARM_BEHAVIOR[] = "alarm-flags";
 static const char PREFERENCES_KEY_RELAYS_INTERLOCK_BEHAVIOR[] = "interlock-flags";
+
+static const char PREFERENCES_KEY_SCREEN_TOUCH_CALIBRATION[] = "touch-calib";
 
 static Preferences preferences;
 
@@ -313,4 +317,21 @@ void settings_init() {
 
 void settings_schedule_save(uint32_t settings_types) {
     xTaskNotify(settings_save_task_handle, settings_types, eSetBits);
+}
+
+void settings_load_touchscreen_calibration_data(LGFX *tft) {
+    uint16_t touchscreen_calibration_data[8];
+
+    preferences.begin(PREFERENCES_NAMESPACE_SCREEN, false);
+    if (preferences.isKey(PREFERENCES_KEY_SCREEN_TOUCH_CALIBRATION)) {
+        log_i("Loading touchscreen calibration data from settings...");
+        preferences.getBytes(PREFERENCES_KEY_SCREEN_TOUCH_CALIBRATION, touchscreen_calibration_data, sizeof(touchscreen_calibration_data));
+        tft->setTouchCalibrate(touchscreen_calibration_data);
+    } else {
+        log_i("No touchscreen calibration data found (first boot?), starting calibration procedure");
+        tft->drawString("Touchscreen calibration: please touch corners in the requested order", 20, (tft->height()  / 2));
+        tft->calibrateTouch(touchscreen_calibration_data, 0xFFFFFFU, 0x000000U, 20);
+        preferences.putBytes(PREFERENCES_KEY_SCREEN_TOUCH_CALIBRATION, touchscreen_calibration_data, sizeof(touchscreen_calibration_data) );
+    }
+    preferences.end();
 }

@@ -150,6 +150,7 @@ static void ui_status_init_screen_content() {
     lv_obj_set_height(ui_status_cooling_input_temp_bar, 10);
     lv_obj_set_x(ui_status_cooling_input_temp_bar, 90);
     lv_obj_set_y(ui_status_cooling_input_temp_bar, 56);
+    lv_bar_set_range(ui_status_cooling_input_temp_bar, 0, 50);
 
     ui_status_cooling_input_temp_value = lv_label_create(ui_status_cooling_input_temp_bar);
     lv_obj_set_width(ui_status_cooling_input_temp_value, LV_SIZE_CONTENT);
@@ -191,6 +192,7 @@ static void ui_status_init_screen_content() {
     lv_obj_set_height(ui_status_cooling_output_temp_bar, 10);
     lv_obj_set_x(ui_status_cooling_output_temp_bar, 90);
     lv_obj_set_y(ui_status_cooling_output_temp_bar, 96);
+    lv_bar_set_range(ui_status_cooling_output_temp_bar, 0, 50);
 
     ui_status_cooling_output_temp_value = lv_label_create(ui_status_cooling_output_temp_bar);
     lv_obj_set_width(ui_status_cooling_output_temp_value, LV_SIZE_CONTENT);
@@ -326,7 +328,7 @@ void ui_status_update(bool initialize) {
         snprintf(
             cooling_input_temp_formatted_value,
             ARRAY_SIZE(cooling_input_temp_formatted_value),
-            (cooling_values.input_temperature <= COOLING_THERMISTOR_MINIMUM_TEMPERATURE) ? "Not detected" : "%2.2f°C",
+            (cooling_values.input_temperature <= COOLING_THERMISTOR_MINIMUM_TEMPERATURE) ? "Not detected" : "%2.1f°C",
             cooling_values.input_temperature);
         lv_label_set_text(ui_status_cooling_input_temp_value, cooling_input_temp_formatted_value);
         lv_bar_set_value(ui_status_cooling_input_temp_bar, (int)cooling_values.input_temperature, LV_ANIM_ON);
@@ -344,7 +346,7 @@ void ui_status_update(bool initialize) {
         snprintf(
             cooling_output_temp_formatted_value,
             ARRAY_SIZE(cooling_output_temp_formatted_value),
-            (cooling_values.input_temperature <= COOLING_THERMISTOR_MINIMUM_TEMPERATURE) ? "Not detected" : "%2.2f°C",
+            (cooling_values.input_temperature <= COOLING_THERMISTOR_MINIMUM_TEMPERATURE) ? "Not detected" : "%2.1f°C",
             cooling_values.output_temperature);
         lv_label_set_text(ui_status_cooling_output_temp_value, cooling_output_temp_formatted_value);
         lv_bar_set_value(ui_status_cooling_output_temp_bar, (int)cooling_values.output_temperature, LV_ANIM_ON);

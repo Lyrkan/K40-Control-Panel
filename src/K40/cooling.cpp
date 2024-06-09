@@ -33,58 +33,71 @@ void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {
     bool cooling_values_updated = false;
 
     /* Update cooling temperature */
-    static float_t cooling_input_thermistor_buffer[COOLING_THERMISTOR_BUFFER_LENGTH];
-    static float_t cooling_output_thermistor_buffer[COOLING_THERMISTOR_BUFFER_LENGTH];
-    static uint32_t cooling_thermistor_buffer_index = 0;
+    static unsigned long cooling_temp_last_update = 0;
+    unsigned long current_time = millis();
+    if (cooling_temp_last_update == 0) {
+        cooling_temp_last_update = current_time;
+    }
 
-    float_t input_thermistor_pin_voltage =
-        (float_t)esp_adc_cal_raw_to_voltage(analogRead(PIN_COOLING_THERMISTOR_IN), adc_chars);
+    unsigned long cooling_temp_delta_time = current_time - cooling_temp_last_update;
+    if (cooling_temp_delta_time >= COOLING_TEMP_UPDATE_INTERVAL) {
+        static float_t cooling_input_thermistor_buffer[COOLING_TEMP_BUFFER_LENGTH];
+        static float_t cooling_output_thermistor_buffer[COOLING_TEMP_BUFFER_LENGTH];
+        static uint32_t cooling_thermistor_buffer_index = 0;
 
-    float_t output_thermistor_pin_voltage =
-        (float_t)esp_adc_cal_raw_to_voltage(analogRead(PIN_COOLING_THERMISTOR_OUT), adc_chars);
+        float_t input_thermistor_pin_voltage =
+            (float_t)esp_adc_cal_raw_to_voltage(analogRead(PIN_COOLING_THERMISTOR_IN), adc_chars);
 
-    // Add current thermistors resistances to the buffers
-    cooling_input_thermistor_buffer[cooling_thermistor_buffer_index] =
-        (input_thermistor_pin_voltage * COOLING_THERMISTOR_VOLTAGE_DIVIDER_RESISTANCE) /
-        (COOLING_THERMISTOR_REF_VOLTAGE - input_thermistor_pin_voltage);
-    cooling_output_thermistor_buffer[cooling_thermistor_buffer_index] =
-        (output_thermistor_pin_voltage * COOLING_THERMISTOR_VOLTAGE_DIVIDER_RESISTANCE) /
-        (COOLING_THERMISTOR_REF_VOLTAGE - input_thermistor_pin_voltage);
-    cooling_thermistor_buffer_index++;
+        float_t output_thermistor_pin_voltage =
+            (float_t)esp_adc_cal_raw_to_voltage(analogRead(PIN_COOLING_THERMISTOR_OUT), adc_chars);
 
-    // If the buffer is full compute the average temperature
-    if (cooling_thermistor_buffer_index >= COOLING_THERMISTOR_BUFFER_LENGTH) {
-        // Reset buffer
-        cooling_thermistor_buffer_index = 0;
+        // Add current thermistors resistances to the buffers
+        cooling_input_thermistor_buffer[cooling_thermistor_buffer_index] =
+            (input_thermistor_pin_voltage * COOLING_THERMISTOR_VOLTAGE_DIVIDER_RESISTANCE) /
+            (COOLING_THERMISTOR_REF_VOLTAGE - input_thermistor_pin_voltage);
+        cooling_output_thermistor_buffer[cooling_thermistor_buffer_index] =
+            (output_thermistor_pin_voltage * COOLING_THERMISTOR_VOLTAGE_DIVIDER_RESISTANCE) /
+            (COOLING_THERMISTOR_REF_VOLTAGE - input_thermistor_pin_voltage);
+        cooling_thermistor_buffer_index++;
 
-        // Compute average buffer value
-        float_t average_input_thermistor_value = 0;
-        float_t average_output_thermistor_value = 0;
-        for (uint32_t i = 0; i < COOLING_THERMISTOR_BUFFER_LENGTH; i++) {
-            average_input_thermistor_value += cooling_input_thermistor_buffer[cooling_thermistor_buffer_index];
-            average_output_thermistor_value += cooling_output_thermistor_buffer[cooling_thermistor_buffer_index];
+        // If the buffer is full compute the average temperature
+        if (cooling_thermistor_buffer_index >= COOLING_TEMP_BUFFER_LENGTH) {
+            // Reset buffer
+            cooling_thermistor_buffer_index = 0;
+
+            // Compute average buffer value
+            float_t average_input_thermistor_value = 0;
+            float_t average_output_thermistor_value = 0;
+            int8_t valid_count = 0;
+            for (uint32_t i = 0; i < COOLING_TEMP_BUFFER_LENGTH; i++) {
+                average_input_thermistor_value += cooling_input_thermistor_buffer[i];
+                average_output_thermistor_value += cooling_output_thermistor_buffer[i];
+            }
+            average_input_thermistor_value /= COOLING_TEMP_BUFFER_LENGTH;
+            average_output_thermistor_value /= COOLING_TEMP_BUFFER_LENGTH;
+
+            // Seinhart-Hart equation
+            cooling_values.input_temperature = cooling_seinhart_hart_temperature(average_input_thermistor_value);
+            cooling_values.output_temperature = cooling_seinhart_hart_temperature(average_output_thermistor_value);
+            cooling_values_updated = true;
         }
-        average_input_thermistor_value /= COOLING_THERMISTOR_BUFFER_LENGTH;
-        average_output_thermistor_value /= COOLING_THERMISTOR_BUFFER_LENGTH;
 
-        // Seinhart-Hart equation
-        cooling_values.input_temperature = cooling_seinhart_hart_temperature(average_input_thermistor_value);
-        cooling_values.output_temperature = cooling_seinhart_hart_temperature(average_output_thermistor_value);
-        cooling_values_updated = true;
+        cooling_temp_last_update = current_time;
     }
 
     // Update cooling flow
     static unsigned long cooling_flow_last_update = 0;
-    unsigned long current_time = millis();
     if (cooling_flow_last_update == 0) {
         cooling_flow_last_update = current_time;
     }
 
-    unsigned long delta_time = current_time - cooling_flow_last_update;
-    if (delta_time >= COOLING_FLOW_UPDATE_INTERVAL) {
+    unsigned long cooling_flow_delta_time = current_time - cooling_flow_last_update;
+    if (cooling_flow_delta_time >= COOLING_FLOW_UPDATE_INTERVAL) {
         // F = 11 * Q ± 5% , Q = L/min
-        cooling_values.input_flow = (cooling_flow_input_interrupt_counter / 11) / ((float_t)delta_time / 1000);
-        cooling_values.output_flow = (cooling_flow_output_interrupt_counter / 11) / ((float_t)delta_time / 1000);
+        cooling_values.input_flow =
+            (cooling_flow_input_interrupt_counter / 11) / ((float_t)cooling_flow_delta_time / 1000);
+        cooling_values.output_flow =
+            (cooling_flow_output_interrupt_counter / 11) / ((float_t)cooling_flow_delta_time / 1000);
         cooling_values_updated = true;
 
         // Reset counter

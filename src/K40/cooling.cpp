@@ -95,9 +95,9 @@ void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {
     if (cooling_flow_delta_time >= COOLING_FLOW_UPDATE_INTERVAL) {
         // F = 11 * Q ± 5% , Q = L/min
         cooling_values.input_flow =
-            (cooling_flow_input_interrupt_counter / 11) / ((float_t)cooling_flow_delta_time / 1000);
+            ((float_t)cooling_flow_input_interrupt_counter / 11) / ((float_t)cooling_flow_delta_time / 1000);
         cooling_values.output_flow =
-            (cooling_flow_output_interrupt_counter / 11) / ((float_t)cooling_flow_delta_time / 1000);
+            ((float_t)cooling_flow_output_interrupt_counter / 11) / ((float_t)cooling_flow_delta_time / 1000);
         cooling_values_updated = true;
 
         // Reset counter

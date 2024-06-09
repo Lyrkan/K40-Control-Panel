@@ -133,6 +133,7 @@ static void ui_status_init_screen_content() {
     lv_obj_set_height(ui_status_cooling_input_flow_bar, 10);
     lv_obj_set_x(ui_status_cooling_input_flow_bar, 90);
     lv_obj_set_y(ui_status_cooling_input_flow_bar, 39);
+    lv_bar_set_range(ui_status_cooling_input_flow_bar, 0, 20);
 
     ui_status_cooling_input_flow_value = lv_label_create(ui_status_cooling_input_flow_bar);
     lv_obj_set_width(ui_status_cooling_input_flow_value, LV_SIZE_CONTENT);
@@ -175,6 +176,7 @@ static void ui_status_init_screen_content() {
     lv_obj_set_height(ui_status_cooling_output_flow_bar, 10);
     lv_obj_set_x(ui_status_cooling_output_flow_bar, 90);
     lv_obj_set_y(ui_status_cooling_output_flow_bar, 79);
+    lv_bar_set_range(ui_status_cooling_output_flow_bar, 0, 20);
 
     ui_status_cooling_output_flow_value = lv_label_create(ui_status_cooling_output_flow_bar);
     lv_obj_set_width(ui_status_cooling_output_flow_value, LV_SIZE_CONTENT);
@@ -319,7 +321,7 @@ void ui_status_update(bool initialize) {
         snprintf(
             cooling_input_flow_formatted_value,
             ARRAY_SIZE(cooling_input_flow_formatted_value),
-            "%2.2fL/mn",
+            "%2.1fL/mn",
             cooling_values.input_flow);
         lv_label_set_text(ui_status_cooling_input_flow_value, cooling_input_flow_formatted_value);
         lv_bar_set_value(ui_status_cooling_input_flow_bar, (int)cooling_values.input_flow, LV_ANIM_ON);
@@ -337,7 +339,7 @@ void ui_status_update(bool initialize) {
         snprintf(
             cooling_output_flow_formatted_value,
             ARRAY_SIZE(cooling_output_flow_formatted_value),
-            "%2.2fL/mn",
+            "%2.1fL/mn",
             cooling_values.output_flow);
         lv_label_set_text(ui_status_cooling_output_flow_value, cooling_output_flow_formatted_value);
         lv_bar_set_value(ui_status_cooling_output_flow_bar, (int)cooling_values.output_flow, LV_ANIM_ON);

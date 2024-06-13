@@ -31,9 +31,15 @@ What it **CAN** do:
     -   Alarm activation
 -   Control 12V lights
 -   Control 5V laser diodes
--   Control a motorized bed (based on [this design](https://civade.com/post/2020/08/23/D%c3%a9coupe-laser-CO2-K40-:-R%c3%a9alisation-d-un-lit-motoris%c3%a9), but it should work with other ones as long as the stepper can be controeled using a DRV8825 driver)
+-   Control a motorized bed (based on [this design](https://www.printables.com/model/597476-k40-motorized-bed), but it should work with other ones as long as the stepper can be controled using a DRV8825 driver)
 -   Expose sensors/state data through an API
 -   Retrieve the current state of the machine and move the laser head through UART if you're using a FluidNC controller board (WIP)
+
+What it **CANNOT** do (_yet_):
+
+-   Start or control a job
+-   Trigger the laser
+-   Send arbitrary Gcode
 
 ## BOM
 
@@ -95,7 +101,18 @@ The design fits on a 100x100mm PCB, so you should be able to get it built for re
 
 ## Wiring
 
-Coming soon™
+Coming soon™, but it should be quite straightforward for most probes/connectors.
+
+Some notes though:
+
+-   If you are using a different PSU for the control panel and your FluidNC board make sure that both of them have a common ground in order for UART to work as intended
+-   Some MS1/MS2/MS3 jumpers have to be installed if you want to use microstepping, refer to the DRV8825 datasheet to know which ones
+-   Also use jumpers to select the voltage for "Diodes" and "Lights" connectors
+-   Use shielded cables if needed (and ground the shield **on one side only**)
+
+## Showcase
+
+[<img src="images/DCIM_01.thumbnail.jpg" width="256">](images/DCIM_01.jpg)
 
 ## Status APIs
 

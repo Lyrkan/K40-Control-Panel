@@ -31,18 +31,36 @@ def upload_cb(source, target, env):
     load_dotenv()
 
     firmware_path = str(source[0])
-    upload_url = os.getenv('OTA_UPLOAD_URL')
+    ota_url = os.getenv('OTA_UPLOAD_URL')
 
     print(f"Firmware path: {firmware_path}")
-    print(f"Upload URL: {upload_url}")
+    print(f"OTA URL: {ota_url}")
     exit
     with open(firmware_path, 'rb') as firmware:
+        # Retrieve credentials
+        login = os.getenv('OTA_LOGIN')
+        password = os.getenv('OTA_PASSWORD')
+        auth = None
+        if (login and password):
+            auth = requests.auth.HTTPBasicAuth(login, password)
+
+        # Send initial request
         md5 = hashlib.md5(firmware.read()).hexdigest()
+        start_url = ota_url + 'ota/start?mode=fr&hash=' + md5
+        print(f"Sending initial request to {start_url}")
+        start_response = requests.get(
+            url=start_url,
+            auth=auth
+        )
+        if (start_response.status_code != 200):
+            print(f"Initial request failed (status code: {start_response.status_code})")
+            exit(1)
+
+        # Upload firmware
         firmware.seek(0)
         encoder = MultipartEncoder(
             fields={
-                'MD5': md5,
-                'firmware': ('firmware', firmware, 'application/octet-stream')
+                'file': ('file', firmware, 'application/octet-stream')
             }
         )
 
@@ -57,20 +75,20 @@ def upload_cb(source, target, env):
 
         monitor = MultipartEncoderMonitor(encoder, lambda monitor: bar.update(monitor.bytes_read - bar.n))
 
-        login = os.getenv('OTA_LOGIN')
-        password = os.getenv('OTA_PASSWORD')
-        auth = None
-        if (login and password):
-            auth = requests.auth.HTTPBasicAuth(login, password)
-
-        response = requests.post(
-            url=upload_url,
+        upload_url = ota_url + 'ota/upload'
+        print(f"Uploading firmware to {upload_url}")
+        upload_response = requests.post(
+            url= upload_url,
             data=monitor,
             headers={'Content-Type': monitor.content_type},
             auth=auth
         )
         bar.close()
-        print(response,response.text)
+        if (upload_response.status_code != 200):
+            print(f"Upload failed (status code: {upload_response.status_code})")
+            exit(1)
+
+        print(f"Done: {upload_response.text}")
 
 env.AddCustomTarget(
     name="OTA",

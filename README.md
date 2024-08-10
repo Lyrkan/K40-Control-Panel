@@ -255,7 +255,6 @@ GET http://<YOUR_PANEL_IP>/api/relays
 {
     "relays": {
         "interlock": false,
-        "air_assist": true,
         "cooling": true,
         "alarm": false,
         "lights": true,

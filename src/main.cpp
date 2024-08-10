@@ -4,6 +4,7 @@
 #include <lvgl.h>
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
+#include "esp_core_dump.h"
 
 #include "LGFX/LGFX.h"
 #include "Grbl/grbl_serial.h"
@@ -118,6 +119,34 @@ void display_update_task_func(void *params) {
     }
 }
 
+void print_backtrace_info(const esp_core_dump_summary_t *coredump_summary) {
+    if (coredump_summary == NULL) {
+        return;
+    }
+
+    esp_core_dump_bt_info_t bt_info = coredump_summary->exc_bt_info;
+
+    char results[256];
+    int offset = 0;
+    for (int i = 0; i < bt_info.depth; i++) {
+        uintptr_t pc = bt_info.bt[i];
+        int len = snprintf(results + offset, sizeof(results) - offset, " 0x%08x", pc);
+        if (len >= 0 && offset + len < sizeof(results)) {
+            offset += len;
+        } else {
+            break;
+        }
+    }
+
+    log_d("Core dump summary:");
+    log_d("  Backtrace: %s", results);
+    log_d("  Backtrace Depth: %u", bt_info.depth);
+    log_d("  Backtrace Corrupted: %s", bt_info.corrupted ? "Yes" : "No");
+    log_d("  Task: %s", coredump_summary->exc_task);
+    log_d("  Program Counter: 0x%08x", coredump_summary->exc_pc);
+    log_d("  Coredump Version: %d", coredump_summary->core_dump_version);
+}
+
 void setup() {
     static lv_disp_draw_buf_t draw_buf;
     static lv_color_t buf[DISPLAY_SCREEN_WIDTH * 20];
@@ -126,6 +155,21 @@ void setup() {
 
     Serial.begin(115200);
     log_i("K40 Control Panel (%s)", GIT_CURRENT_REF);
+
+    /* Handle core dumps */
+    esp_core_dump_init();
+    esp_core_dump_summary_t *core_dump_summary = (esp_core_dump_summary_t *)malloc(sizeof(esp_core_dump_summary_t));
+    if (core_dump_summary) {
+        esp_err_t err = esp_core_dump_get_summary(core_dump_summary);
+        if (err == ESP_OK) {
+            print_backtrace_info(core_dump_summary);
+        } else if (err == ESP_ERR_NOT_FOUND) {
+            log_i("No core dump was found in flash memory");
+        } else {
+            log_i("Could not retrieve core dump: 0x%03x", err);
+        }
+        free(core_dump_summary);
+    }
 
     /* Load settings */
     settings_init();

@@ -4,8 +4,8 @@
 #include <ArduinoJson.h>
 #include <AsyncTCP.h>
 #include <AsyncJson.h>
+#include <ElegantOTA.h>
 #include <ESPAsyncWebServer.h>
-#include <AsyncElegantOTA.h>
 #include <lvgl.h>
 #include <math.h>
 #include <SPIFFS.h>
@@ -348,7 +348,7 @@ void webserver_init() {
 
     /* Initialize ElegantOTA */
     TAKE_MUTEX(ota_settings_mutex)
-    AsyncElegantOTA.begin(&server, ota_settings.login, ota_settings.password);
+    ElegantOTA.begin(&server, ota_settings.login, ota_settings.password);
     RELEASE_MUTEX(ota_settings_mutex)
 
     // Start server

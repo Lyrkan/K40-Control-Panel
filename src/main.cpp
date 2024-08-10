@@ -133,6 +133,7 @@ void setup() {
     /* Initialize LGFX/LVGL */
     tft.begin();
     tft.setColorDepth(16);
+    tft.setBrightness(150); // TODO Add to settings
     settings_load_touchscreen_calibration_data(&tft);
 
     lv_init();
@@ -155,7 +156,6 @@ void setup() {
     pinMode(PIN_LID_STATUS_BACK, INPUT_PULLUP);
     pinMode(PIN_FLAME_SENSOR, INPUT_PULLUP);
     pinMode(RELAY_PIN_INTERLOCK, OUTPUT);
-    pinMode(RELAY_PIN_AIR_ASSIST, OUTPUT);
     pinMode(RELAY_PIN_ALARM, OUTPUT);
     pinMode(RELAY_PIN_LIGHTS, OUTPUT);
     pinMode(RELAY_PIN_BEAM_PREVIEW, OUTPUT);
@@ -166,6 +166,7 @@ void setup() {
     pinMode(PIN_BED_STEP, OUTPUT);
     pinMode(PIN_BED_DIR, OUTPUT);
     pinMode(PIN_BED_LIMIT, INPUT_PULLUP);
+    pinMode(PIN_BED_ENABLE, OUTPUT);
 
     /* Set default state for relays */
     relays_init();

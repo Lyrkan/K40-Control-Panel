@@ -18,6 +18,10 @@
 #define GRBL_MESSAGE_REPORT_FORMAT "$Report/Status=2"
 #define GRBL_MESSAGE_REPORT_INTERVAL "$Report/Interval=200"
 
+// TODO Allow to configure which one of M7 or M8 should be used
+#define GRBL_MESSAGE_ENABLE_AIR_ASSIST "M7"
+#define GRBL_MESSAGE_DISABLE_AIR_ASSIST "M9"
+
 #define GRBL_TASK_NOTIFY_ACK_INDEX 0
 #define GRBL_TASK_NOTIFY_ACK_SUCCESS 0
 #define GRBL_TASK_NOTIFY_ACK_ERROR 1
@@ -81,5 +85,6 @@ bool grbl_send_message(
 bool grbl_send_init_commands();
 bool grbl_send_home_command(uint8_t axis_flags, GrblCommandCallbacks callbacks = GrblCommandCallbacks());
 bool grbl_send_move_command(GrblMoveCommand command, GrblCommandCallbacks callbacks = GrblCommandCallbacks());
+bool grbl_toogle_air_assist(bool enable, GrblCommandCallbacks callbacks = GrblCommandCallbacks());
 
 #endif

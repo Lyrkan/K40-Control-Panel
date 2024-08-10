@@ -14,6 +14,7 @@ class GrblReport {
     GrblFeedState feed_state;
     int line_number;
     int active_pins;
+    int enabled_accessories;
 
     GrblReport();
     void update(const GrblReport *report);

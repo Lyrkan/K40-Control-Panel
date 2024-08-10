@@ -16,6 +16,7 @@ class LGFX : public lgfx::LGFX_Device {
 #error "Unsupported display driver"
 #endif
 
+    lgfx::Light_PWM _light_instance;
     lgfx::Bus_SPI _bus_instance;
     lgfx::Touch_XPT2046 _touch_instance;
 
@@ -48,7 +49,6 @@ class LGFX : public lgfx::LGFX_Device {
 
         {
             auto cfg = _panel_instance.config();
-
             cfg.pin_cs = 15;
             cfg.pin_rst = -1;
             cfg.pin_busy = -1;
@@ -70,6 +70,13 @@ class LGFX : public lgfx::LGFX_Device {
 #endif
 
             _panel_instance.config(cfg);
+        }
+
+        {
+            auto cfg = _light_instance.config();
+            cfg.pin_bl = 14;
+            _light_instance.config(cfg);
+            _panel_instance.setLight(&_light_instance);
         }
 
         {

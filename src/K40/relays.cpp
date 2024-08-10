@@ -9,20 +9,18 @@
 #include "queues.h"
 #include "settings.h"
 
-static RelayPin relay_pins[] = {
-    RELAY_PIN_INTERLOCK, RELAY_PIN_AIR_ASSIST, RELAY_PIN_ALARM, RELAY_PIN_LIGHTS, RELAY_PIN_BEAM_PREVIEW};
+static RelayPin relay_pins[] = {RELAY_PIN_INTERLOCK, RELAY_PIN_ALARM, RELAY_PIN_LIGHTS, RELAY_PIN_BEAM_PREVIEW};
 
 static inline uint8_t relays_get_pin_state_value(RelayPin pin, RelayState state) {
     switch (pin) {
-    // Relays board
+    // Relay
     case RELAY_PIN_INTERLOCK:
-    case RELAY_PIN_AIR_ASSIST:
-    case RELAY_PIN_ALARM:
         return (state == RELAY_STATE_ENABLED) ? LOW : HIGH;
 
     // MOSFETs
     case RELAY_PIN_LIGHTS:
     case RELAY_PIN_BEAM_PREVIEW:
+    case RELAY_PIN_ALARM:
         return (state == RELAY_STATE_ENABLED) ? HIGH : LOW;
     }
 
@@ -31,8 +29,7 @@ static inline uint8_t relays_get_pin_state_value(RelayPin pin, RelayState state)
 
 void relays_init() {
     digitalWrite(RELAY_PIN_INTERLOCK, relays_get_pin_state_value(RELAY_PIN_INTERLOCK, RELAY_STATE_ENABLED));
-    digitalWrite(RELAY_PIN_AIR_ASSIST, relays_get_pin_state_value(RELAY_PIN_AIR_ASSIST, RELAY_STATE_ENABLED));
-    digitalWrite(RELAY_PIN_ALARM, relays_get_pin_state_value(RELAY_PIN_ALARM, RELAY_STATE_DISABLED));
+    digitalWrite(RELAY_PIN_ALARM, relays_get_pin_state_value(RELAY_PIN_ALARM, RELAY_STATE_ENABLED));
     digitalWrite(RELAY_PIN_LIGHTS, relays_get_pin_state_value(RELAY_PIN_LIGHTS, RELAY_STATE_ENABLED));
     digitalWrite(RELAY_PIN_BEAM_PREVIEW, relays_get_pin_state_value(RELAY_PIN_BEAM_PREVIEW, RELAY_STATE_ENABLED));
 }
@@ -85,24 +82,24 @@ void relays_update() {
     GrblState grbl_state = grbl_last_report.state;
     RELEASE_MUTEX(grbl_last_report_mutex)
 
-    if (((bool)alarm_behavior & ALARM_ENABLE_WHEN_COOLING_ISSUE) && (alerts_status & (ALERT_TYPE_COOLING))) {
+    if ((bool)(alarm_behavior & ALARM_ENABLE_WHEN_COOLING_ISSUE) && (bool)(alerts_status & (ALERT_TYPE_COOLING))) {
         enable_alarm_relay = true;
     }
 
-    if (((bool)alarm_behavior & ALARM_ENABLE_WHEN_FLAME_SENSOR_TRIGGERED) &&
-        (alerts_status & (ALERT_TYPE_FLAME_SENSOR))) {
+    if ((bool)(alarm_behavior & ALARM_ENABLE_WHEN_FLAME_SENSOR_TRIGGERED) &&
+        (bool)(alerts_status & (ALERT_TYPE_FLAME_SENSOR))) {
         enable_alarm_relay = true;
     }
 
-    if (((bool)alarm_behavior & ALARM_ENABLE_WHEN_LID_OPENED) && (alerts_status & (ALERT_TYPE_LIDS))) {
+    if ((bool)(alarm_behavior & ALARM_ENABLE_WHEN_LID_OPENED) && (bool)(alerts_status & (ALERT_TYPE_LIDS))) {
         enable_alarm_relay = true;
     }
 
-    if (((bool)alarm_behavior & ALARM_ENABLE_WHEN_RUNNING) && grbl_state == GRBL_STATE_RUN) {
+    if ((bool)(alarm_behavior & ALARM_ENABLE_WHEN_RUNNING) && grbl_state == GRBL_STATE_RUN) {
         enable_alarm_relay = true;
     }
 
-    if (((bool)alarm_behavior & ALARM_ENABLE_WHEN_NOT_IDLING) && grbl_state != GRBL_STATE_IDLE) {
+    if ((bool)(alarm_behavior & ALARM_ENABLE_WHEN_NOT_IDLING) && grbl_state != GRBL_STATE_IDLE) {
         enable_alarm_relay = true;
     }
 

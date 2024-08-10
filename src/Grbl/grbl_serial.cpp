@@ -402,3 +402,7 @@ bool grbl_send_move_command(GrblMoveCommand command, GrblCommandCallbacks callba
 
     return grbl_send_message(buffer, callbacks);
 }
+
+bool grbl_toogle_air_assist(bool enable, GrblCommandCallbacks callbacks) {
+    return grbl_send_message(enable ? GRBL_MESSAGE_ENABLE_AIR_ASSIST : GRBL_MESSAGE_DISABLE_AIR_ASSIST, callbacks);
+}

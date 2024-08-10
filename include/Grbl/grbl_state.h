@@ -118,6 +118,14 @@ typedef enum GrblPinFlag {
     GRBL_PIN_FLAG_S = 1 << 7,
 } GrblPinFlag;
 
+typedef enum GrblAccessoryFlag {
+    GRBL_ACCESSORY_FLAG_UNKNOWN = -1,
+    GRBL_ACCESSORY_FLAG_SPINDLE_CW = 1 << 0,
+    GRBL_ACCESSORY_FLAG_SPINDLE_CCW = 1 << 1,
+    GRBL_ACCESSORY_FLAG_FLOOD_COOLANT = 1 << 2,
+    GRBL_ACCESSORY_FLAG_MIST_COOLANT = 1 << 3,
+} GrblAccessoryFlag;
+
 typedef struct {
     bool is_set;
     float x;

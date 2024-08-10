@@ -17,7 +17,8 @@ typedef enum {
 typedef enum {
     PIN_BED_STEP = 16,
     PIN_BED_DIR = 17,
-    PIN_BED_LIMIT = 27
+    PIN_BED_LIMIT = 27,
+    PIN_BED_ENABLE = 0,
 } BedStepperPin;
 
 typedef enum {

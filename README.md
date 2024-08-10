@@ -50,16 +50,19 @@ For the control panel:
 -   1x 38 pins ESP32-S with a spacing of 24mm between pin rows (**not** 25.5mm)
 -   1x ST7796 (recommended) or ILI9488 (slower) 3.95" LCD screen
 -   1x DRV8825 stepper driver
--   1x L7805CV 5V regulator (a heatsink is also recommended)
+-   1x TSR-1-2450 5V regulator (or a less-efficient L7805CV - you will want to add a heatsink if you go this way)
 -   4x IRLML6244 N-channel MOSFETs
+-   1x MF-LSMF200/24X-2 resettable fuse
 -   4x 1N4007 diodes
+-   1x 15kΩ 1/4W R1206 SMD resistor
+-   3x 2.2kΩ 1/4W R1206 SMD resistor
 -   9x 10kΩ 1/4W R1206 SMD resistors
 -   3x 1kΩ 1/4W R1206 SMD resistors
--   7x 220Ω 1/4W R1206 SMD resistors
--   1x 3.3KΩ 1/4W R1206 SMD resistors
+-   4x 220Ω 1/4W R1206 SMD resistors
 -   1x 0.1uF electrolytic capacitors
 -   1x 100uF electrolytic capacitors
--   3x 0.1uF ceramic capacitors
+-   1x 0.33uF ceramic capacitors
+-   4x 0.1uF ceramic capacitors
 -   4x 2.2-3V 0805 SMD LEDs
 -   1x SRD-12VDC-SL-C relay
 -   1x 2P PCB terminal blocks (5mm pitch)
@@ -106,7 +109,7 @@ This PCB requires some SMD soldering, this is not that hard to do but I would st
 
 ## Wiring
 
-[<img src="images/pcb-3d.png?v2" width="512">](/images/pcb-3d.png)
+[<img src="images/pcb-3d.png?v3" width="512">](/images/pcb-3d.png)
 
 Some notes:
 
@@ -118,6 +121,7 @@ Some notes:
 ## Showcase
 
 [<img src="images/DCIM_01.thumbnail.jpg" width="256">](images/DCIM_01.jpg)
+[<img src="images/DCIM_02.thumbnail.jpg" width="256">](images/DCIM_02.jpg)
 
 ## Status APIs
 

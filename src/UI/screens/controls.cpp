@@ -36,6 +36,7 @@ static void ui_controls_lock_grbl_controls() {
     lv_obj_add_state(ui_controls_laser_disable_steppers_button, LV_STATE_DISABLED);
     lv_btnmatrix_set_btn_ctrl_all(ui_controls_laser_move_x_matrix, LV_BTNMATRIX_CTRL_DISABLED);
     lv_btnmatrix_set_btn_ctrl_all(ui_controls_laser_move_y_matrix, LV_BTNMATRIX_CTRL_DISABLED);
+    lv_obj_add_state(ui_controls_air_assist_switch, LV_STATE_DISABLED);
 }
 
 static void ui_controls_unlock_grbl_controls() {
@@ -43,6 +44,7 @@ static void ui_controls_unlock_grbl_controls() {
     lv_obj_clear_state(ui_controls_laser_disable_steppers_button, LV_STATE_DISABLED);
     lv_btnmatrix_clear_btn_ctrl_all(ui_controls_laser_move_x_matrix, LV_BTNMATRIX_CTRL_DISABLED);
     lv_btnmatrix_clear_btn_ctrl_all(ui_controls_laser_move_y_matrix, LV_BTNMATRIX_CTRL_DISABLED);
+    lv_obj_clear_state(ui_controls_air_assist_switch, LV_STATE_DISABLED);
 }
 
 static void ui_controls_btnmatrix_handler(lv_event_t *e) {
@@ -165,12 +167,21 @@ static void ui_controls_switch_handler(lv_event_t *e) {
     int32_t relay_pin = -1;
     if (target == ui_controls_interlock_switch) {
         relay_pin = RELAY_PIN_INTERLOCK;
-    } else if (target == ui_controls_air_assist_switch) {
-        relay_pin = RELAY_PIN_AIR_ASSIST;
     } else if (target == ui_controls_lights_switch) {
         relay_pin = RELAY_PIN_LIGHTS;
     } else if (target == ui_controls_preview_switch) {
         relay_pin = RELAY_PIN_BEAM_PREVIEW;
+    } else if (target == ui_controls_air_assist_switch) {
+        GrblCommandCallbacks grbl_command_callbacks = GrblCommandCallbacks();
+        grbl_command_callbacks.on_finished = []() -> void {
+            ui_controls_notify_update(CONTROLS_UPDATE_GRBL_COMMMAND_ENDED);
+        };
+        grbl_command_callbacks.on_failure = []() -> void {
+            ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, "Air assist toggle failed or timed out");
+        };
+
+        ui_controls_lock_grbl_controls();
+        grbl_toogle_air_assist(lv_obj_has_state(target, LV_STATE_CHECKED), grbl_command_callbacks);
     }
 
     if (relay_pin != -1) {
@@ -398,6 +409,7 @@ void ui_controls_update(bool initialize) {
         TAKE_MUTEX(grbl_last_report_mutex)
         GrblCoord m_pos = grbl_last_report.m_pos;
         GrblFeedState feed = grbl_last_report.feed_state;
+        bool air_assist_enabled = (grbl_last_report.enabled_accessories & GRBL_ACCESSORY_FLAG_MIST_COOLANT) != 0;
         RELEASE_MUTEX(grbl_last_report_mutex)
 
         if (m_pos.is_set) {
@@ -410,6 +422,11 @@ void ui_controls_update(bool initialize) {
         if (feed.is_set) {
             snprintf(laser_speed_formatted_value, ARRAY_SIZE(laser_speed_formatted_value), "%d", feed.rate / 60);
             lv_textarea_set_text(ui_controls_laser_speed_textarea, laser_speed_formatted_value);
+        }
+
+        if (!lv_obj_has_state(ui_controls_air_assist_switch, LV_STATE_DISABLED)) {
+            air_assist_enabled ? lv_obj_add_state(ui_controls_air_assist_switch, LV_STATE_CHECKED)
+                               : lv_obj_clear_state(ui_controls_air_assist_switch, LV_STATE_CHECKED);
         }
 
         xEventGroupClearBits(ui_controls_event_group, CONTROLS_UPDATE_GRBL_REPORT);
@@ -432,7 +449,7 @@ void ui_controls_update(bool initialize) {
     if (initialize || (delta_time > CONTROLS_STATE_UPDATE_INTERVAL)) {
         // Retrieve relays state from the queue object
         const bool interlock_active = relays_is_active(RELAY_PIN_INTERLOCK);
-        const bool air_assist_active = relays_is_active(RELAY_PIN_AIR_ASSIST);
+        const bool air_assist_active = false; // TODO Retrieve air assist state
         const bool lights_active = relays_is_active(RELAY_PIN_LIGHTS);
         const bool beam_preview_active = relays_is_active(RELAY_PIN_BEAM_PREVIEW);
 
@@ -444,9 +461,6 @@ void ui_controls_update(bool initialize) {
 
         interlock_disabled ? lv_obj_add_state(ui_controls_interlock_switch, LV_STATE_DISABLED)
                            : lv_obj_clear_state(ui_controls_interlock_switch, LV_STATE_DISABLED);
-
-        air_assist_active ? lv_obj_add_state(ui_controls_air_assist_switch, LV_STATE_CHECKED)
-                          : lv_obj_clear_state(ui_controls_air_assist_switch, LV_STATE_CHECKED);
 
         lights_active ? lv_obj_add_state(ui_controls_lights_switch, LV_STATE_CHECKED)
                       : lv_obj_clear_state(ui_controls_lights_switch, LV_STATE_CHECKED);

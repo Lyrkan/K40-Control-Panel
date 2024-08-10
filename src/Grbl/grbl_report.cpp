@@ -43,6 +43,7 @@ GrblReport::GrblReport() {
     };
     line_number = 0;
     active_pins = 0;
+    enabled_accessories = 0;
 }
 
 void GrblReport::update(const GrblReport *report) {
@@ -85,6 +86,10 @@ void GrblReport::update(const GrblReport *report) {
         line_number = report->line_number;
     }
 
+    if (report->enabled_accessories > GRBL_ACCESSORY_FLAG_UNKNOWN) {
+        enabled_accessories = report->enabled_accessories;
+    }
+
     // Update MPos or WPos using Work Coordinate Offset if available
     if (wco.is_set) {
         if (report->m_pos.is_set && !report->w_pos.is_set) {
@@ -114,6 +119,7 @@ void GrblReport::update(const GrblReport *report) {
         buffer_state.is_set);
     log_d("  Feed state: %d, %d (is_set=%d)", feed_state.rate, feed_state.spindle_speed, feed_state.is_set);
     log_d("  Active pins: %d", active_pins);
+    log_d("  Enabled accessories: %d", enabled_accessories);
     log_d("  Line number: %d", line_number);
 }
 

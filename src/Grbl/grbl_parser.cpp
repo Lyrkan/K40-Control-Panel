@@ -223,14 +223,31 @@ static void grbl_process_report(char *report_body) {
             continue;
         }
 
-        if (grbl_remove_prefix_suffix(&report_token, "Ov:")) {
-            log_d("Override values: %s", report_token);
-            // TODO
+        if (grbl_remove_prefix_suffix(&report_token, "A:")) {
+            log_d("Enabled accessories: %s", report_token);
+            for (int accessoryIndex = 0; report_token[accessoryIndex] != '\0'; accessoryIndex++) {
+                switch (report_token[accessoryIndex]) {
+                case 'S':
+                    report.enabled_accessories += GRBL_ACCESSORY_FLAG_SPINDLE_CW;
+                    break;
+                case 'C':
+                    report.enabled_accessories += GRBL_ACCESSORY_FLAG_SPINDLE_CCW;
+                    break;
+                case 'F':
+                    report.enabled_accessories += GRBL_ACCESSORY_FLAG_FLOOD_COOLANT;
+                    break;
+                case 'M':
+                    report.enabled_accessories += GRBL_ACCESSORY_FLAG_MIST_COOLANT;
+                    break;
+                default:
+                    log_w("Unknown accessory identifier %c", report_token[accessoryIndex]);
+                }
+            }
             continue;
         }
 
-        if (grbl_remove_prefix_suffix(&report_token, "A:")) {
-            log_d("Accessory state: %s", report_token);
+        if (grbl_remove_prefix_suffix(&report_token, "Ov:")) {
+            log_d("Override values: %s", report_token);
             // TODO
             continue;
         }

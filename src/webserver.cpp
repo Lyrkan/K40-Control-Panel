@@ -131,7 +131,6 @@ static void handleApiRelaysRequest(AsyncWebServerRequest *request) {
 
     // Retrieve relays state from the queue object
     state["relays"]["interlock"] = relays_is_active(RELAY_PIN_INTERLOCK);
-    state["relays"]["air_assist"] = relays_is_active(RELAY_PIN_AIR_ASSIST);
     state["relays"]["alarm"] = relays_is_active(RELAY_PIN_ALARM);
     state["relays"]["lights"] = relays_is_active(RELAY_PIN_LIGHTS);
     state["relays"]["beam_preview"] = relays_is_active(RELAY_PIN_BEAM_PREVIEW);
@@ -233,12 +232,12 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
             int32_t bitfield_mask_r;
             int32_t bitfield_mask_g;
             int32_t bitfield_mask_b;
-            int32_t bitfield_mask_a;
         } BitmapHeader;
 
         // Add bitmap header if this is the first chunk
         size_t start_index = 0;
         size_t header_size = sizeof(BitmapHeader);
+        uint8_t bytes_per_pixel = 2;
 
         if (index == 0) {
             // TODO Make it so the header can still be sent
@@ -249,29 +248,27 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
 
             BitmapHeader *bmp_header = (BitmapHeader *)buffer;
             sprintf(bmp_header->bmp_signature, "BM");
-            bmp_header->bmp_size = header_size + (4 * DISPLAY_SCREEN_WIDTH * DISPLAY_SCREEN_HEIGHT);
+            bmp_header->bmp_size = header_size + (bytes_per_pixel * DISPLAY_SCREEN_WIDTH * DISPLAY_SCREEN_HEIGHT);
             bmp_header->bmp_offset = header_size;
             bmp_header->dib_header_size = header_size - 14;
             bmp_header->dib_width = DISPLAY_SCREEN_WIDTH;
             bmp_header->dib_height = -DISPLAY_SCREEN_HEIGHT;
             bmp_header->dib_color_planes = 1;
-            bmp_header->dib_bpp = 32;
+            bmp_header->dib_bpp = bytes_per_pixel * 8;
             bmp_header->dib_compression = 3; // BI_BITFIELDS
-            bmp_header->dib_bmp_size = (4 * DISPLAY_SCREEN_WIDTH * DISPLAY_SCREEN_HEIGHT);
+            bmp_header->dib_bmp_size = (bytes_per_pixel * DISPLAY_SCREEN_WIDTH * DISPLAY_SCREEN_HEIGHT);
             bmp_header->dib_hor_res = 5000;
             bmp_header->dib_ver_res = 5000;
             bmp_header->dib_palette = 0;
             bmp_header->dib_important_colors = 0;
-            bmp_header->bitfield_mask_r = 0x00FF0000;
-            bmp_header->bitfield_mask_g = 0x0000FF00;
-            bmp_header->bitfield_mask_b = 0x000000FF;
-            bmp_header->bitfield_mask_a = 0xFF000000;
+            bmp_header->bitfield_mask_r = 0xF800;
+            bmp_header->bitfield_mask_g = 0x07E0;
+            bmp_header->bitfield_mask_b = 0x001F;
 
             start_index = header_size;
             max_len -= header_size;
         }
 
-        uint8_t bytes_per_pixel = 4;
         unsigned int current_pixel_index = (index - (header_size - start_index)) / bytes_per_pixel;
         if (current_pixel_index >= DISPLAY_SCREEN_HEIGHT * DISPLAY_SCREEN_WIDTH) {
             RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
@@ -301,7 +298,7 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
 
         driver.hor_res = lv_disp_get_hor_res(obj_disp);
         driver.ver_res = lv_disp_get_hor_res(obj_disp);
-        lv_disp_drv_use_generic_set_px_cb(&driver, LV_IMG_CF_TRUE_COLOR_ALPHA);
+        lv_disp_drv_use_generic_set_px_cb(&driver, LV_IMG_CF_RGB565);
 
         lv_disp_t fake_disp;
         lv_memset_00(&fake_disp, sizeof(lv_disp_t));

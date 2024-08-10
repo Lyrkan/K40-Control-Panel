@@ -8,7 +8,6 @@ typedef enum {
 
 typedef enum {
     RELAY_PIN_INTERLOCK = 12,
-    RELAY_PIN_AIR_ASSIST = 14,
     RELAY_PIN_ALARM = 4,
     RELAY_PIN_LIGHTS = 13,
     RELAY_PIN_BEAM_PREVIEW = 26

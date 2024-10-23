@@ -1,8 +1,4 @@
 #include <WiFi.h>
-
-#include "UI/menu.h"
-#include "UI/screens/settings.h"
-#include "UI/images.h"
 #include "ntp.h"
 #include "wifi.h"
 

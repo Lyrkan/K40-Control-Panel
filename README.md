@@ -19,7 +19,7 @@
 </p>
 
 > [!WARNING]
-> I am currently testing a new iteration of the control board. This document reflects what it should look like but the code and Gerber files have **not** been updated yet. I plan to release that version in a few week, so I would recommend to wait a little bit more before jumping into this project.
+> I am currently testing a new iteration of the control board that fixes a few things and adds some safety features. The code, documentation and Gerber files have **not** been updated yet. I plan to release that version in a few weeks, so I would recommend to wait a little bit more before jumping into this project.
 
 ## Overview
 

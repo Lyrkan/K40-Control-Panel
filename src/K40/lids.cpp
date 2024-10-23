@@ -4,10 +4,13 @@
 
 #include "K40/alerts.h"
 #include "K40/lids.h"
-#include "UI/screens/status.h"
 #include "macros.h"
 #include "mutex.h"
 #include "queues.h"
+
+#if HAS_DISPLAY
+#include "UI/screens/status.h"
+#endif
 
 LidsStates lids_states;
 
@@ -26,8 +29,10 @@ void lids_update_status() {
         bool enable_alert = front_lid_opened || back_lid_opened;
         alerts_toggle_alert(ALERT_TYPE_LIDS, enable_alert);
 
+#if HAS_DISPLAY
         // Notify UI of new values
         ui_status_notify_update(STATUS_UPDATE_PROBE_LIDS);
+#endif
     }
     RELEASE_MUTEX(lids_current_status_mutex);
 }

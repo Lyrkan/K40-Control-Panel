@@ -6,8 +6,11 @@
 #include "Grbl/grbl_report.h"
 #include "Grbl/grbl_serial.h"
 #include "Grbl/grbl_state.h"
-#include "UI/overlay.h"
 #include "tasks.h"
+
+#if HAS_DISPLAY
+#include "UI/overlay.h"
+#endif
 
 static bool grbl_remove_prefix_suffix(char **input, const char *prefix, const char *suffix = NULL) {
     size_t input_length = strnlen(*input, GRBL_MAX_LINE_lENGTH);
@@ -56,7 +59,10 @@ static void grbl_process_error(const char *error_code) {
     const char *error_description = grbl_error_to_string((GrblError)error_code_i);
 
     log_e("Error message received (code: %d): %s", error_code_i, error_description);
+
+#if HAS_DISPLAY
     ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, error_description);
+#endif
 
     // Notify the TX task that its previous message has been acknowledged
     if (grbl_tx_task_handle != NULL) {
@@ -73,7 +79,11 @@ static void grbl_process_alarm(const char *alarm_code) {
     const char *alarm_description = grbl_alarm_to_string((GrblAlarm)alarm_code_i);
 
     log_e("Alarm triggered (code: %d): %s", alarm_code_i, alarm_description);
+
+#if HAS_DISPLAY
     ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, alarm_description);
+#endif
+
     grbl_update_last_alarm((GrblAlarm)alarm_code_i);
 }
 
@@ -261,7 +271,10 @@ static void grbl_process_report(char *report_body) {
 static void grbl_process_feedback(const char *feedback_body) { log_d("Feedback body: %s", feedback_body); }
 
 static void grbl_process_welcome(const char *welcome_line) {
+#if HAS_DISPLAY
     ui_overlay_add_flash_message(FLASH_LEVEL_INFO, welcome_line);
+#endif
+
     log_d("Welcome message: %s", welcome_line);
     grbl_send_init_commands();
 }

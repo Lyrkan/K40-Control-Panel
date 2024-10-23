@@ -32,8 +32,10 @@ jobs:
               run: |
                 pio run -e ILI9488
                 pio run -e ST7796
+                pio run -e headless
                 mv .pio/build/ILI9488/firmware.bin .pio/build/ILI9488/firmware-ILI9488.bin
                 mv .pio/build/ST7796/firmware.bin .pio/build/ST7796/firmware-ST7796.bin
+                mv .pio/build/headless/firmware.bin .pio/build/headless/firmware-headless.bin
             - name: "Update experimental tag"
               uses: rickstaa/action-create-tag@v1
               with:
@@ -52,4 +54,5 @@ jobs:
                   files: |
                       .pio/build/ILI9488/firmware-ILI9488.bin
                       .pio/build/ST7796/firmware-ST7796.bin
+                      .pio/build/headless/firmware-headless.bin
                       gerber/Gerber_K40-Control-Panel.zip

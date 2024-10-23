@@ -3,12 +3,15 @@
 #include <freertos/queue.h>
 #include "Grbl/grbl_report.h"
 #include "Grbl/grbl_state.h"
-#include "UI/screens/controls.h"
-#include "UI/screens/status.h"
 #include "K40/alerts.h"
 #include "macros.h"
 #include "mutex.h"
 #include "queues.h"
+
+#if HAS_DISPLAY
+#include "UI/screens/controls.h"
+#include "UI/screens/status.h"
+#endif
 
 GrblReport::GrblReport() {
     state = GRBL_STATE_UNKNOWN;
@@ -130,8 +133,10 @@ void grbl_update_last_report(const GrblReport *report) {
     grbl_last_report.update(report);
     RELEASE_MUTEX(grbl_last_report_mutex)
 
+#if HAS_DISPLAY
     ui_status_notify_update(STATUS_UPDATE_GRBL_REPORT);
     ui_controls_notify_update(CONTROLS_UPDATE_GRBL_REPORT);
+#endif
 }
 
 void grbl_update_last_alarm(GrblAlarm alarm) {
@@ -139,5 +144,7 @@ void grbl_update_last_alarm(GrblAlarm alarm) {
     grbl_last_report.alarm = alarm;
     RELEASE_MUTEX(grbl_last_report_mutex)
 
+#if HAS_DISPLAY
     ui_status_notify_update(STATUS_UPDATE_GRBL_REPORT);
+#endif
 }

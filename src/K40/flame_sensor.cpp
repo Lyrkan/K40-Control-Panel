@@ -5,10 +5,13 @@
 
 #include "K40/alerts.h"
 #include "K40/flame_sensor.h"
-#include "UI/screens/status.h"
 #include "macros.h"
 #include "mutex.h"
 #include "queues.h"
+
+#if HAS_DISPLAY
+#include "UI/screens/status.h"
+#endif
 
 bool flame_sensor_triggered;
 
@@ -24,8 +27,10 @@ void flame_sensor_update_status() {
         // Change alert state
         alerts_toggle_alert(ALERT_TYPE_FLAME_SENSOR, flame_sensor_triggered);
 
+#if HAS_DISPLAY
         // Notify UI of new value
         ui_status_notify_update(STATUS_UPDATE_PROBE_FLAME_SENSOR);
+#endif
     }
     RELEASE_MUTEX(flame_sensor_current_status_mutex);
 }

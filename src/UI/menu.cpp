@@ -195,7 +195,7 @@ void ui_menu_init() {
     lv_obj_set_x(ui_menu_indicators_current_time_value, 0);
     lv_obj_set_y(ui_menu_indicators_current_time_value, -8);
     lv_obj_set_align(ui_menu_indicators_current_time_value, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_menu_indicators_current_time_value, MENU_INDICATORS_TIME_UNKNOWN_VALUE);
+    lv_label_set_text(ui_menu_indicators_current_time_value, TIME_UNKNOWN_VALUE);
 
     ui_menu_indicators_connectivity_value = lv_label_create(ui_menu_indicators_panel);
     lv_obj_set_width(ui_menu_indicators_connectivity_value, LV_SIZE_CONTENT);
@@ -241,7 +241,7 @@ void ui_menu_indicators_update() {
         }
 
         // Update current time
-        static char current_formatted_time[MAX(ARRAY_SIZE(MENU_INDICATORS_TIME_UNKNOWN_VALUE), 6)];
+        static char current_formatted_time[MAX(ARRAY_SIZE(TIME_UNKNOWN_VALUE), 6)];
         ntp_get_formatted_time(current_formatted_time, ARRAY_SIZE(current_formatted_time));
         lv_label_set_text(ui_menu_indicators_current_time_value, current_formatted_time);
 

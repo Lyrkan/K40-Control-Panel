@@ -6,7 +6,6 @@
 #include <AsyncJson.h>
 #include <ElegantOTA.h>
 #include <ESPAsyncWebServer.h>
-#include <lvgl.h>
 #include <math.h>
 #include <SPIFFS.h>
 
@@ -17,7 +16,6 @@
 #include "K40/flame_sensor.h"
 #include "K40/lids.h"
 #include "K40/relays.h"
-#include "UI/display.h"
 #include "cpu_monitor.h"
 #include "esp.h"
 #include "macros.h"
@@ -26,6 +24,11 @@
 #include "settings.h"
 #include "tasks.h"
 #include "webserver.h"
+
+#if HAS_DISPLAY
+#include <lvgl.h>
+#include "UI/display.h"
+#endif
 
 SemaphoreHandle_t webserver_screenshot_mutex = xSemaphoreCreateRecursiveMutex();
 static AsyncWebServer server(80);
@@ -207,6 +210,7 @@ static void handleGrblStatusRequest(AsyncWebServerRequest *request) {
 }
 
 static void handleScreenshotRequest(AsyncWebServerRequest *request) {
+#if HAS_DISPLAY
     // Prevent UI updates
     TAKE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
 
@@ -330,6 +334,9 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
 
         return start_index + (max_pixels * bytes_per_pixel);
     });
+#else
+    request->send(404, "text/plain", "K40-Control-Panel was compiled without display support");
+#endif
 }
 
 static void handleNotFoundRequest(AsyncWebServerRequest *request) { request->send(404, "text/plain", "Not Found"); }

@@ -2,7 +2,10 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <Preferences.h>
+
+#if HAS_DISPLAY
 #include "LGFX/LGFX.h"
+#endif
 
 #include "macros.h"
 #include "settings.h"
@@ -319,6 +322,7 @@ void settings_schedule_save(uint32_t settings_types) {
     xTaskNotify(settings_save_task_handle, settings_types, eSetBits);
 }
 
+#if HAS_DISPLAY
 void settings_load_touchscreen_calibration_data(LGFX *tft) {
     uint16_t touchscreen_calibration_data[8];
 
@@ -335,3 +339,4 @@ void settings_load_touchscreen_calibration_data(LGFX *tft) {
     }
     preferences.end();
 }
+#endif

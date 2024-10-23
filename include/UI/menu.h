@@ -6,7 +6,6 @@
 #define MENU_HEIGHT 48
 #define MENU_INDICATORS_UPDATE_INTERVAL 1000 // ms
 
-const char MENU_INDICATORS_TIME_UNKNOWN_VALUE[] = "--:--";
 const char MENU_INDICATORS_WIFI_VALUE_OFFLINE[] = "Offline";
 const char MENU_INDICATORS_WIFI_VALUE_ONLINE[] = "Online";
 

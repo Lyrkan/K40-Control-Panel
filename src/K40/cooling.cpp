@@ -6,10 +6,13 @@
 
 #include "K40/alerts.h"
 #include "K40/cooling.h"
-#include "UI/screens/status.h"
 #include "macros.h"
 #include "mutex.h"
 #include "settings.h"
+
+#if HAS_DISPLAY
+#include "UI/screens/status.h"
+#endif
 
 CoolingValues cooling_values;
 
@@ -121,8 +124,10 @@ void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {
 
         alerts_toggle_alert(ALERT_TYPE_COOLING, enable_alert);
 
+#if HAS_DISPLAY
         // Notify UI of new values
         ui_status_notify_update(STATUS_UPDATE_PROBE_COOLING);
+#endif
     }
 
     RELEASE_MUTEX(cooling_current_status_mutex);

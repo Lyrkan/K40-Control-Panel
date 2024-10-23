@@ -8,12 +8,15 @@
 
 #include "Grbl/grbl_parser.h"
 #include "Grbl/grbl_serial.h"
-#include "UI/overlay.h"
-#include "UI/screens/status.h"
 #include "macros.h"
 #include "queues.h"
 #include "settings.h"
 #include "tasks.h"
+
+#if HAS_DISPLAY
+#include "UI/overlay.h"
+#include "UI/screens/status.h"
+#endif
 
 static GrblSerialStatus grbl_serial_status = GRBL_SERIAL_STATUS_DISCONNECTED;
 static SemaphoreHandle_t grbl_serial_status_mutex = xSemaphoreCreateMutex();
@@ -125,7 +128,10 @@ static void grbl_tx_task(void *param) {
             xTaskNotifyStateClearIndexed(NULL, GRBL_TASK_NOTIFY_ACK_INDEX);
             if (write(fd, message.buffer, strnlen(message.buffer, GRBL_MAX_LINE_lENGTH)) == -1) {
                 log_e("Could not write buffer to serial: %d", errno);
+
+#if HAS_DISPLAY
                 ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, "An error happened when trying to send Grbl message");
+#endif
             }
 
             uint32_t ack_notification_value;
@@ -174,7 +180,10 @@ static void grbl_tx_task(void *param) {
                     char flash_message[255];
                     snprintf(flash_message, ARRAY_SIZE(flash_message), "Grbl command timed-out: %s", message.buffer);
                     flash_message[strnlen(flash_message, ARRAY_SIZE(flash_message)) - 1] = '\0'; // Remove line-ending
+
+#if HAS_DISPLAY
                     ui_overlay_add_flash_message(FLASH_LEVEL_WARNING, flash_message);
+#endif
                 }
 
                 // Notify sender that a timeout occurred
@@ -258,7 +267,10 @@ void grbl_set_serial_status(GrblSerialStatus serial_status) {
     TAKE_MUTEX(grbl_serial_status_mutex)
     grbl_serial_status = serial_status;
     RELEASE_MUTEX(grbl_serial_status_mutex)
+
+#if HAS_DISPLAY
     ui_status_notify_update(STATUS_UPDATE_UART);
+#endif
 }
 
 bool grbl_send_message(const char *message, GrblCommandCallbacks callbacks, bool send_to_front) {
@@ -274,9 +286,12 @@ bool grbl_send_message(
     size_t message_length = strlen(message);
     if (message_length > GRBL_MAX_LINE_lENGTH) {
         log_e("Message length exceeds GRBL_MAX_LINE_LENGTH: %s", message);
+
+#if HAS_DISPLAY
         ui_overlay_add_flash_message(
             FLASH_LEVEL_WARNING,
             "A Grbl message was ignored becaused it exceeded the max allowed length");
+#endif
         return false;
     }
 
@@ -295,18 +310,25 @@ bool grbl_send_message(
         log_d("Scheduling Grbl message with high priority (timeout: %dms): %s", command.ack_timeout_ms, command.buffer);
         if (xQueueSendToFront(grbl_tx_msg_queue, &command, 0) != pdTRUE) {
             log_w("TX queue seems to be full, a message was dropped");
+
+#if HAS_DISPLAY
             ui_overlay_add_flash_message(
                 FLASH_LEVEL_WARNING,
                 "A Grbl message was dropped because the TX queue seemed to be full");
+#endif
+
             return false;
         }
     } else {
         log_d("Scheduling Grbl message with low priority (timeout: %dms): %s", command.ack_timeout_ms, command.buffer);
         if (xQueueSendToBack(grbl_tx_msg_queue, &command, 0) != pdTRUE) {
             log_w("TX queue seems to be full, a message was dropped");
+
+#if HAS_DISPLAY
             ui_overlay_add_flash_message(
                 FLASH_LEVEL_WARNING,
                 "A Grbl message was dropped because the TX queue seemed to be full");
+#endif
             return false;
         }
     }

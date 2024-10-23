@@ -1,7 +1,5 @@
 #include <time.h>
 #include <WiFi.h>
-
-#include "UI/menu.h"
 #include "ntp.h"
 
 tm timeinfo;
@@ -17,7 +15,7 @@ void ntp_get_formatted_time(char *output, size_t output_size) {
     localtime_r(&now, &timeinfo);
 
     if (timeinfo.tm_year < (2022 - 1900)) {
-        snprintf(output, output_size, MENU_INDICATORS_TIME_UNKNOWN_VALUE);
+        snprintf(output, output_size, TIME_UNKNOWN_VALUE);
     } else {
         strftime(output, output_size, "%H:%M", &timeinfo);
     }

@@ -8,14 +8,15 @@ typedef enum {
     GRBL_STATE_RUN = 2,
     GRBL_STATE_HOLD_0 = 3,
     GRBL_STATE_HOLD_1 = 4,
-    GRBL_STATE_ALARM = 5,
-    GRBL_STATE_DOOR_0 = 6,
-    GRBL_STATE_DOOR_1 = 7,
-    GRBL_STATE_DOOR_2 = 8,
-    GRBL_STATE_DOOR_3 = 9,
-    GRBL_STATE_CHECK = 10,
-    GRBL_STATE_HOME = 11,
-    GRBL_STATE_SLEEP = 12,
+    GRBL_STATE_JOG = 5,
+    GRBL_STATE_ALARM = 6,
+    GRBL_STATE_DOOR_0 = 7,
+    GRBL_STATE_DOOR_1 = 8,
+    GRBL_STATE_DOOR_2 = 9,
+    GRBL_STATE_DOOR_3 = 10,
+    GRBL_STATE_CHECK = 11,
+    GRBL_STATE_HOME = 12,
+    GRBL_STATE_SLEEP = 13,
 } GrblState;
 
 typedef enum GrblAlarm {

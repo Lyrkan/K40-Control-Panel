@@ -11,6 +11,10 @@ GrblState grbl_state_from_string(char *state) {
         return GRBL_STATE_RUN;
     }
 
+    if (strcmp(state, "Jog") == 0) {
+        return GRBL_STATE_JOG;
+    }
+
     if (strcmp(state, "Alarm") == 0) {
         return GRBL_STATE_ALARM;
     }
@@ -70,6 +74,8 @@ const char *grbl_state_to_string(GrblState state) {
         return "Hold: complete";
     case GRBL_STATE_HOLD_1:
         return "Hold: in-progress";
+    case GRBL_STATE_JOG:
+        return "Jogging";
     case GRBL_STATE_ALARM:
         return "Alarm";
     case GRBL_STATE_DOOR_0:

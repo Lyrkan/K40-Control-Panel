@@ -11,6 +11,8 @@
 
 #if HAS_DISPLAY
 #include "UI/screens/status.h"
+#else
+#include "Headless/headless_serial.h"
 #endif
 
 bool flame_sensor_triggered;
@@ -30,6 +32,8 @@ void flame_sensor_update_status() {
 #if HAS_DISPLAY
         // Notify UI of new value
         ui_status_notify_update(STATUS_UPDATE_PROBE_FLAME_SENSOR);
+#else
+        headless_send_status_message();
 #endif
     }
     RELEASE_MUTEX(flame_sensor_current_status_mutex);

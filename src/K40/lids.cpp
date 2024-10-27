@@ -10,6 +10,8 @@
 
 #if HAS_DISPLAY
 #include "UI/screens/status.h"
+#else
+#include "Headless/headless_serial.h"
 #endif
 
 LidsStates lids_states;
@@ -32,6 +34,8 @@ void lids_update_status() {
 #if HAS_DISPLAY
         // Notify UI of new values
         ui_status_notify_update(STATUS_UPDATE_PROBE_LIDS);
+#else
+        headless_send_status_message();
 #endif
     }
     RELEASE_MUTEX(lids_current_status_mutex);

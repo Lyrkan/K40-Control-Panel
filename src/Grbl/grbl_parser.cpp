@@ -10,6 +10,8 @@
 
 #if HAS_DISPLAY
 #include "UI/overlay.h"
+#else
+#include "Headless/headless_serial.h"
 #endif
 
 static bool grbl_remove_prefix_suffix(char **input, const char *prefix, const char *suffix = NULL) {
@@ -287,6 +289,11 @@ void grbl_process_line(char *line) {
     }
 
     log_d("Received Grbl data: %s", line);
+
+#if !(HAS_DISPLAY)
+    headless_send_grbl_message(line);
+#endif
+
     if (strcmp(line, "ok") == 0) {
         // ACK
         grbl_process_ack();

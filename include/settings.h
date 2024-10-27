@@ -21,7 +21,13 @@ typedef enum {
     SETTINGS_TYPE_RELAYS = 1 << 4,
 } SettingsType;
 
+typedef enum {
+    BED_CONTROL_MODE_GRBL = 1 << 0,
+    BED_CONTROL_MODE_STEPPER = 1 << 1,
+} BedControlMode;
+
 typedef struct {
+    BedControlMode control_mode;
     uint32_t screw_lead_um;
     uint32_t microstep_multiplier;
     uint32_t steps_per_revolution;

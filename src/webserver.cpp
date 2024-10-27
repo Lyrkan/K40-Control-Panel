@@ -132,7 +132,7 @@ static void handleApiRelaysRequest(AsyncWebServerRequest *request) {
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &state = response->getRoot();
 
-    // Retrieve relays state from the queue object
+    // Retrieve relays state
     state["relays"]["interlock"] = relays_is_active(RELAY_PIN_INTERLOCK);
     state["relays"]["alarm"] = relays_is_active(RELAY_PIN_ALARM);
     state["relays"]["lights"] = relays_is_active(RELAY_PIN_LIGHTS);

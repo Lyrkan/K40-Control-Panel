@@ -18,6 +18,7 @@ static const char PREFERENCES_NAMESPACE_GRBL[] = "grbl-settings";
 static const char PREFERENCES_NAMESPACE_RELAYS[] = "relays-settings";
 static const char PREFERENCES_NAMESPACE_SCREEN[] = "screen-settings";
 
+static const char PREFERENCES_KEY_BED_CONTROL_MODE[] = "control-mode";
 static const char PREFERENCES_KEY_BED_SCREW_LEAD[] = "screw-lead-um";
 static const char PREFERENCES_KEY_BED_MICROSTEP_MULTIPLIER[] = "microstep-mul";
 static const char PREFERENCES_KEY_BED_STEPS_PER_REVOLUTION[] = "steps-per-rev";
@@ -52,6 +53,7 @@ SemaphoreHandle_t grbl_settings_mutex = xSemaphoreCreateMutex();
 SemaphoreHandle_t relays_settings_mutex = xSemaphoreCreateMutex();
 
 BedSettings bed_settings = {
+    .control_mode = BED_CONTROL_MODE_STEPPER,
     .screw_lead_um = 8000,
     .microstep_multiplier = 8,
     .steps_per_revolution = 200,
@@ -99,6 +101,7 @@ static void settings_save_task_func(void *params) {
             TAKE_MUTEX(bed_settings_mutex)
 
             preferences.begin(PREFERENCES_NAMESPACE_BED, false);
+            preferences.putUInt(PREFERENCES_KEY_BED_CONTROL_MODE, bed_settings.control_mode);
             preferences.putUInt(PREFERENCES_KEY_BED_SCREW_LEAD, bed_settings.screw_lead_um);
             preferences.putUInt(PREFERENCES_KEY_BED_MICROSTEP_MULTIPLIER, bed_settings.microstep_multiplier);
             preferences.putUInt(PREFERENCES_KEY_BED_STEPS_PER_REVOLUTION, bed_settings.steps_per_revolution);
@@ -191,6 +194,7 @@ void settings_init() {
 
     // clang-format off
     bed_settings = {
+        .control_mode = static_cast<BedControlMode>(preferences.getUInt(PREFERENCES_KEY_BED_CONTROL_MODE, bed_settings.control_mode)),
         .screw_lead_um = preferences.getUInt(PREFERENCES_KEY_BED_SCREW_LEAD, bed_settings.screw_lead_um),
         .microstep_multiplier = preferences.getUInt(PREFERENCES_KEY_BED_MICROSTEP_MULTIPLIER, bed_settings.microstep_multiplier),
         .steps_per_revolution = preferences.getUInt(PREFERENCES_KEY_BED_STEPS_PER_REVOLUTION, bed_settings.steps_per_revolution),
@@ -206,6 +210,7 @@ void settings_init() {
 
     preferences.end();
 
+    log_d("  control_mode: %d", bed_settings.control_mode);
     log_d("  screw_lead_um: %d", bed_settings.screw_lead_um);
     log_d("  microstep_multiplier: %d", bed_settings.microstep_multiplier);
     log_d("  steps_per_revolution: %d", bed_settings.steps_per_revolution);

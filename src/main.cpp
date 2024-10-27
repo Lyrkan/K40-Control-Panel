@@ -65,6 +65,8 @@ void display_update_task_func(void *params) {
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
+#else
+#include "Headless/headless_serial.h"
 #endif
 
 /**
@@ -225,6 +227,9 @@ void setup() {
         TASK_DISPLAY_UPDATE_PRIORITY,
         &display_update_task_handle,
         TASK_DISPLAY_UPDATE_CORE_ID);
+#else
+    /* Initialize Headless serial task */
+    headless_serial_init();
 #endif
 }
 

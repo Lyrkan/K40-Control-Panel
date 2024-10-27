@@ -16,6 +16,8 @@
 #if HAS_DISPLAY
 #include "UI/overlay.h"
 #include "UI/screens/status.h"
+#else
+#include "Headless/headless_serial.h"
 #endif
 
 static GrblSerialStatus grbl_serial_status = GRBL_SERIAL_STATUS_DISCONNECTED;
@@ -270,6 +272,8 @@ void grbl_set_serial_status(GrblSerialStatus serial_status) {
 
 #if HAS_DISPLAY
     ui_status_notify_update(STATUS_UPDATE_UART);
+#else
+    headless_send_status_message();
 #endif
 }
 

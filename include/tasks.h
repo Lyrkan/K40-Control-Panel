@@ -36,4 +36,15 @@ extern TaskHandle_t grbl_tx_task_handle;
 extern TaskHandle_t settings_save_task_handle;
 extern TaskHandle_t cpu_monitor_task_handle;
 
+#if !(HAS_DISPLAY)
+#define TASK_HEADLESS_RX_STACK_SIZE 3072
+#define TASK_HEADLESS_TX_STACK_SIZE 3072
+#define TASK_HEADLESS_RX_PRIORITY 1
+#define TASK_HEADLESS_TX_PRIORITY 1
+#define TASK_HEADLESS_RX_CORE_ID 0
+#define TASK_HEADLESS_TX_CORE_ID 0
+extern TaskHandle_t headless_rx_task_handle;
+extern TaskHandle_t headless_tx_task_handle;
+#endif
+
 #endif

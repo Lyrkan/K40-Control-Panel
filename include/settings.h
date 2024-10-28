@@ -4,7 +4,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <math.h>
-
+#include <ArduinoJson.h>
 #if HAS_DISPLAY
 #include "LGFX/LGFX.h"
 #endif
@@ -88,6 +88,8 @@ extern RelaysSettings relays_settings;
 
 void settings_init();
 void settings_schedule_save(uint32_t settings_types);
+void settings_get_json(JsonDocument &doc);
+void settings_update_from_json(const JsonObject &doc);
 
 #if HAS_DISPLAY
 void settings_load_touchscreen_calibration_data(LGFX *tft);

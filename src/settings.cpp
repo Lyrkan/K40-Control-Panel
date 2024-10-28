@@ -2,7 +2,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <Preferences.h>
-
+#include <ArduinoJson.h>
 #if HAS_DISPLAY
 #include "LGFX/LGFX.h"
 #endif
@@ -345,3 +345,149 @@ void settings_load_touchscreen_calibration_data(LGFX *tft) {
     preferences.end();
 }
 #endif
+
+void settings_get_json(JsonDocument& doc) {
+    // Bed settings
+    TAKE_MUTEX(bed_settings_mutex)
+    doc["bed"]["control_mode"] = bed_settings.control_mode;
+    doc["bed"]["screw_lead_um"] = bed_settings.screw_lead_um;
+    doc["bed"]["microstep_multiplier"] = bed_settings.microstep_multiplier;
+    doc["bed"]["steps_per_revolution"] = bed_settings.steps_per_revolution;
+    doc["bed"]["moving_speed"] = bed_settings.moving_speed;
+    doc["bed"]["homing_speed"] = bed_settings.homing_speed;
+    doc["bed"]["origin"]["is_set"] = bed_settings.origin.is_set;
+    doc["bed"]["origin"]["position_nm"] = bed_settings.origin.position_nm;
+    doc["bed"]["backoff_distance_um"] = bed_settings.backoff_distance_um;
+    RELEASE_MUTEX(bed_settings_mutex)
+
+    // Probes settings
+    TAKE_MUTEX(probes_settings_mutex)
+    doc["probes"]["cooling"]["flow"]["min"] = probes_settings.cooling_flow_min;
+    doc["probes"]["cooling"]["flow"]["max"] = probes_settings.cooling_flow_max;
+    doc["probes"]["cooling"]["temp"]["min"] = probes_settings.cooling_temp_min;
+    doc["probes"]["cooling"]["temp"]["max"] = probes_settings.cooling_temp_max;
+    RELEASE_MUTEX(probes_settings_mutex)
+
+    // OTA settings
+    TAKE_MUTEX(ota_settings_mutex)
+    doc["ota"]["login"] = ota_settings.login;
+    doc["ota"]["password"] = ota_settings.password;
+    RELEASE_MUTEX(ota_settings_mutex)
+
+    // GRBL settings
+    TAKE_MUTEX(grbl_settings_mutex)
+    doc["grbl"]["jog_speed"] = grbl_settings.jog_speed;
+    doc["grbl"]["default_timeout_ms"] = grbl_settings.default_timeout_ms;
+    doc["grbl"]["homing_timeout_ms"] = grbl_settings.homing_timeout_ms;
+    RELEASE_MUTEX(grbl_settings_mutex)
+
+    // Relays settings
+    TAKE_MUTEX(relays_settings_mutex)
+    doc["relays"]["alarm_behavior"] = relays_settings.alarm_behavior;
+    doc["relays"]["interlock_behavior"] = relays_settings.interlock_behavior;
+    RELEASE_MUTEX(relays_settings_mutex)
+}
+
+void settings_update_from_json(const JsonObject& doc) {
+    uint32_t updated_settings_types = 0;
+
+    // Bed settings
+    if (doc.containsKey("bed")) {
+        JsonObject bed = doc["bed"];
+        TAKE_MUTEX(bed_settings_mutex)
+        bool bed_updated = false;
+
+        if (bed.containsKey("control_mode")) bed_settings.control_mode = static_cast<BedControlMode>(bed["control_mode"].as<uint32_t>()), bed_updated = true;
+        if (bed.containsKey("screw_lead_um")) bed_settings.screw_lead_um = bed["screw_lead_um"].as<uint32_t>(), bed_updated = true;
+        if (bed.containsKey("microstep_multiplier")) bed_settings.microstep_multiplier = bed["microstep_multiplier"].as<uint32_t>(), bed_updated = true;
+        if (bed.containsKey("steps_per_revolution")) bed_settings.steps_per_revolution = bed["steps_per_revolution"].as<uint32_t>(), bed_updated = true;
+        if (bed.containsKey("moving_speed")) bed_settings.moving_speed = bed["moving_speed"].as<uint32_t>(), bed_updated = true;
+        if (bed.containsKey("homing_speed")) bed_settings.homing_speed = bed["homing_speed"].as<uint32_t>(), bed_updated = true;
+        if (bed.containsKey("backoff_distance_um")) bed_settings.backoff_distance_um = bed["backoff_distance_um"].as<uint32_t>(), bed_updated = true;
+
+        if (bed.containsKey("origin")) {
+            JsonObject origin = bed["origin"];
+            if (origin.containsKey("is_set")) bed_settings.origin.is_set = origin["is_set"].as<bool>();
+            if (origin.containsKey("position_nm")) bed_settings.origin.position_nm = origin["position_nm"].as<int32_t>();
+            bed_updated = true;
+        }
+
+        if (bed_updated) updated_settings_types |= SETTINGS_TYPE_BED;
+        RELEASE_MUTEX(bed_settings_mutex)
+    }
+
+    // Probes settings
+    if (doc.containsKey("probes")) {
+        JsonObject probes = doc["probes"];
+        TAKE_MUTEX(probes_settings_mutex)
+        bool probes_updated = false;
+
+        if (probes.containsKey("cooling")) {
+            JsonObject cooling = probes["cooling"];
+            if (cooling.containsKey("flow")) {
+                JsonObject flow = cooling["flow"];
+                if (flow.containsKey("min")) probes_settings.cooling_flow_min = flow["min"].as<float>(), probes_updated = true;
+                if (flow.containsKey("max")) probes_settings.cooling_flow_max = flow["max"].as<float>(), probes_updated = true;
+            }
+            if (cooling.containsKey("temp")) {
+                JsonObject temp = cooling["temp"];
+                if (temp.containsKey("min")) probes_settings.cooling_temp_min = temp["min"].as<float>(), probes_updated = true;
+                if (temp.containsKey("max")) probes_settings.cooling_temp_max = temp["max"].as<float>(), probes_updated = true;
+            }
+        }
+
+        if (probes_updated) updated_settings_types |= SETTINGS_TYPE_PROBES;
+        RELEASE_MUTEX(probes_settings_mutex)
+    }
+
+    // OTA settings
+    if (doc.containsKey("ota")) {
+        JsonObject ota = doc["ota"];
+        TAKE_MUTEX(ota_settings_mutex)
+        bool ota_updated = false;
+
+        if (ota.containsKey("login")) {
+            strlcpy(ota_settings.login, ota["login"].as<const char*>(), ARRAY_SIZE(ota_settings.login));
+            ota_updated = true;
+        }
+        if (ota.containsKey("password")) {
+            strlcpy(ota_settings.password, ota["password"].as<const char*>(), ARRAY_SIZE(ota_settings.password));
+            ota_updated = true;
+        }
+
+        if (ota_updated) updated_settings_types |= SETTINGS_TYPE_OTA;
+        RELEASE_MUTEX(ota_settings_mutex)
+    }
+
+    // GRBL settings
+    if (doc.containsKey("grbl")) {
+        JsonObject grbl = doc["grbl"];
+        TAKE_MUTEX(grbl_settings_mutex)
+        bool grbl_updated = false;
+
+        if (grbl.containsKey("jog_speed")) grbl_settings.jog_speed = grbl["jog_speed"].as<float>(), grbl_updated = true;
+        if (grbl.containsKey("default_timeout_ms")) grbl_settings.default_timeout_ms = grbl["default_timeout_ms"].as<uint32_t>(), grbl_updated = true;
+        if (grbl.containsKey("homing_timeout_ms")) grbl_settings.homing_timeout_ms = grbl["homing_timeout_ms"].as<uint32_t>(), grbl_updated = true;
+
+        if (grbl_updated) updated_settings_types |= SETTINGS_TYPE_GRBL;
+        RELEASE_MUTEX(grbl_settings_mutex)
+    }
+
+    // Relays settings
+    if (doc.containsKey("relays")) {
+        JsonObject relays = doc["relays"];
+        TAKE_MUTEX(relays_settings_mutex)
+        bool relays_updated = false;
+
+        if (relays.containsKey("alarm_behavior")) relays_settings.alarm_behavior = relays["alarm_behavior"].as<uint32_t>(), relays_updated = true;
+        if (relays.containsKey("interlock_behavior")) relays_settings.interlock_behavior = relays["interlock_behavior"].as<uint32_t>(), relays_updated = true;
+
+        if (relays_updated) updated_settings_types |= SETTINGS_TYPE_RELAYS;
+        RELEASE_MUTEX(relays_settings_mutex)
+    }
+
+    // If any settings were updated, schedule a save
+    if (updated_settings_types != 0) {
+        settings_schedule_save(updated_settings_types);
+    }
+}

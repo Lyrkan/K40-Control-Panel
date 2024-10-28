@@ -63,25 +63,21 @@ void headless_process_line(char *line) {
         break;
     }
 
+    case HEADLESS_ACTION_TYPE_SETTINGS_GET:
     case HEADLESS_ACTION_TYPE_SETTINGS_SET: {
-        if (!payload.is<JsonObject>()) {
-            log_e("Settings SET action requires an object payload");
-            return;
+        if (action == HEADLESS_ACTION_TYPE_SETTINGS_SET) {
+            if (!payload.is<JsonObject>()) {
+                log_e("Settings SET action requires an object payload");
+            } else {
+                JsonObject settings = payload.as<JsonObject>();
+                uint32_t updated_settings_types = 0;
+                settings_update_from_json(settings);
+            }
         }
 
-        JsonObject settings = payload.as<JsonObject>();
-        for (JsonPair setting : settings) {
-            log_d("Setting %s = %s", setting.key().c_str(), setting.value().as<const char *>());
-            // TODO: Implement settings update logic
-        }
-        break;
-    }
-
-    case HEADLESS_ACTION_TYPE_SETTINGS_GET: {
+        // Send back the updated settings
         StaticJsonDocument<512> settings_payload;
-
-        // TODO: Add settings to the payload
-
+        settings_get_json(settings_payload);
         headless_send_message(HEADLESS_MESSAGE_TYPE_SETTINGS, settings_payload);
         break;
     }

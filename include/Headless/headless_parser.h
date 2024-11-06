@@ -6,6 +6,7 @@ typedef enum HeadlessActionType {
     HEADLESS_ACTION_TYPE_SETTINGS_SET = 1,
     HEADLESS_ACTION_TYPE_SETTINGS_GET = 2,
     HEADLESS_ACTION_TYPE_STATUS = 3,
+    HEADLESS_ACTION_TYPE_RELAYS_SET = 4,
 } HeadlessActionType;
 
 void headless_process_line(char *line);

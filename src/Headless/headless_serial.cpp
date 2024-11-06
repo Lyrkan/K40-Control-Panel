@@ -132,6 +132,13 @@ static void headless_tx_task(void *param) {
     }
 }
 
+static void headless_status_update_task(void *param) {
+    while (true) {
+        headless_send_status_message();
+        vTaskDelay(pdMS_TO_TICKS(HEADLESS_STATUS_UPDATE_INTERVAL_MS));
+    }
+}
+
 void headless_serial_init() {
     // Set-up UART channel/pins
     const uart_config_t uart_config = {
@@ -173,6 +180,15 @@ void headless_serial_init() {
         TASK_HEADLESS_TX_PRIORITY,
         &headless_tx_task_handle,
         TASK_HEADLESS_TX_CORE_ID);
+
+    xTaskCreatePinnedToCore(
+        headless_status_update_task,
+        "headless_status_update",
+        TASK_HEADLESS_STATUS_UPDATE_STACK_SIZE,
+        NULL,
+        TASK_HEADLESS_STATUS_UPDATE_PRIORITY,
+        &headless_status_update_task_handle,
+        TASK_HEADLESS_STATUS_UPDATE_CORE_ID);
 }
 
 bool headless_send_message(HeadlessMessageType type, const JsonDocument &payload) {
@@ -236,11 +252,12 @@ bool headless_send_status_message() {
 }
 
 bool headless_send_grbl_report() {
-    StaticJsonDocument<512> payload;
+    StaticJsonDocument<1024> payload;
 
     TAKE_MUTEX(grbl_last_report_mutex)
 
     payload["state"] = grbl_last_report.state;
+    payload["alarm"] = grbl_last_report.alarm;
 
     if (grbl_last_report.w_pos.is_set) {
         payload["w_pos"]["x"] = grbl_last_report.w_pos.x;

@@ -1,11 +1,14 @@
 #include <Arduino.h>
 #include <string.h>
 #include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
 #include <ArduinoJson.h>
 
 #include "Headless/headless_parser.h"
 #include "Headless/headless_serial.h"
+#include "K40/relays.h"
 #include "Grbl/grbl_serial.h"
+#include "queues.h"
 #include "settings.h"
 
 void headless_process_line(char *line) {
@@ -85,6 +88,53 @@ void headless_process_line(char *line) {
     case HEADLESS_ACTION_TYPE_STATUS:
         headless_send_status_message();
         break;
+
+    case HEADLESS_ACTION_TYPE_RELAYS_SET: {
+        if (!payload.is<JsonObject>()) {
+            log_e("Relays SET action requires an object payload");
+            return;
+        }
+
+        JsonObject relays = payload.as<JsonObject>();
+
+        // Handle interlock relay
+        if (relays.containsKey("interlock")) {
+            RelaysCommand command = {
+                .pin = RELAY_PIN_INTERLOCK,
+                .state = relays["interlock"].as<bool>() ? RELAY_STATE_ENABLED : RELAY_STATE_DISABLED,
+            };
+            xQueueSendToBack(relays_command_queue, &command, pdMS_TO_TICKS(100));
+        }
+
+        // Handle air assist
+        if (relays.containsKey("air_assist")) {
+            GrblCommandCallbacks callbacks;
+            callbacks.on_failure = []() -> void { log_e("Air assist toggle failed or timed out"); };
+            grbl_toogle_air_assist(relays["air_assist"].as<bool>(), callbacks);
+        }
+
+        // Handle lights
+        if (relays.containsKey("light")) {
+            RelaysCommand command = {
+                .pin = RELAY_PIN_LIGHTS,
+                .state = relays["light"].as<bool>() ? RELAY_STATE_ENABLED : RELAY_STATE_DISABLED,
+            };
+            xQueueSendToBack(relays_command_queue, &command, pdMS_TO_TICKS(100));
+        }
+
+        // Handle beam preview
+        if (relays.containsKey("beam_preview")) {
+            RelaysCommand command = {
+                .pin = RELAY_PIN_BEAM_PREVIEW,
+                .state = relays["beam_preview"].as<bool>() ? RELAY_STATE_ENABLED : RELAY_STATE_DISABLED,
+            };
+            xQueueSendToBack(relays_command_queue, &command, pdMS_TO_TICKS(100));
+        }
+
+        // Send back updated status
+        headless_send_status_message();
+        break;
+    }
 
     default:
         log_e("Unknown action type: %d", action);

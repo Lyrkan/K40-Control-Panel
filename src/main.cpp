@@ -175,6 +175,26 @@ void setup() {
     settings_init();
 
 #if HAS_DISPLAY
+    static lv_disp_draw_buf_t draw_buf;
+    static lv_color_t buf[DISPLAY_SCREEN_WIDTH * 20];
+    static lv_disp_drv_t disp_drv;
+    static lv_indev_drv_t indev_drv;
+
+    lv_init();
+    lv_disp_draw_buf_init(&draw_buf, buf, NULL, DISPLAY_SCREEN_WIDTH * 20);
+    lv_disp_drv_init(&disp_drv);
+    disp_drv.hor_res = DISPLAY_SCREEN_WIDTH;
+    disp_drv.ver_res = DISPLAY_SCREEN_HEIGHT;
+    disp_drv.flush_cb = display_flush_cb;
+    disp_drv.draw_buf = &draw_buf;
+    lv_disp_drv_register(&disp_drv);
+
+    /* Initialize the (dummy) input device driver */
+    lv_indev_drv_init(&indev_drv);
+    indev_drv.type = LV_INDEV_TYPE_POINTER;
+    indev_drv.read_cb = touchpad_read_cb;
+    lv_indev_drv_register(&indev_drv);
+
     /* Initialize LGFX/LVGL */
     tft.begin();
     tft.setColorDepth(16);
@@ -184,6 +204,30 @@ void setup() {
     /* Initialize UI */
     ui_init();
 #endif
+
+    /* Setup pins */
+    pinMode(PIN_LID_STATUS_FRONT, INPUT);
+    pinMode(PIN_LID_STATUS_BACK, INPUT_PULLUP);
+    pinMode(PIN_FLAME_SENSOR, INPUT_PULLUP);
+    pinMode(RELAY_PIN_INTERLOCK, OUTPUT);
+    pinMode(RELAY_PIN_ALARM, OUTPUT);
+    pinMode(RELAY_PIN_LIGHTS, OUTPUT);
+    pinMode(RELAY_PIN_BEAM_PREVIEW, OUTPUT);
+    pinMode(PIN_COOLING_THERMISTOR_IN, INPUT);
+    pinMode(PIN_COOLING_FLOW_IN, INPUT_PULLUP);
+    pinMode(PIN_COOLING_THERMISTOR_OUT, INPUT);
+    pinMode(PIN_COOLING_FLOW_OUT, INPUT_PULLUP);
+    pinMode(PIN_BED_STEP, OUTPUT);
+    pinMode(PIN_BED_DIR, OUTPUT);
+    pinMode(PIN_BED_LIMIT, INPUT_PULLUP);
+    pinMode(PIN_BED_ENABLE, OUTPUT);
+
+    /* Set default state for relays */
+    relays_init();
+
+    /* Setup interrupts */
+    attachInterrupt(PIN_COOLING_FLOW_IN, cooling_flow_input_probe_interrupt, FALLING);
+    attachInterrupt(PIN_COOLING_FLOW_OUT, cooling_flow_output_probe_interrupt, FALLING);
 
     /* Initialize WiFi */
     wifi_init();

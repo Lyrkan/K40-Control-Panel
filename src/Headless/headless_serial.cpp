@@ -196,7 +196,7 @@ bool headless_send_message(HeadlessMessageType type, const JsonDocument &payload
     doc["t"] = type;
     doc["p"] = payload;
 
-    char message[HEADLESS_MAX_LINE_lENGTH + 2];
+    char *message = (char *)malloc(sizeof(char) * (HEADLESS_MAX_LINE_lENGTH + 2));
     serializeJson(doc, message, HEADLESS_MAX_LINE_lENGTH);
 
     int message_length = strlen(message);
@@ -204,7 +204,7 @@ bool headless_send_message(HeadlessMessageType type, const JsonDocument &payload
     message[message_length + 1] = '\0';
 
     log_d("Scheduling headless message: %s", message);
-    if (xQueueSendToBack(headless_tx_msg_queue, message, 0) != pdTRUE) {
+    if (xQueueSendToBack(headless_tx_msg_queue, &message, 0) != pdTRUE) {
         log_w("Headless TX queue seems to be full, a message was dropped");
         return false;
     }

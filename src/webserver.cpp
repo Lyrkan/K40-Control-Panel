@@ -55,14 +55,21 @@ static void handleApiInfoRequest(AsyncWebServerRequest *request) {
     state["system"]["cpu"]["load_percent"]["core_1"] = core_usage_percentage_1;
 
     TaskHandle_t task_handles[] = {
+#if HAS_DISPLAY
         display_update_task_handle,
+#else
+        headless_rx_task_handle,
+        headless_tx_task_handle,
+        headless_status_update_task_handle,
+#endif
         bed_update_task_handle,
         state_update_task_handle,
         grbl_rx_task_handle,
         grbl_tx_task_handle,
         settings_save_task_handle,
         cpu_monitor_task_handle,
-        xTaskGetCurrentTaskHandle()};
+        xTaskGetCurrentTaskHandle()
+    };
 
     const char *task_states[] = {
         "running",

@@ -130,7 +130,8 @@ void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {
         // Notify UI of new values
         ui_status_notify_update(STATUS_UPDATE_PROBE_COOLING);
 #else
-        headless_send_status_message();
+        // FIXME: Schedule a message instead of sending it immediately
+        // headless_send_status_message();
 #endif
     }
 

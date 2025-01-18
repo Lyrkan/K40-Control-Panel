@@ -35,7 +35,8 @@ void lids_update_status() {
         // Notify UI of new values
         ui_status_notify_update(STATUS_UPDATE_PROBE_LIDS);
 #else
-        headless_send_status_message();
+        // FIXME: Schedule a message instead of sending it immediately
+        // headless_send_status_message();
 #endif
     }
     RELEASE_MUTEX(lids_current_status_mutex);

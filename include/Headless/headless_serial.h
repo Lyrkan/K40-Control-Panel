@@ -30,7 +30,6 @@ typedef enum HeadlessMessageType {
 
 void headless_serial_init();
 bool headless_send_message(HeadlessMessageType type, const JsonDocument &payload);
-bool headless_send_status_message();
 bool headless_send_grbl_report();
 bool headless_send_grbl_message(const char *message);
 

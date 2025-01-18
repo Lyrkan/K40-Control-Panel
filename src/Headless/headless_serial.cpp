@@ -134,7 +134,43 @@ static void headless_tx_task(void *param) {
 
 static void headless_status_update_task(void *param) {
     while (true) {
-        headless_send_status_message();
+        StaticJsonDocument<512> payload;
+
+        // Retrieve sensors data
+        TAKE_MUTEX(cooling_current_status_mutex)
+        payload["sensors"]["cooling"]["flow"]["in"] = cooling_values.input_flow;
+        payload["sensors"]["cooling"]["flow"]["out"] = cooling_values.output_flow;
+        payload["sensors"]["cooling"]["temp"]["in"] = cooling_values.input_temperature;
+        payload["sensors"]["cooling"]["temp"]["out"] = cooling_values.output_temperature;
+        RELEASE_MUTEX(cooling_current_status_mutex)
+
+        TAKE_MUTEX(lids_current_status_mutex)
+        payload["sensors"]["lids"]["front"] = lids_states.front_opened ? "opened" : "closed";
+        payload["sensors"]["lids"]["back"] = lids_states.back_opened ? "opened" : "closed";
+        RELEASE_MUTEX(lids_current_status_mutex)
+
+        TAKE_MUTEX(flame_sensor_current_status_mutex)
+        payload["sensors"]["flame_sensor"]["triggered"] = flame_sensor_triggered;
+        RELEASE_MUTEX(flame_sensor_current_status_mutex)
+
+        // Retrieve alerts
+        uint8_t alerts_status = alerts_get_current_alerts();
+        payload["alerts"]["cooling"] = (alerts_status & ALERT_TYPE_COOLING) != 0;
+        payload["alerts"]["lids"] = (alerts_status & ALERT_TYPE_LIDS) != 0;
+        payload["alerts"]["flame_sensor"] = (alerts_status & ALERT_TYPE_FLAME_SENSOR) != 0;
+
+        // Retrieve relays state
+        payload["relays"]["interlock"] = relays_is_active(RELAY_PIN_INTERLOCK);
+        payload["relays"]["alarm"] = relays_is_active(RELAY_PIN_ALARM);
+        payload["relays"]["lights"] = relays_is_active(RELAY_PIN_LIGHTS);
+        payload["relays"]["beam_preview"] = relays_is_active(RELAY_PIN_BEAM_PREVIEW);
+
+        // Retrieve UART status
+        GrblSerialStatus serial_status = grbl_get_serial_status();
+        payload["uart"] = serial_status;
+
+        headless_send_message(HEADLESS_MESSAGE_TYPE_STATUS, payload);
+
         vTaskDelay(pdMS_TO_TICKS(HEADLESS_STATUS_UPDATE_INTERVAL_MS));
     }
 }
@@ -210,45 +246,6 @@ bool headless_send_message(HeadlessMessageType type, const JsonDocument &payload
     }
 
     return true;
-}
-
-bool headless_send_status_message() {
-    StaticJsonDocument<512> payload;
-
-    // Retrieve sensors data
-    TAKE_MUTEX(cooling_current_status_mutex)
-    payload["sensors"]["cooling"]["flow"]["in"] = cooling_values.input_flow;
-    payload["sensors"]["cooling"]["flow"]["out"] = cooling_values.output_flow;
-    payload["sensors"]["cooling"]["temp"]["in"] = cooling_values.input_temperature;
-    payload["sensors"]["cooling"]["temp"]["out"] = cooling_values.output_temperature;
-    RELEASE_MUTEX(cooling_current_status_mutex)
-
-    TAKE_MUTEX(lids_current_status_mutex)
-    payload["sensors"]["lids"]["front"] = lids_states.front_opened ? "opened" : "closed";
-    payload["sensors"]["lids"]["back"] = lids_states.back_opened ? "opened" : "closed";
-    RELEASE_MUTEX(lids_current_status_mutex)
-
-    TAKE_MUTEX(flame_sensor_current_status_mutex)
-    payload["sensors"]["flame_sensor"]["triggered"] = flame_sensor_triggered;
-    RELEASE_MUTEX(flame_sensor_current_status_mutex)
-
-    // Retrieve alerts
-    uint8_t alerts_status = alerts_get_current_alerts();
-    payload["alerts"]["cooling"] = (alerts_status & ALERT_TYPE_COOLING) != 0;
-    payload["alerts"]["lids"] = (alerts_status & ALERT_TYPE_LIDS) != 0;
-    payload["alerts"]["flame_sensor"] = (alerts_status & ALERT_TYPE_FLAME_SENSOR) != 0;
-
-    // Retrieve relays state
-    payload["relays"]["interlock"] = relays_is_active(RELAY_PIN_INTERLOCK);
-    payload["relays"]["alarm"] = relays_is_active(RELAY_PIN_ALARM);
-    payload["relays"]["lights"] = relays_is_active(RELAY_PIN_LIGHTS);
-    payload["relays"]["beam_preview"] = relays_is_active(RELAY_PIN_BEAM_PREVIEW);
-
-    // Retrieve UART status
-    GrblSerialStatus serial_status = grbl_get_serial_status();
-    payload["uart"] = serial_status;
-
-    return headless_send_message(HEADLESS_MESSAGE_TYPE_STATUS, payload);
 }
 
 bool headless_send_grbl_report() {

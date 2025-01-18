@@ -33,7 +33,8 @@ void flame_sensor_update_status() {
         // Notify UI of new value
         ui_status_notify_update(STATUS_UPDATE_PROBE_FLAME_SENSOR);
 #else
-        headless_send_status_message();
+        // FIXME: Schedule a message instead of sending it immediately
+        // headless_send_status_message();
 #endif
     }
     RELEASE_MUTEX(flame_sensor_current_status_mutex);

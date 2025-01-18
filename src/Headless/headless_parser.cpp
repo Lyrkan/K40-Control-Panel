@@ -86,7 +86,8 @@ void headless_process_line(char *line) {
     }
 
     case HEADLESS_ACTION_TYPE_STATUS:
-        headless_send_status_message();
+        // FIXME: Schedule a message instead of sending it immediately
+        // headless_send_status_message();
         break;
 
     case HEADLESS_ACTION_TYPE_RELAYS_SET: {
@@ -130,9 +131,6 @@ void headless_process_line(char *line) {
             };
             xQueueSendToBack(relays_command_queue, &command, pdMS_TO_TICKS(100));
         }
-
-        // Send back updated status
-        headless_send_status_message();
         break;
     }
 

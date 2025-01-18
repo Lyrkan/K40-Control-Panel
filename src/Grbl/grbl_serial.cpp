@@ -273,7 +273,8 @@ void grbl_set_serial_status(GrblSerialStatus serial_status) {
 #if HAS_DISPLAY
     ui_status_notify_update(STATUS_UPDATE_UART);
 #else
-    headless_send_status_message();
+    // FIXME: Schedule a message instead of sending it immediately
+    // headless_send_status_message();
 #endif
 }
 

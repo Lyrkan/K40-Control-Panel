@@ -118,7 +118,7 @@ static void headless_tx_task(void *param) {
                 continue;
             }
 
-            log_d("Sending message from headless TX queue: %s", message.buffer);
+            log_d("Sending message from headless TX queue: %s", message);
             if (write(fd, message, strnlen(message, HEADLESS_MAX_LINE_lENGTH)) == -1) {
                 log_e("Could not write buffer to headless serial: %d", errno);
                 free(message);

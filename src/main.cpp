@@ -207,7 +207,7 @@ void setup() {
 
     /* Setup pins */
     pinMode(PIN_LID_STATUS_FRONT, INPUT);
-    pinMode(PIN_LID_STATUS_BACK, INPUT_PULLUP);
+    pinMode(PIN_LID_STATUS_BACK, INPUT);
     pinMode(PIN_FLAME_SENSOR, INPUT_PULLUP);
     pinMode(RELAY_PIN_INTERLOCK, OUTPUT);
     pinMode(RELAY_PIN_ALARM, OUTPUT);

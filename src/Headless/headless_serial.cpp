@@ -25,6 +25,9 @@
 static SemaphoreHandle_t headless_serial_status_mutex = xSemaphoreCreateMutex();
 static QueueHandle_t headless_tx_msg_queue = xQueueCreate(HEADLESS_TX_QUEUE_SIZE, sizeof(char *));
 
+static StaticEventGroup_t headless_serial_event_group_static;
+static EventGroupHandle_t headless_update_event_group = xEventGroupCreateStatic(&headless_serial_event_group_static);
+
 static void headless_rx_task(void *param) {
     char rx_line_buffer[HEADLESS_MAX_LINE_lENGTH + 1] = {0};
     int rx_line_buffer_idx = 0;
@@ -132,101 +135,6 @@ static void headless_tx_task(void *param) {
     }
 }
 
-static void headless_status_update_task(void *param) {
-    while (true) {
-        StaticJsonDocument<512> payload;
-
-        // Retrieve sensors data
-        TAKE_MUTEX(cooling_current_status_mutex)
-        payload["sensors"]["cooling"]["flow"]["in"] = cooling_values.input_flow;
-        payload["sensors"]["cooling"]["flow"]["out"] = cooling_values.output_flow;
-        payload["sensors"]["cooling"]["temp"]["in"] = cooling_values.input_temperature;
-        payload["sensors"]["cooling"]["temp"]["out"] = cooling_values.output_temperature;
-        RELEASE_MUTEX(cooling_current_status_mutex)
-
-        TAKE_MUTEX(lids_current_status_mutex)
-        payload["sensors"]["lids"]["front"] = lids_states.front_opened ? "opened" : "closed";
-        payload["sensors"]["lids"]["back"] = lids_states.back_opened ? "opened" : "closed";
-        RELEASE_MUTEX(lids_current_status_mutex)
-
-        TAKE_MUTEX(flame_sensor_current_status_mutex)
-        payload["sensors"]["flame_sensor"]["triggered"] = flame_sensor_triggered;
-        RELEASE_MUTEX(flame_sensor_current_status_mutex)
-
-        // Retrieve alerts
-        uint8_t alerts_status = alerts_get_current_alerts();
-        payload["alerts"]["cooling"] = (alerts_status & ALERT_TYPE_COOLING) != 0;
-        payload["alerts"]["lids"] = (alerts_status & ALERT_TYPE_LIDS) != 0;
-        payload["alerts"]["flame_sensor"] = (alerts_status & ALERT_TYPE_FLAME_SENSOR) != 0;
-
-        // Retrieve relays state
-        payload["relays"]["interlock"] = relays_is_active(RELAY_PIN_INTERLOCK);
-        payload["relays"]["alarm"] = relays_is_active(RELAY_PIN_ALARM);
-        payload["relays"]["lights"] = relays_is_active(RELAY_PIN_LIGHTS);
-        payload["relays"]["beam_preview"] = relays_is_active(RELAY_PIN_BEAM_PREVIEW);
-
-        // Retrieve UART status
-        GrblSerialStatus serial_status = grbl_get_serial_status();
-        payload["uart"] = serial_status;
-
-        headless_send_message(HEADLESS_MESSAGE_TYPE_STATUS, payload);
-
-        vTaskDelay(pdMS_TO_TICKS(HEADLESS_STATUS_UPDATE_INTERVAL_MS));
-    }
-}
-
-void headless_serial_init() {
-    // Set-up UART channel/pins
-    const uart_config_t uart_config = {
-        .baud_rate = HEADLESS_UART_BAUD_RATE,
-        .data_bits = UART_DATA_8_BITS,
-        .parity = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .source_clk = UART_SCLK_APB,
-    };
-
-    ESP_ERROR_CHECK(uart_param_config(HEADLESS_UART_CHANNEL, &uart_config));
-    ESP_ERROR_CHECK(uart_set_pin(HEADLESS_UART_CHANNEL, PIN_HEADLESS_TX, PIN_HEADLESS_RX, -1, -1));
-    ESP_ERROR_CHECK(uart_driver_install(
-        HEADLESS_UART_CHANNEL,
-        HEADLESS_UART_RX_BUFFER_SIZE,
-        HEADLESS_UART_TX_BUFFER_SIZE,
-        0,
-        NULL,
-        0));
-
-    // Set-up VFS to use UART driver
-    esp_vfs_dev_uart_use_driver(HEADLESS_UART_CHANNEL);
-
-    // Start TX/RX consumers
-    xTaskCreatePinnedToCore(
-        headless_rx_task,
-        "headless_rx",
-        TASK_HEADLESS_RX_STACK_SIZE,
-        NULL,
-        TASK_HEADLESS_RX_PRIORITY,
-        &headless_rx_task_handle,
-        TASK_HEADLESS_RX_CORE_ID);
-
-    xTaskCreatePinnedToCore(
-        headless_tx_task,
-        "headless_tx",
-        TASK_HEADLESS_TX_STACK_SIZE,
-        NULL,
-        TASK_HEADLESS_TX_PRIORITY,
-        &headless_tx_task_handle,
-        TASK_HEADLESS_TX_CORE_ID);
-
-    xTaskCreatePinnedToCore(
-        headless_status_update_task,
-        "headless_status_update",
-        TASK_HEADLESS_STATUS_UPDATE_STACK_SIZE,
-        NULL,
-        TASK_HEADLESS_STATUS_UPDATE_PRIORITY,
-        &headless_status_update_task_handle,
-        TASK_HEADLESS_STATUS_UPDATE_CORE_ID);
-}
-
 bool headless_send_message(HeadlessMessageType type, const JsonDocument &payload) {
     StaticJsonDocument<1024> doc;
     doc["t"] = type;
@@ -246,6 +154,49 @@ bool headless_send_message(HeadlessMessageType type, const JsonDocument &payload
     }
 
     return true;
+}
+
+void headless_send_status_update() {
+    StaticJsonDocument<512> payload;
+
+    // Retrieve sensors data
+    TAKE_MUTEX(cooling_current_status_mutex)
+    payload["sensors"]["cooling"]["flow"]["in"] = cooling_values.input_flow;
+    payload["sensors"]["cooling"]["flow"]["out"] = cooling_values.output_flow;
+    payload["sensors"]["cooling"]["temp"]["in"] = cooling_values.input_temperature;
+    payload["sensors"]["cooling"]["temp"]["out"] = cooling_values.output_temperature;
+    RELEASE_MUTEX(cooling_current_status_mutex)
+
+    TAKE_MUTEX(lids_current_status_mutex)
+    payload["sensors"]["lids"]["front"] = lids_states.front_opened ? "opened" : "closed";
+    payload["sensors"]["lids"]["back"] = lids_states.back_opened ? "opened" : "closed";
+    RELEASE_MUTEX(lids_current_status_mutex)
+
+    TAKE_MUTEX(flame_sensor_current_status_mutex)
+    payload["sensors"]["flame_sensor"]["triggered"] = flame_sensor_triggered;
+    RELEASE_MUTEX(flame_sensor_current_status_mutex)
+
+    // Retrieve alerts
+    uint8_t alerts_status = alerts_get_current_alerts();
+    payload["alerts"]["cooling"] = (alerts_status & ALERT_TYPE_COOLING) != 0;
+    payload["alerts"]["lids"] = (alerts_status & ALERT_TYPE_LIDS) != 0;
+    payload["alerts"]["flame_sensor"] = (alerts_status & ALERT_TYPE_FLAME_SENSOR) != 0;
+
+    // Retrieve relays state
+    TAKE_MUTEX(grbl_last_report_mutex)
+    bool air_assist_enabled = (grbl_last_report.enabled_accessories & GRBL_ACCESSORY_FLAG_MIST_COOLANT) != 0;
+    RELEASE_MUTEX(grbl_last_report_mutex)
+    payload["relays"]["interlock"] = relays_is_active(RELAY_PIN_INTERLOCK);
+    payload["relays"]["alarm"] = relays_is_active(RELAY_PIN_ALARM);
+    payload["relays"]["lights"] = relays_is_active(RELAY_PIN_LIGHTS);
+    payload["relays"]["beam_preview"] = relays_is_active(RELAY_PIN_BEAM_PREVIEW);
+    payload["relays"]["air_assist"] = air_assist_enabled;
+
+    // Retrieve UART status
+    GrblSerialStatus serial_status = grbl_get_serial_status();
+    payload["uart"] = serial_status;
+
+    headless_send_message(HEADLESS_MESSAGE_TYPE_STATUS, payload);
 }
 
 bool headless_send_grbl_report() {
@@ -309,8 +260,105 @@ bool headless_send_grbl_report() {
     payload["active_pins"]["r"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_R) != 0;
     payload["active_pins"]["s"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_S) != 0;
 
+    payload["active_accessories"]["spindle_cw"] =
+        (grbl_last_report.enabled_accessories & GRBL_ACCESSORY_FLAG_SPINDLE_CW) != 0;
+    payload["active_accessories"]["spindle_ccw"] =
+        (grbl_last_report.enabled_accessories & GRBL_ACCESSORY_FLAG_SPINDLE_CCW) != 0;
+    payload["active_accessories"]["flood_coolant"] =
+        (grbl_last_report.enabled_accessories & GRBL_ACCESSORY_FLAG_FLOOD_COOLANT) != 0;
+    payload["active_accessories"]["mist_coolant"] =
+        (grbl_last_report.enabled_accessories & GRBL_ACCESSORY_FLAG_MIST_COOLANT) != 0;
+
     return headless_send_message(HEADLESS_MESSAGE_TYPE_GRBL_REPORT, payload);
 }
+
+static void headless_status_update_task(void *param) {
+    while (true) {
+        uint8_t pending_updates = xEventGroupGetBits(headless_update_event_group);
+        bool pending_grbl_report_update = (pending_updates & HEADLESS_UPDATE_GRBL_REPORT) != 0;
+        bool pending_status_update = (pending_updates & HEADLESS_UPDATE_STATUS) != 0;
+
+        static unsigned long last_forced_update_time = 0;
+        unsigned long current_time = millis();
+        if (last_forced_update_time == 0) {
+            last_forced_update_time = current_time;
+        }
+
+        unsigned long delta_time = current_time - last_forced_update_time;
+        bool force_update = false;
+        if (delta_time > HEADLESS_FORCED_UPDATE_INTERVAL_MS) {
+            force_update = true;
+            last_forced_update_time = current_time;
+        }
+
+        if (force_update || pending_grbl_report_update) {
+            headless_send_grbl_report();
+            xEventGroupClearBits(headless_update_event_group, HEADLESS_UPDATE_GRBL_REPORT);
+        }
+
+        if (force_update || pending_status_update) {
+            headless_send_status_update();
+            xEventGroupClearBits(headless_update_event_group, HEADLESS_UPDATE_STATUS);
+        }
+
+        // Check every HEADLESS_UPDATE_CHECK_INTERVAL_MS milliseconds if there are any pending updates
+        vTaskDelay(pdMS_TO_TICKS(HEADLESS_UPDATE_CHECK_INTERVAL_MS));
+    }
+}
+
+void headless_serial_init() {
+    // Set-up UART channel/pins
+    const uart_config_t uart_config = {
+        .baud_rate = HEADLESS_UART_BAUD_RATE,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .source_clk = UART_SCLK_APB,
+    };
+
+    ESP_ERROR_CHECK(uart_param_config(HEADLESS_UART_CHANNEL, &uart_config));
+    ESP_ERROR_CHECK(uart_set_pin(HEADLESS_UART_CHANNEL, PIN_HEADLESS_TX, PIN_HEADLESS_RX, -1, -1));
+    ESP_ERROR_CHECK(uart_driver_install(
+        HEADLESS_UART_CHANNEL,
+        HEADLESS_UART_RX_BUFFER_SIZE,
+        HEADLESS_UART_TX_BUFFER_SIZE,
+        0,
+        NULL,
+        0));
+
+    // Set-up VFS to use UART driver
+    esp_vfs_dev_uart_use_driver(HEADLESS_UART_CHANNEL);
+
+    // Start TX/RX consumers
+    xTaskCreatePinnedToCore(
+        headless_rx_task,
+        "headless_rx",
+        TASK_HEADLESS_RX_STACK_SIZE,
+        NULL,
+        TASK_HEADLESS_RX_PRIORITY,
+        &headless_rx_task_handle,
+        TASK_HEADLESS_RX_CORE_ID);
+
+    xTaskCreatePinnedToCore(
+        headless_tx_task,
+        "headless_tx",
+        TASK_HEADLESS_TX_STACK_SIZE,
+        NULL,
+        TASK_HEADLESS_TX_PRIORITY,
+        &headless_tx_task_handle,
+        TASK_HEADLESS_TX_CORE_ID);
+
+    xTaskCreatePinnedToCore(
+        headless_status_update_task,
+        "headless_status_update",
+        TASK_HEADLESS_STATUS_UPDATE_STACK_SIZE,
+        NULL,
+        TASK_HEADLESS_STATUS_UPDATE_PRIORITY,
+        &headless_status_update_task_handle,
+        TASK_HEADLESS_STATUS_UPDATE_CORE_ID);
+}
+
+void headless_notify_update(uint8_t update_types) { xEventGroupSetBits(headless_update_event_group, update_types); }
 
 bool headless_send_grbl_message(const char *message) {
     StaticJsonDocument<128> payload;

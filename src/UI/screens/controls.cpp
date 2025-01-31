@@ -449,10 +449,8 @@ void ui_controls_update(bool initialize) {
     if (initialize || (delta_time > CONTROLS_STATE_UPDATE_INTERVAL)) {
         // Retrieve relays state from the queue object
         const bool interlock_active = relays_is_active(RELAY_PIN_INTERLOCK);
-        const bool air_assist_active = false; // TODO Retrieve air assist state
         const bool lights_active = relays_is_active(RELAY_PIN_LIGHTS);
         const bool beam_preview_active = relays_is_active(RELAY_PIN_BEAM_PREVIEW);
-
         const bool interlock_disabled = relays_is_disabled(RELAY_PIN_INTERLOCK);
 
         // Update switches to match the current state

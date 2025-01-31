@@ -139,7 +139,7 @@ void grbl_update_last_report(const GrblReport *report) {
     ui_status_notify_update(STATUS_UPDATE_GRBL_REPORT);
     ui_controls_notify_update(CONTROLS_UPDATE_GRBL_REPORT);
 #else
-    headless_send_grbl_report();
+    headless_notify_update(HEADLESS_UPDATE_GRBL_REPORT);
 #endif
 }
 
@@ -151,6 +151,6 @@ void grbl_update_last_alarm(GrblAlarm alarm) {
 #if HAS_DISPLAY
     ui_status_notify_update(STATUS_UPDATE_GRBL_REPORT);
 #else
-    headless_send_grbl_report();
+    headless_notify_update(HEADLESS_UPDATE_GRBL_REPORT);
 #endif
 }

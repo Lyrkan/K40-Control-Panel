@@ -86,8 +86,7 @@ void headless_process_line(char *line) {
     }
 
     case HEADLESS_ACTION_TYPE_STATUS:
-        // FIXME: Schedule a message instead of sending it immediately
-        // headless_send_status_message();
+        headless_notify_update(HEADLESS_UPDATE_STATUS);
         break;
 
     case HEADLESS_ACTION_TYPE_RELAYS_SET: {
@@ -115,10 +114,10 @@ void headless_process_line(char *line) {
         }
 
         // Handle lights
-        if (relays.containsKey("light")) {
+        if (relays.containsKey("lights")) {
             RelaysCommand command = {
                 .pin = RELAY_PIN_LIGHTS,
-                .state = relays["light"].as<bool>() ? RELAY_STATE_ENABLED : RELAY_STATE_DISABLED,
+                .state = relays["lights"].as<bool>() ? RELAY_STATE_ENABLED : RELAY_STATE_DISABLED,
             };
             xQueueSendToBack(relays_command_queue, &command, pdMS_TO_TICKS(100));
         }

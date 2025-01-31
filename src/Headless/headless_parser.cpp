@@ -45,7 +45,8 @@ void headless_process_line(char *line) {
         }
 
         const char *message = payload["message"];
-        static int message_id = payload["id"];
+        static int message_id;
+        message_id = payload["id"];
 
         // Setup callbacks to send acknowledgment
         GrblCommandCallbacks callbacks;

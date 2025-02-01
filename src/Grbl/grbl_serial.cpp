@@ -280,6 +280,12 @@ void grbl_set_serial_status(GrblSerialStatus serial_status) {
 bool grbl_send_message(const char *message, GrblCommandCallbacks callbacks, bool send_to_front) {
     TAKE_MUTEX(grbl_settings_mutex)
     uint32_t timeout_ms = grbl_settings.default_timeout_ms;
+
+    // Check if this is a homing command ($H...)
+    if (strncmp(message, "$H", 2) == 0) {
+        timeout_ms = grbl_settings.homing_timeout_ms;
+    }
+
     RELEASE_MUTEX(grbl_settings_mutex);
 
     return grbl_send_message(message, timeout_ms, callbacks, send_to_front);
@@ -379,11 +385,7 @@ bool grbl_send_home_command(uint8_t axis_flags, GrblCommandCallbacks callbacks) 
         snprintf(buffer, ARRAY_SIZE(buffer), "%s%c", buffer, 'Z');
     }
 
-    TAKE_MUTEX(grbl_settings_mutex)
-    uint32_t homing_timeout_ms = grbl_settings.homing_timeout_ms;
-    RELEASE_MUTEX(grbl_settings_mutex);
-
-    return grbl_send_message(buffer, homing_timeout_ms, callbacks);
+    return grbl_send_message(buffer, callbacks);
 }
 
 bool grbl_send_move_command(GrblMoveCommand command, GrblCommandCallbacks callbacks) {

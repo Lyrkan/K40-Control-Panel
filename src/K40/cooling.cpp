@@ -62,7 +62,7 @@ void cooling_update_status(esp_adc_cal_characteristics_t *adc_chars) {
             (COOLING_THERMISTOR_REF_VOLTAGE - input_thermistor_pin_voltage);
         cooling_output_thermistor_buffer[cooling_thermistor_buffer_index] =
             (output_thermistor_pin_voltage * COOLING_THERMISTOR_VOLTAGE_DIVIDER_RESISTANCE) /
-            (COOLING_THERMISTOR_REF_VOLTAGE - input_thermistor_pin_voltage);
+            (COOLING_THERMISTOR_REF_VOLTAGE - output_thermistor_pin_voltage);
         cooling_thermistor_buffer_index++;
 
         // If the buffer is full compute the average temperature

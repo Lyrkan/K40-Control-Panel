@@ -173,7 +173,7 @@ void headless_send_status_update() {
     RELEASE_MUTEX(lids_current_status_mutex)
 
     TAKE_MUTEX(flame_sensor_current_status_mutex)
-    payload["sensors"]["flame_sensor"]["triggered"] = flame_sensor_triggered;
+    payload["sensors"]["flame_sensor"] = flame_sensor_triggered ? "triggered" : "ok";
     RELEASE_MUTEX(flame_sensor_current_status_mutex)
 
     // Retrieve alerts

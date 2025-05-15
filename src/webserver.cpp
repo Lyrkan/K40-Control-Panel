@@ -143,7 +143,7 @@ static void handleApiRelaysRequest(AsyncWebServerRequest *request) {
     state["relays"]["interlock"] = relays_is_active(RELAY_PIN_INTERLOCK);
     state["relays"]["alarm"] = relays_is_active(RELAY_PIN_ALARM);
     state["relays"]["lights"] = relays_is_active(RELAY_PIN_LIGHTS);
-    state["relays"]["beam_preview"] = relays_is_active(RELAY_PIN_BEAM_PREVIEW);
+    state["relays"]["accessory"] = relays_is_active(RELAY_PIN_ACCESSORY);
 
     // Serialize JSON data and send it to the client
     response->setLength();

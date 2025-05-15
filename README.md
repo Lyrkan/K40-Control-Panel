@@ -31,7 +31,7 @@ What it **CAN** do:
 -   Control the CO2 laser interlock based on the current state
 -   Control a 5V/12V alarm indicator
 -   Control 5V/12V lights
--   Control 5V/12V laser diodes
+-   Control 5V/12V accessories
 -   Control a motorized bed (based on [this design](https://www.printables.com/model/597476-k40-motorized-bed), but it should work with other ones as long as the stepper can be controled using a DRV8825 driver)
 -   Retrieve the current state of the machine and move the laser head through UART (requires a FluidNC board)
 -   Enable/disable air assist (requires a FluidNC board)
@@ -76,7 +76,7 @@ Other things you may need:
 -   2x YF-B4 flow sensor with a thermistor (preferably one with a `50kΩ` resistance at 25°C and `B=3950K`)
 -   1x LM393 IR flame sensor module
 -   2x micro switches (1 for each lid you want to monitor, you can use a jumper instead if desired)
--   1x (or 2x depending on your needs) 5V/12V laser diodes
+-   1x 5V/12V accessory
 -   1x 5V/12V LED light (for the enclosure)
 -   1x 5V/12V alarm module (for instance a blinking light)
 
@@ -258,7 +258,7 @@ GET http://<YOUR_PANEL_IP>/api/relays
         "cooling": true,
         "alarm": false,
         "lights": true,
-        "beam_preview": true
+        "accessory": true
     }
 }
 ```

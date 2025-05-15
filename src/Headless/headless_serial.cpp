@@ -189,7 +189,7 @@ void headless_send_status_update() {
     payload["relays"]["interlock"] = relays_is_active(RELAY_PIN_INTERLOCK);
     payload["relays"]["alarm"] = relays_is_active(RELAY_PIN_ALARM);
     payload["relays"]["lights"] = relays_is_active(RELAY_PIN_LIGHTS);
-    payload["relays"]["beam_preview"] = relays_is_active(RELAY_PIN_BEAM_PREVIEW);
+    payload["relays"]["accessory"] = relays_is_active(RELAY_PIN_ACCESSORY);
     payload["relays"]["air_assist"] = air_assist_enabled;
 
     // Retrieve UART status

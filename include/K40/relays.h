@@ -10,7 +10,7 @@ typedef enum {
     RELAY_PIN_INTERLOCK = 12,
     RELAY_PIN_ALARM = 4,
     RELAY_PIN_LIGHTS = 13,
-    RELAY_PIN_BEAM_PREVIEW = 26
+    RELAY_PIN_ACCESSORY = 26
 } RelayPin;
 
 typedef struct {

@@ -123,11 +123,11 @@ void headless_process_line(char *line) {
             xQueueSendToBack(relays_command_queue, &command, pdMS_TO_TICKS(100));
         }
 
-        // Handle beam preview
-        if (relays.containsKey("beam_preview")) {
+        // Handle accessory
+        if (relays.containsKey("accessory")) {
             RelaysCommand command = {
-                .pin = RELAY_PIN_BEAM_PREVIEW,
-                .state = relays["beam_preview"].as<bool>() ? RELAY_STATE_ENABLED : RELAY_STATE_DISABLED,
+                .pin = RELAY_PIN_ACCESSORY,
+                .state = relays["accessory"].as<bool>() ? RELAY_STATE_ENABLED : RELAY_STATE_DISABLED,
             };
             xQueueSendToBack(relays_command_queue, &command, pdMS_TO_TICKS(100));
         }

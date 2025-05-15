@@ -9,7 +9,7 @@
 #include "queues.h"
 #include "settings.h"
 
-static RelayPin relay_pins[] = {RELAY_PIN_INTERLOCK, RELAY_PIN_ALARM, RELAY_PIN_LIGHTS, RELAY_PIN_BEAM_PREVIEW};
+static RelayPin relay_pins[] = {RELAY_PIN_INTERLOCK, RELAY_PIN_ALARM, RELAY_PIN_LIGHTS, RELAY_PIN_ACCESSORY};
 
 static inline uint8_t relays_get_pin_state_value(RelayPin pin, RelayState state) {
     switch (pin) {
@@ -19,7 +19,7 @@ static inline uint8_t relays_get_pin_state_value(RelayPin pin, RelayState state)
 
     // MOSFETs
     case RELAY_PIN_LIGHTS:
-    case RELAY_PIN_BEAM_PREVIEW:
+    case RELAY_PIN_ACCESSORY:
     case RELAY_PIN_ALARM:
         return (state == RELAY_STATE_ENABLED) ? HIGH : LOW;
     }
@@ -31,7 +31,7 @@ void relays_init() {
     digitalWrite(RELAY_PIN_INTERLOCK, relays_get_pin_state_value(RELAY_PIN_INTERLOCK, RELAY_STATE_ENABLED));
     digitalWrite(RELAY_PIN_ALARM, relays_get_pin_state_value(RELAY_PIN_ALARM, RELAY_STATE_ENABLED));
     digitalWrite(RELAY_PIN_LIGHTS, relays_get_pin_state_value(RELAY_PIN_LIGHTS, RELAY_STATE_ENABLED));
-    digitalWrite(RELAY_PIN_BEAM_PREVIEW, relays_get_pin_state_value(RELAY_PIN_BEAM_PREVIEW, RELAY_STATE_ENABLED));
+    digitalWrite(RELAY_PIN_ACCESSORY, relays_get_pin_state_value(RELAY_PIN_ACCESSORY, RELAY_STATE_ENABLED));
 }
 
 bool relays_is_active(RelayPin pin) { return digitalRead(pin) == relays_get_pin_state_value(pin, RELAY_STATE_ENABLED); }

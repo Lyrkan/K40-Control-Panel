@@ -29,7 +29,7 @@ static lv_obj_t *ui_controls_laser_move_y_matrix;
 static lv_obj_t *ui_controls_interlock_switch;
 static lv_obj_t *ui_controls_air_assist_switch;
 static lv_obj_t *ui_controls_lights_switch;
-static lv_obj_t *ui_controls_preview_switch;
+static lv_obj_t *ui_controls_accessory_switch;
 
 static void ui_controls_lock_grbl_controls() {
     lv_obj_add_state(ui_controls_laser_home_button, LV_STATE_DISABLED);
@@ -169,8 +169,8 @@ static void ui_controls_switch_handler(lv_event_t *e) {
         relay_pin = RELAY_PIN_INTERLOCK;
     } else if (target == ui_controls_lights_switch) {
         relay_pin = RELAY_PIN_LIGHTS;
-    } else if (target == ui_controls_preview_switch) {
-        relay_pin = RELAY_PIN_BEAM_PREVIEW;
+    } else if (target == ui_controls_accessory_switch) {
+        relay_pin = RELAY_PIN_ACCESSORY;
     } else if (target == ui_controls_air_assist_switch) {
         GrblCommandCallbacks grbl_command_callbacks = GrblCommandCallbacks();
         grbl_command_callbacks.on_finished = []() -> void {
@@ -331,12 +331,12 @@ void ui_controls_init_screen_content() {
     lv_obj_set_y(ui_controls_lights_switch_label, 30);
     lv_label_set_text(ui_controls_lights_switch_label, "Lights");
 
-    lv_obj_t *ui_controls_preview_switch_label = lv_label_create(ui_controls_toggles_card);
-    lv_obj_set_width(ui_controls_preview_switch_label, LV_SIZE_CONTENT);
-    lv_obj_set_height(ui_controls_preview_switch_label, LV_SIZE_CONTENT);
-    lv_obj_set_x(ui_controls_preview_switch_label, 230);
-    lv_obj_set_y(ui_controls_preview_switch_label, 60);
-    lv_label_set_text(ui_controls_preview_switch_label, "Beam preview");
+    lv_obj_t *ui_controls_accessory_switch_label = lv_label_create(ui_controls_toggles_card);
+    lv_obj_set_width(ui_controls_accessory_switch_label, LV_SIZE_CONTENT);
+    lv_obj_set_height(ui_controls_accessory_switch_label, LV_SIZE_CONTENT);
+    lv_obj_set_x(ui_controls_accessory_switch_label, 230);
+    lv_obj_set_y(ui_controls_accessory_switch_label, 60);
+    lv_label_set_text(ui_controls_accessory_switch_label, "Accessory");
 
     ui_controls_interlock_switch = lv_switch_create(ui_controls_toggles_card);
     lv_obj_set_width(ui_controls_interlock_switch, 50);
@@ -359,12 +359,12 @@ void ui_controls_init_screen_content() {
     lv_obj_set_y(ui_controls_lights_switch, 30);
     lv_obj_add_event_cb(ui_controls_lights_switch, ui_controls_switch_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
-    ui_controls_preview_switch = lv_switch_create(ui_controls_toggles_card);
-    lv_obj_set_width(ui_controls_preview_switch, 50);
-    lv_obj_set_height(ui_controls_preview_switch, 25);
-    lv_obj_set_x(ui_controls_preview_switch, 330);
-    lv_obj_set_y(ui_controls_preview_switch, 60);
-    lv_obj_add_event_cb(ui_controls_preview_switch, ui_controls_switch_handler, LV_EVENT_VALUE_CHANGED, NULL);
+    ui_controls_accessory_switch = lv_switch_create(ui_controls_toggles_card);
+    lv_obj_set_width(ui_controls_accessory_switch, 50);
+    lv_obj_set_height(ui_controls_accessory_switch, 25);
+    lv_obj_set_x(ui_controls_accessory_switch, 330);
+    lv_obj_set_y(ui_controls_accessory_switch, 60);
+    lv_obj_add_event_cb(ui_controls_accessory_switch, ui_controls_switch_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
     // Force the first update
     ui_controls_update(true);
@@ -450,7 +450,7 @@ void ui_controls_update(bool initialize) {
         // Retrieve relays state from the queue object
         const bool interlock_active = relays_is_active(RELAY_PIN_INTERLOCK);
         const bool lights_active = relays_is_active(RELAY_PIN_LIGHTS);
-        const bool beam_preview_active = relays_is_active(RELAY_PIN_BEAM_PREVIEW);
+        const bool accessory_active = relays_is_active(RELAY_PIN_ACCESSORY);
         const bool interlock_disabled = relays_is_disabled(RELAY_PIN_INTERLOCK);
 
         // Update switches to match the current state
@@ -463,8 +463,8 @@ void ui_controls_update(bool initialize) {
         lights_active ? lv_obj_add_state(ui_controls_lights_switch, LV_STATE_CHECKED)
                       : lv_obj_clear_state(ui_controls_lights_switch, LV_STATE_CHECKED);
 
-        beam_preview_active ? lv_obj_add_state(ui_controls_preview_switch, LV_STATE_CHECKED)
-                            : lv_obj_clear_state(ui_controls_preview_switch, LV_STATE_CHECKED);
+        accessory_active ? lv_obj_add_state(ui_controls_accessory_switch, LV_STATE_CHECKED)
+                         : lv_obj_clear_state(ui_controls_accessory_switch, LV_STATE_CHECKED);
 
         // Reset timer
         last_update = current_time;

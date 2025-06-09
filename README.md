@@ -18,9 +18,6 @@
     <a title="Last release"><img src="https://img.shields.io/github/release/Lyrkan/K40-Control-Panel.svg"></a>
 </p>
 
-> [!WARNING]
-> I am currently testing a new iteration of the control board that fixes a few things and adds some safety features. The code, documentation and Gerber files have **not** been updated yet. I plan to release that version in a few weeks, so I would recommend to wait a little bit more before jumping into this project.
-
 ## Overview
 
 What it **CAN** do:
@@ -41,28 +38,30 @@ What it **CANNOT** do (_yet_):
 
 -   Start or control a job
 -   Trigger the laser
--   Send arbitrary Gcode
 
 ## BOM
 
 For the control panel:
 
 -   1x 38 pins ESP32-S with a spacing of 24mm between pin rows (**not** 25.5mm)
--   1x ST7796 (recommended) or ILI9488 (slower) 3.95" LCD screen
--   1x DRV8825 stepper driver
+-   1x ST7796 (recommended) or ILI9488 (slower) 3.95" LCD screen (not needed if you want to use it in headless mode, for instance with [Phosphoros](https://github.com/Lyrkan/Phosphoros))
+-   1x DRV8825 stepper driver (only if you want to drive your motorized bed from this board, GRBL is also supported)
 -   1x TSR-1-2450 5V regulator (or a less-efficient L7805CV - you will want to add a heatsink if you go this way)
 -   4x IRLML6244 N-channel MOSFETs
 -   1x MF-LSMF200/24X-2 resettable fuse
 -   4x 1N4007 diodes
--   1x 15kΩ 1/4W R1206 SMD resistor
+-   1x SRDA3.3-4DR2G diode
+-   4x 220Ω 1/4W R1206 SMD resistor
+-   3x 1kΩ 1/4W R1206 SMD resistor
 -   3x 2.2kΩ 1/4W R1206 SMD resistor
--   9x 10kΩ 1/4W R1206 SMD resistors
--   3x 1kΩ 1/4W R1206 SMD resistors
--   4x 220Ω 1/4W R1206 SMD resistors
+-   9x 10kΩ 1/4W R1206 SMD resistor
+-   1x 15kΩ 1/4W R1206 SMD resistor
+-   1x 51kΩ 1/4W R1206 SMD resistor
+-   2x 100kΩ 1/4W R1206 SMD resistor
 -   1x 0.1uF electrolytic capacitors
 -   1x 100uF electrolytic capacitors
--   1x 0.33uF ceramic capacitors
 -   4x 0.1uF ceramic capacitors
+-   1x 0.33uF ceramic capacitors
 -   4x 2.2-3V 0805 SMD LEDs
 -   1x SRD-12VDC-SL-C relay
 -   1x 2P PCB terminal blocks (5mm pitch)
@@ -78,7 +77,7 @@ Other things you may need:
 -   2x micro switches (1 for each lid you want to monitor, you can use a jumper instead if desired)
 -   1x 5V/12V accessory
 -   1x 5V/12V LED light (for the enclosure)
--   1x 5V/12V alarm module (for instance a blinking light)
+-   1x 5V/12V alarm module (for instance a blinking light or a relay)
 
 ## Building the firmware
 
@@ -113,9 +112,9 @@ This PCB requires some SMD soldering, this is not that hard to do but I would st
 
 Some notes:
 
--   If you are using a different PSU for the control panel and your FluidNC board make sure that both of them have a common ground in order for UART to work as intended
+-   If you are using a different PSU for the control panel and your FluidNC board make sure that both of them share a common ground in order for UART to work as intended
 -   Some MS1/MS2/MS3 jumpers have to be installed if you want to use microstepping, refer to the DRV8825 datasheet to know which ones
--   Also use jumpers to select the voltage for "Diodes" and "Lights" connectors
+-   Also use jumpers to select the voltage for "Accessory" and "Lights" connectors
 -   Use shielded cables if needed (and ground the shield **on one side only**)
 
 ## Showcase

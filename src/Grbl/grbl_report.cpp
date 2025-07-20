@@ -47,8 +47,8 @@ GrblReport::GrblReport() {
         .spindle_speed = 0,
     };
     line_number = 0;
-    active_pins = 0;
-    enabled_accessories = 0;
+    active_pins = GRBL_PIN_FLAG_UNKNOWN;
+    enabled_accessories = GRBL_ACCESSORY_FLAG_UNKNOWN;
 }
 
 void GrblReport::update(const GrblReport *report) {

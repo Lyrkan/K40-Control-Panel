@@ -348,15 +348,13 @@ void ui_status_update(bool initialize) {
         snprintf(
             cooling_output_temp_formatted_value,
             ARRAY_SIZE(cooling_output_temp_formatted_value),
-            (cooling_values.input_temperature <= COOLING_THERMISTOR_MINIMUM_TEMPERATURE) ? "Not detected" : "%2.1f°C",
+            (cooling_values.output_temperature <= COOLING_THERMISTOR_MINIMUM_TEMPERATURE) ? "Not detected" : "%2.1f°C",
             cooling_values.output_temperature);
         lv_label_set_text(ui_status_cooling_output_temp_value, cooling_output_temp_formatted_value);
         lv_bar_set_value(ui_status_cooling_output_temp_bar, (int)cooling_values.output_temperature, LV_ANIM_ON);
 
         RELEASE_MUTEX(cooling_current_status_mutex)
-        xEventGroupClearBits(
-            ui_status_event_group,
-            STATUS_UPDATE_PROBE_COOLING | STATUS_UPDATE_PROBE_LIDS | STATUS_UPDATE_PROBE_FLAME_SENSOR);
+        xEventGroupClearBits(ui_status_event_group, STATUS_UPDATE_PROBE_COOLING);
     }
 
     // Update lids widgets

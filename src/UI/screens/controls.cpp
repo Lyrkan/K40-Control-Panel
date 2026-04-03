@@ -58,7 +58,7 @@ static void ui_controls_btnmatrix_handler(lv_event_t *e) {
     // Detect when GRBL command are fully process to release UI
     GrblCommandCallbacks grbl_command_callbacks = GrblCommandCallbacks();
     grbl_command_callbacks.on_finished = []() -> void {
-        ui_controls_notify_update(CONTROLS_UPDATE_GRBL_COMMMAND_ENDED);
+        ui_controls_notify_update(CONTROLS_UPDATE_GRBL_COMMAND_ENDED);
     };
 
     if (event_target == NULL) {
@@ -125,7 +125,7 @@ static void ui_controls_button_handler(lv_event_t *e) {
     // Detect when GRBL command are fully process to release UI
     GrblCommandCallbacks grbl_command_callbacks = GrblCommandCallbacks();
     grbl_command_callbacks.on_finished = []() -> void {
-        ui_controls_notify_update(CONTROLS_UPDATE_GRBL_COMMMAND_ENDED);
+        ui_controls_notify_update(CONTROLS_UPDATE_GRBL_COMMAND_ENDED);
     };
 
     if (event_target == NULL) {
@@ -174,14 +174,14 @@ static void ui_controls_switch_handler(lv_event_t *e) {
     } else if (target == ui_controls_air_assist_switch) {
         GrblCommandCallbacks grbl_command_callbacks = GrblCommandCallbacks();
         grbl_command_callbacks.on_finished = []() -> void {
-            ui_controls_notify_update(CONTROLS_UPDATE_GRBL_COMMMAND_ENDED);
+            ui_controls_notify_update(CONTROLS_UPDATE_GRBL_COMMAND_ENDED);
         };
         grbl_command_callbacks.on_failure = []() -> void {
             ui_overlay_add_flash_message(FLASH_LEVEL_DANGER, "Air assist toggle failed or timed out");
         };
 
         ui_controls_lock_grbl_controls();
-        grbl_toogle_air_assist(lv_obj_has_state(target, LV_STATE_CHECKED), grbl_command_callbacks);
+        grbl_toggle_air_assist(lv_obj_has_state(target, LV_STATE_CHECKED), grbl_command_callbacks);
     }
 
     if (relay_pin != -1) {
@@ -403,7 +403,7 @@ void ui_controls_update(bool initialize) {
 
     uint8_t pending_updates = xEventGroupGetBits(ui_controls_event_group);
     bool pending_grbl_report_update = initialize || ((pending_updates & CONTROLS_UPDATE_GRBL_REPORT) != 0);
-    bool grbl_command_ended_update = initialize || ((pending_updates & CONTROLS_UPDATE_GRBL_COMMMAND_ENDED) != 0);
+    bool grbl_command_ended_update = initialize || ((pending_updates & CONTROLS_UPDATE_GRBL_COMMAND_ENDED) != 0);
 
     if (pending_grbl_report_update) {
         TAKE_MUTEX(grbl_last_report_mutex)
@@ -434,7 +434,7 @@ void ui_controls_update(bool initialize) {
 
     if (grbl_command_ended_update) {
         ui_controls_unlock_grbl_controls();
-        xEventGroupClearBits(ui_controls_event_group, CONTROLS_UPDATE_GRBL_COMMMAND_ENDED);
+        xEventGroupClearBits(ui_controls_event_group, CONTROLS_UPDATE_GRBL_COMMAND_ENDED);
     }
 
     // Update relays state on an interval

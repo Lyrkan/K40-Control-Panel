@@ -29,7 +29,7 @@ static StaticEventGroup_t headless_serial_event_group_static;
 static EventGroupHandle_t headless_update_event_group = xEventGroupCreateStatic(&headless_serial_event_group_static);
 
 static void headless_rx_task(void *param) {
-    char rx_line_buffer[HEADLESS_MAX_LINE_lENGTH + 1] = {0};
+    char rx_line_buffer[HEADLESS_MAX_LINE_LENGTH + 1] = {0};
     int rx_line_buffer_idx = 0;
     bool rx_ignore_current_line = false;
 
@@ -61,11 +61,11 @@ static void headless_rx_task(void *param) {
                 if (FD_ISSET(fd, &rfds)) {
                     char buf;
                     ssize_t read_bytes;
-                    while ((read_bytes = read(fd, &buf, 1) > 0)) {
+                    while ((read_bytes = read(fd, &buf, 1)) > 0) {
                         if (buf == '\n' || buf == '\r') {
                             if (rx_ignore_current_line) {
                                 log_d(
-                                    "Last instruction was ignored because its size exceeded HEADLESS_MAX_LINE_lENGTH");
+                                    "Last instruction was ignored because its size exceeded HEADLESS_MAX_LINE_LENGTH");
                                 rx_ignore_current_line = false;
                             } else {
                                 headless_process_line(rx_line_buffer);
@@ -79,8 +79,8 @@ static void headless_rx_task(void *param) {
                             continue;
                         }
 
-                        if (rx_line_buffer_idx >= HEADLESS_MAX_LINE_lENGTH) {
-                            log_e("Current buffer length exceeds GRBL_MAX_LINE_lENGTH, ignoring everything until the "
+                        if (rx_line_buffer_idx >= HEADLESS_MAX_LINE_LENGTH) {
+                            log_e("Current buffer length exceeds GRBL_MAX_LINE_LENGTH, ignoring everything until the "
                                   "next line");
                             rx_ignore_current_line = true;
                             continue;
@@ -122,7 +122,7 @@ static void headless_tx_task(void *param) {
             }
 
             log_d("Sending message from headless TX queue: %s", message);
-            if (write(fd, message, strnlen(message, HEADLESS_MAX_LINE_lENGTH)) == -1) {
+            if (write(fd, message, strnlen(message, HEADLESS_MAX_LINE_LENGTH)) == -1) {
                 log_e("Could not write buffer to headless serial: %d", errno);
                 free(message);
                 break;
@@ -135,13 +135,14 @@ static void headless_tx_task(void *param) {
     }
 }
 
-bool headless_send_message(HeadlessMessageType type, const JsonDocument &payload) {
-    StaticJsonDocument<1024> doc;
-    doc["t"] = type;
-    doc["p"] = payload;
+static bool headless_enqueue_doc(const JsonDocument &doc) {
+    char *message = (char *)malloc(sizeof(char) * (HEADLESS_MAX_LINE_LENGTH + 2));
+    if (message == NULL) {
+        log_e("Headless: malloc failed for TX message");
+        return false;
+    }
 
-    char *message = (char *)malloc(sizeof(char) * (HEADLESS_MAX_LINE_lENGTH + 2));
-    serializeJson(doc, message, HEADLESS_MAX_LINE_lENGTH);
+    serializeJson(doc, message, HEADLESS_MAX_LINE_LENGTH);
 
     int message_length = strlen(message);
     message[message_length] = '\n';
@@ -150,14 +151,24 @@ bool headless_send_message(HeadlessMessageType type, const JsonDocument &payload
     log_d("Scheduling headless message: %s", message);
     if (xQueueSendToBack(headless_tx_msg_queue, &message, 0) != pdTRUE) {
         log_w("Headless TX queue seems to be full, a message was dropped");
+        free(message);
         return false;
     }
 
     return true;
 }
 
+bool headless_send_message(HeadlessMessageType type, const JsonDocument &payload) {
+    StaticJsonDocument<1024> doc;
+    doc["t"] = type;
+    doc["p"] = payload;
+    return headless_enqueue_doc(doc);
+}
+
 void headless_send_status_update() {
-    StaticJsonDocument<512> payload;
+    StaticJsonDocument<1024> doc;
+    doc["t"] = HEADLESS_MESSAGE_TYPE_STATUS;
+    JsonObject payload = doc.createNestedObject("p");
 
     // Retrieve sensors data
     TAKE_MUTEX(cooling_current_status_mutex)
@@ -196,11 +207,13 @@ void headless_send_status_update() {
     GrblSerialStatus serial_status = grbl_get_serial_status();
     payload["uart"] = serial_status;
 
-    headless_send_message(HEADLESS_MESSAGE_TYPE_STATUS, payload);
+    headless_enqueue_doc(doc);
 }
 
 bool headless_send_grbl_report() {
-    StaticJsonDocument<1024> payload;
+    StaticJsonDocument<1024> doc;
+    doc["t"] = HEADLESS_MESSAGE_TYPE_GRBL_REPORT;
+    JsonObject payload = doc.createNestedObject("p");
 
     TAKE_MUTEX(grbl_last_report_mutex)
 
@@ -249,27 +262,28 @@ bool headless_send_grbl_report() {
     payload["line_number"] = grbl_last_report.line_number;
 
     int active_pins = grbl_last_report.active_pins;
+    int enabled_accessories = grbl_last_report.enabled_accessories;
     RELEASE_MUTEX(grbl_last_report_mutex)
 
-    payload["active_pins"]["x"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_X) != 0;
-    payload["active_pins"]["y"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_Y) != 0;
-    payload["active_pins"]["z"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_Z) != 0;
-    payload["active_pins"]["p"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_P) != 0;
-    payload["active_pins"]["d"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_D) != 0;
-    payload["active_pins"]["h"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_H) != 0;
-    payload["active_pins"]["r"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_R) != 0;
-    payload["active_pins"]["s"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_S) != 0;
+    payload["active_pins"]["x"] = (active_pins & GRBL_PIN_FLAG_X) != 0;
+    payload["active_pins"]["y"] = (active_pins & GRBL_PIN_FLAG_Y) != 0;
+    payload["active_pins"]["z"] = (active_pins & GRBL_PIN_FLAG_Z) != 0;
+    payload["active_pins"]["p"] = (active_pins & GRBL_PIN_FLAG_P) != 0;
+    payload["active_pins"]["d"] = (active_pins & GRBL_PIN_FLAG_D) != 0;
+    payload["active_pins"]["h"] = (active_pins & GRBL_PIN_FLAG_H) != 0;
+    payload["active_pins"]["r"] = (active_pins & GRBL_PIN_FLAG_R) != 0;
+    payload["active_pins"]["s"] = (active_pins & GRBL_PIN_FLAG_S) != 0;
 
     payload["active_accessories"]["spindle_cw"] =
-        (grbl_last_report.enabled_accessories & GRBL_ACCESSORY_FLAG_SPINDLE_CW) != 0;
+        (enabled_accessories & GRBL_ACCESSORY_FLAG_SPINDLE_CW) != 0;
     payload["active_accessories"]["spindle_ccw"] =
-        (grbl_last_report.enabled_accessories & GRBL_ACCESSORY_FLAG_SPINDLE_CCW) != 0;
+        (enabled_accessories & GRBL_ACCESSORY_FLAG_SPINDLE_CCW) != 0;
     payload["active_accessories"]["flood_coolant"] =
-        (grbl_last_report.enabled_accessories & GRBL_ACCESSORY_FLAG_FLOOD_COOLANT) != 0;
+        (enabled_accessories & GRBL_ACCESSORY_FLAG_FLOOD_COOLANT) != 0;
     payload["active_accessories"]["mist_coolant"] =
-        (grbl_last_report.enabled_accessories & GRBL_ACCESSORY_FLAG_MIST_COOLANT) != 0;
+        (enabled_accessories & GRBL_ACCESSORY_FLAG_MIST_COOLANT) != 0;
 
-    return headless_send_message(HEADLESS_MESSAGE_TYPE_GRBL_REPORT, payload);
+    return headless_enqueue_doc(doc);
 }
 
 static void headless_status_update_task(void *param) {

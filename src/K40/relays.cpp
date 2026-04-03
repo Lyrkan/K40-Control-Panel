@@ -113,8 +113,7 @@ void relays_update() {
 
     while (xQueueReceive(relays_command_queue, &relays_command, 0) == pdTRUE) {
         // Make sure we don't activate a relay that is supposed to be disabled
-        if (relays_command.state == relays_get_pin_state_value(relays_command.pin, RELAY_STATE_ENABLED) &&
-            relays_is_disabled(relays_command.pin)) {
+        if (relays_command.state == RELAY_STATE_ENABLED && relays_is_disabled(relays_command.pin)) {
             continue;
         }
 

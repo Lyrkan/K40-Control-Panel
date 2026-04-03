@@ -11,7 +11,7 @@
 #define GRBL_UART_BAUD_RATE 115200
 #define GRBL_UART_RX_BUFFER_SIZE 2048
 #define GRBL_UART_TX_BUFFER_SIZE 0
-#define GRBL_MAX_LINE_lENGTH 100
+#define GRBL_MAX_LINE_LENGTH 100
 #define GRBL_TX_QUEUE_SIZE 10
 #define GRBL_INIT_MESSAGES_DELAY_MS 5000
 #define GRBL_MESSAGE_STATUS "?"
@@ -85,6 +85,6 @@ bool grbl_send_message(
 bool grbl_send_init_commands();
 bool grbl_send_home_command(uint8_t axis_flags, GrblCommandCallbacks callbacks = GrblCommandCallbacks());
 bool grbl_send_move_command(GrblMoveCommand command, GrblCommandCallbacks callbacks = GrblCommandCallbacks());
-bool grbl_toogle_air_assist(bool enable, GrblCommandCallbacks callbacks = GrblCommandCallbacks());
+bool grbl_toggle_air_assist(bool enable, GrblCommandCallbacks callbacks = GrblCommandCallbacks());
 
 #endif

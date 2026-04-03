@@ -25,7 +25,7 @@ static SemaphoreHandle_t grbl_serial_status_mutex = xSemaphoreCreateMutex();
 static QueueHandle_t grbl_tx_msg_queue = xQueueCreate(GRBL_TX_QUEUE_SIZE, sizeof(GrblCommand));
 
 static void grbl_rx_task(void *param) {
-    char rx_line_buffer[GRBL_MAX_LINE_lENGTH + 1] = {0};
+    char rx_line_buffer[GRBL_MAX_LINE_LENGTH + 1] = {0};
     int rx_line_buffer_idx = 0;
     bool rx_ignore_current_line = false;
 
@@ -57,10 +57,10 @@ static void grbl_rx_task(void *param) {
                 if (FD_ISSET(fd, &rfds)) {
                     char buf;
                     ssize_t read_bytes;
-                    while ((read_bytes = read(fd, &buf, 1) > 0)) {
+                    while ((read_bytes = read(fd, &buf, 1)) > 0) {
                         if (buf == '\n' || buf == '\r') {
                             if (rx_ignore_current_line) {
-                                log_d("Last instruction was ignored because its size exceeded GRBL_MAX_LINE_lENGTH");
+                                log_d("Last instruction was ignored because its size exceeded GRBL_MAX_LINE_LENGTH");
                                 rx_ignore_current_line = false;
                             } else {
                                 grbl_process_line(rx_line_buffer);
@@ -74,8 +74,8 @@ static void grbl_rx_task(void *param) {
                             continue;
                         }
 
-                        if (rx_line_buffer_idx >= GRBL_MAX_LINE_lENGTH) {
-                            log_e("Current buffer length exceeds GRBL_MAX_LINE_lENGTH, ignoring everything until the "
+                        if (rx_line_buffer_idx >= GRBL_MAX_LINE_LENGTH) {
+                            log_e("Current buffer length exceeds GRBL_MAX_LINE_LENGTH, ignoring everything until the "
                                   "next line");
                             rx_ignore_current_line = true;
                             continue;
@@ -128,7 +128,7 @@ static void grbl_tx_task(void *param) {
 
             log_d("Sending message from TX queue: %s", message.buffer);
             xTaskNotifyStateClearIndexed(NULL, GRBL_TASK_NOTIFY_ACK_INDEX);
-            if (write(fd, message.buffer, strnlen(message.buffer, GRBL_MAX_LINE_lENGTH)) == -1) {
+            if (write(fd, message.buffer, strnlen(message.buffer, GRBL_MAX_LINE_LENGTH)) == -1) {
                 log_e("Could not write buffer to serial: %d", errno);
 
 #if HAS_DISPLAY
@@ -294,7 +294,7 @@ bool grbl_send_message(const char *message, GrblCommandCallbacks callbacks, bool
 bool grbl_send_message(
     const char *message, uint32_t ack_timeout_ms, GrblCommandCallbacks callbacks, bool send_to_front) {
     size_t message_length = strlen(message);
-    if (message_length > GRBL_MAX_LINE_lENGTH) {
+    if (message_length > GRBL_MAX_LINE_LENGTH) {
         log_e("Message length exceeds GRBL_MAX_LINE_LENGTH: %s", message);
 
 #if HAS_DISPLAY
@@ -320,6 +320,7 @@ bool grbl_send_message(
         log_d("Scheduling Grbl message with high priority (timeout: %dms): %s", command.ack_timeout_ms, command.buffer);
         if (xQueueSendToFront(grbl_tx_msg_queue, &command, 0) != pdTRUE) {
             log_w("TX queue seems to be full, a message was dropped");
+            free(message_copy);
 
 #if HAS_DISPLAY
             ui_overlay_add_flash_message(
@@ -333,6 +334,7 @@ bool grbl_send_message(
         log_d("Scheduling Grbl message with low priority (timeout: %dms): %s", command.ack_timeout_ms, command.buffer);
         if (xQueueSendToBack(grbl_tx_msg_queue, &command, 0) != pdTRUE) {
             log_w("TX queue seems to be full, a message was dropped");
+            free(message_copy);
 
 #if HAS_DISPLAY
             ui_overlay_add_flash_message(
@@ -374,16 +376,18 @@ bool grbl_send_home_command(uint8_t axis_flags, GrblCommandCallbacks callbacks) 
         (axis_flags & GRBL_AXIS_Y) != 0 ? "Y" : "",
         (axis_flags & GRBL_AXIS_Z) != 0 ? "Z" : "");
 
-    char buffer[ARRAY_SIZE("$HXYZ")] = "$H\0";
+    char buffer[ARRAY_SIZE("$HXYZ")] = "$H";
+    size_t len = strlen(buffer);
     if ((axis_flags & GRBL_AXIS_X) != 0) {
-        snprintf(buffer, ARRAY_SIZE(buffer), "%s%c", buffer, 'X');
+        buffer[len++] = 'X';
     }
     if ((axis_flags & GRBL_AXIS_Y) != 0) {
-        snprintf(buffer, ARRAY_SIZE(buffer), "%s%c", buffer, 'Y');
+        buffer[len++] = 'Y';
     }
     if ((axis_flags & GRBL_AXIS_Z) != 0) {
-        snprintf(buffer, ARRAY_SIZE(buffer), "%s%c", buffer, 'Z');
+        buffer[len++] = 'Z';
     }
+    buffer[len] = '\0';
 
     return grbl_send_message(buffer, callbacks);
 }
@@ -402,35 +406,43 @@ bool grbl_send_move_command(GrblMoveCommand command, GrblCommandCallbacks callba
         (command.axis_flags & GRBL_AXIS_Z) != 0 ? command.z : 0,
         command.feed_rate);
 
-    char buffer[ARRAY_SIZE("$J=G21 G90 F0000.0 X000.00 Y000.00 Z000.00")] = "$J=G21\0";
+    char buffer[ARRAY_SIZE("$J=G21 G90 F0000.0 X000.00 Y000.00 Z000.00")] = "$J=G21";
+    size_t len = strlen(buffer);
+    size_t remaining = ARRAY_SIZE(buffer) - len;
 
     // Set absolute/relative mode
     switch (command.move_mode) {
     case GRBL_MOVE_MODE_ABSOLUTE:
-        snprintf(buffer, ARRAY_SIZE(buffer), "%s G90", buffer);
+        len += snprintf(buffer + len, remaining, " G90");
+        remaining = ARRAY_SIZE(buffer) - len;
         break;
     case GRBL_MOVE_MODE_RELATIVE:
-        snprintf(buffer, ARRAY_SIZE(buffer), "%s G91", buffer);
+        len += snprintf(buffer + len, remaining, " G91");
+        remaining = ARRAY_SIZE(buffer) - len;
         break;
     }
 
     // Set feed rate
-    snprintf(buffer, ARRAY_SIZE(buffer), "%s F%.1f", buffer, command.feed_rate * 60);
+    len += snprintf(buffer + len, remaining, " F%.1f", command.feed_rate * 60);
+    remaining = ARRAY_SIZE(buffer) - len;
 
     // Set target
     if ((command.axis_flags & GRBL_AXIS_X) != 0) {
-        snprintf(buffer, ARRAY_SIZE(buffer), "%s X%.2f", buffer, command.x);
+        len += snprintf(buffer + len, remaining, " X%.2f", command.x);
+        remaining = ARRAY_SIZE(buffer) - len;
     }
     if ((command.axis_flags & GRBL_AXIS_Y) != 0) {
-        snprintf(buffer, ARRAY_SIZE(buffer), "%s Y%.2f", buffer, command.y);
+        len += snprintf(buffer + len, remaining, " Y%.2f", command.y);
+        remaining = ARRAY_SIZE(buffer) - len;
     }
     if ((command.axis_flags & GRBL_AXIS_Z) != 0) {
-        snprintf(buffer, ARRAY_SIZE(buffer), "%s Z%.2f", buffer, command.z);
+        len += snprintf(buffer + len, remaining, " Z%.2f", command.z);
+        remaining = ARRAY_SIZE(buffer) - len;
     }
 
     return grbl_send_message(buffer, callbacks);
 }
 
-bool grbl_toogle_air_assist(bool enable, GrblCommandCallbacks callbacks) {
+bool grbl_toggle_air_assist(bool enable, GrblCommandCallbacks callbacks) {
     return grbl_send_message(enable ? GRBL_MESSAGE_ENABLE_AIR_ASSIST : GRBL_MESSAGE_DISABLE_AIR_ASSIST, callbacks);
 }

@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <string.h>
 #include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include <freertos/queue.h>
 #include <ArduinoJson.h>
 
@@ -10,6 +11,8 @@
 #include "Grbl/grbl_serial.h"
 #include "queues.h"
 #include "settings.h"
+
+static SemaphoreHandle_t headless_grbl_command_mutex = xSemaphoreCreateMutex();
 
 void headless_process_line(char *line) {
     // Make sure we have at least one char
@@ -21,7 +24,7 @@ void headless_process_line(char *line) {
     log_d("Received Headless data: %s", line);
 
     // Parse JSON input
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<1024> doc;
     DeserializationError error = deserializeJson(doc, line);
     if (error) {
         log_e("Failed to parse JSON input: %s", error.c_str());
@@ -46,24 +49,41 @@ void headless_process_line(char *line) {
 
         const char *message = payload["message"];
         static int message_id;
+
+        if (xSemaphoreTake(headless_grbl_command_mutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+            log_w("Previous headless GRBL command still pending, sending failure ACK");
+            StaticJsonDocument<128> ack_payload;
+            ack_payload["id"] = payload["id"];
+            ack_payload["success"] = false;
+            headless_send_message(HEADLESS_MESSAGE_TYPE_GRBL_ACK, ack_payload);
+            break;
+        }
+
         message_id = payload["id"];
 
-        // Setup callbacks to send acknowledgment
         GrblCommandCallbacks callbacks;
         callbacks.on_success = []() -> void {
             StaticJsonDocument<128> ack_payload;
             ack_payload["id"] = message_id;
             ack_payload["success"] = true;
             headless_send_message(HEADLESS_MESSAGE_TYPE_GRBL_ACK, ack_payload);
+            xSemaphoreGive(headless_grbl_command_mutex);
         };
         callbacks.on_failure = []() -> void {
             StaticJsonDocument<128> ack_payload;
             ack_payload["id"] = message_id;
             ack_payload["success"] = false;
             headless_send_message(HEADLESS_MESSAGE_TYPE_GRBL_ACK, ack_payload);
+            xSemaphoreGive(headless_grbl_command_mutex);
         };
 
-        grbl_send_message(message, callbacks);
+        if (!grbl_send_message(message, callbacks)) {
+            StaticJsonDocument<128> ack_payload;
+            ack_payload["id"] = message_id;
+            ack_payload["success"] = false;
+            headless_send_message(HEADLESS_MESSAGE_TYPE_GRBL_ACK, ack_payload);
+            xSemaphoreGive(headless_grbl_command_mutex);
+        }
         break;
     }
 
@@ -74,7 +94,6 @@ void headless_process_line(char *line) {
                 log_e("Settings SET action requires an object payload");
             } else {
                 JsonObject settings = payload.as<JsonObject>();
-                uint32_t updated_settings_types = 0;
                 settings_update_from_json(settings);
             }
         }
@@ -111,7 +130,7 @@ void headless_process_line(char *line) {
         if (relays.containsKey("air_assist")) {
             GrblCommandCallbacks callbacks;
             callbacks.on_failure = []() -> void { log_e("Air assist toggle failed or timed out"); };
-            grbl_toogle_air_assist(relays["air_assist"].as<bool>(), callbacks);
+            grbl_toggle_air_assist(relays["air_assist"].as<bool>(), callbacks);
         }
 
         // Handle lights

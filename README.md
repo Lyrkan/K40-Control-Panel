@@ -33,6 +33,7 @@ What it **CAN** do:
 -   Retrieve the current state of the machine and move the laser head through UART (requires a FluidNC board)
 -   Enable/disable air assist (requires a FluidNC board)
 -   Expose sensors/state data through an API
+-   Run in headless mode with a UART-based serial protocol (for instance with [Phosphoros](https://github.com/Lyrkan/Phosphoros))
 
 What it **CANNOT** do (_yet_):
 
@@ -87,8 +88,12 @@ Make sure you have Python 3.x installed on your system, then run:
 # Install/update Platform.io
 pip install --upgrade platformio
 
-# Build the firmware (default LCD driver: ST7796)
-pio build
+# Build the firmware (headless mode by default)
+pio run
+
+# Build for a specific display driver instead
+pio run -e ST7796
+pio run -e ILI9488
 ```
 
 Then flash your ESP32 using the `upload` target.
@@ -193,7 +198,8 @@ GET http://<YOUR_PANEL_IP>/api/info
                 "priority": 3,
                 "high_water_mark": 15064
             }
-        }
+        },
+        "reset_reason": "POWERON"
     }
 }
 ```
@@ -254,7 +260,6 @@ GET http://<YOUR_PANEL_IP>/api/relays
 {
     "relays": {
         "interlock": false,
-        "cooling": true,
         "alarm": false,
         "lights": true,
         "accessory": true
@@ -305,5 +310,137 @@ GET http://<YOUR_PANEL_IP>/api/grbl
         "r": false,
         "s": false
     }
+}
+```
+
+## Headless Serial Protocol
+
+When built in headless mode (the default), the control panel communicates over UART using a JSON-based serial protocol. This is used for instance by [Phosphoros](https://github.com/Lyrkan/Phosphoros).
+
+### Connection
+
+-   UART2, 115200 baud, 8N1
+-   TX pin: GPIO 21, RX pin: GPIO 18
+-   Each message is a single JSON object terminated by a newline (`\n`)
+
+### Inbound messages (controller to panel)
+
+Format: `{"a": <action_type>, "p": <payload>}`
+
+| Action | Type | Payload | Description |
+|--------|------|---------|-------------|
+| `0` | GRBL | `{"message": "<gcode>", "id": <int>}` | Forward a GRBL command. The panel responds with a GRBL_ACK message. |
+| `1` | SETTINGS_SET | Settings object (key/value pairs) | Update settings. The panel responds with a SETTINGS message containing the full updated settings. |
+| `2` | SETTINGS_GET | _none_ | Request current settings. The panel responds with a SETTINGS message. |
+| `3` | STATUS | _none_ | Request an immediate status update. |
+| `4` | RELAYS_SET | `{"interlock": <bool>, "air_assist": <bool>, "lights": <bool>, "accessory": <bool>}` | Set relay/accessory states. All keys are optional. |
+
+### Outbound messages (panel to controller)
+
+Format: `{"t": <message_type>, "p": <payload>}`
+
+#### Type `0` -- STATUS
+
+Sent periodically (every 500ms) or on request. Contains sensors, alerts, relays and UART connection status.
+
+```json
+{
+    "t": 0,
+    "p": {
+        "sensors": {
+            "cooling": {
+                "flow": { "in": 5.62, "out": 5.60 },
+                "temp": { "in": 18.9, "out": 21.3 }
+            },
+            "lids": {
+                "front": "opened",
+                "back": "closed"
+            },
+            "flame_sensor": "ok"
+        },
+        "alerts": {
+            "cooling": false,
+            "lids": true,
+            "flame_sensor": false
+        },
+        "relays": {
+            "interlock": false,
+            "alarm": false,
+            "lights": true,
+            "accessory": true,
+            "air_assist": false
+        },
+        "uart": 1
+    }
+}
+```
+
+The `uart` field indicates the GRBL serial connection status: `0` = connecting, `1` = connected, `2` = disconnected.
+
+#### Type `1` -- GRBL_REPORT
+
+Grbl status report. Similar to the `/api/grbl` HTTP endpoint but also includes `alarm` and `active_accessories` fields.
+
+```json
+{
+    "t": 1,
+    "p": {
+        "state": 1,
+        "alarm": 0,
+        "w_pos": { "x": 0, "y": 0, "z": 0 },
+        "m_pos": { "x": 0, "y": 0, "z": 0 },
+        "wco": { "x": 0, "y": 0, "z": 0 },
+        "buffer": {
+            "planned_buffer_available_blocks": 100,
+            "rx_buffer_available_bytes": 20
+        },
+        "feed": { "rate": 0, "spindle_speed": 0 },
+        "line_number": 0,
+        "active_pins": {
+            "x": false, "y": false, "z": false, "p": false,
+            "d": false, "h": false, "r": false, "s": false
+        },
+        "active_accessories": {
+            "spindle_cw": false,
+            "spindle_ccw": false,
+            "flood_coolant": false,
+            "mist_coolant": false
+        }
+    }
+}
+```
+
+Coordinate objects (`w_pos`, `m_pos`, `wco`), `buffer` and `feed` can be `null` when not yet reported by the GRBL controller.
+
+#### Type `2` -- GRBL_MESSAGE
+
+Raw GRBL message forwarded from the FluidNC board.
+
+```json
+{
+    "t": 2,
+    "p": { "message": "[MSG:INFO ...]" }
+}
+```
+
+#### Type `3` -- GRBL_ACK
+
+Acknowledgment for a previously sent GRBL command (action type `0`).
+
+```json
+{
+    "t": 3,
+    "p": { "id": 1, "success": true }
+}
+```
+
+#### Type `4` -- SETTINGS
+
+Current settings dump, sent in response to a SETTINGS_GET or SETTINGS_SET action.
+
+```json
+{
+    "t": 4,
+    "p": { ... }
 }
 ```

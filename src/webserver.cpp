@@ -171,7 +171,7 @@ static void handleGrblStatusRequest(AsyncWebServerRequest *request) {
         state["m_pos"]["y"] = grbl_last_report.m_pos.y;
         state["m_pos"]["z"] = grbl_last_report.m_pos.z;
     } else {
-        state["w_pos"] = nullptr;
+        state["m_pos"] = nullptr;
     }
 
     if (grbl_last_report.wco.is_set) {
@@ -202,14 +202,14 @@ static void handleGrblStatusRequest(AsyncWebServerRequest *request) {
     int active_pins = grbl_last_report.active_pins;
     RELEASE_MUTEX(grbl_last_report_mutex)
 
-    state["active_pins"]["x"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_X) != 0;
-    state["active_pins"]["y"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_Y) != 0;
-    state["active_pins"]["z"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_Z) != 0;
-    state["active_pins"]["p"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_P) != 0;
-    state["active_pins"]["d"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_D) != 0;
-    state["active_pins"]["h"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_H) != 0;
-    state["active_pins"]["r"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_R) != 0;
-    state["active_pins"]["s"] = (grbl_last_report.active_pins & GRBL_PIN_FLAG_S) != 0;
+    state["active_pins"]["x"] = (active_pins & GRBL_PIN_FLAG_X) != 0;
+    state["active_pins"]["y"] = (active_pins & GRBL_PIN_FLAG_Y) != 0;
+    state["active_pins"]["z"] = (active_pins & GRBL_PIN_FLAG_Z) != 0;
+    state["active_pins"]["p"] = (active_pins & GRBL_PIN_FLAG_P) != 0;
+    state["active_pins"]["d"] = (active_pins & GRBL_PIN_FLAG_D) != 0;
+    state["active_pins"]["h"] = (active_pins & GRBL_PIN_FLAG_H) != 0;
+    state["active_pins"]["r"] = (active_pins & GRBL_PIN_FLAG_R) != 0;
+    state["active_pins"]["s"] = (active_pins & GRBL_PIN_FLAG_S) != 0;
 
     // Serialize JSON data and send it to the client
     response->setLength();
@@ -254,6 +254,7 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
             // TODO Make it so the header can still be sent
             // even if the first buffer is less than header_size bytes.
             if (max_len < header_size) {
+                RELEASE_RECURSIVE_MUTEX(webserver_screenshot_mutex)
                 return 0;
             }
 
@@ -308,7 +309,7 @@ static void handleScreenshotRequest(AsyncWebServerRequest *request) {
         lv_disp_drv_init(&driver);
 
         driver.hor_res = lv_disp_get_hor_res(obj_disp);
-        driver.ver_res = lv_disp_get_hor_res(obj_disp);
+        driver.ver_res = lv_disp_get_ver_res(obj_disp);
         lv_disp_drv_use_generic_set_px_cb(&driver, LV_IMG_CF_RGB565);
 
         lv_disp_t fake_disp;

@@ -680,6 +680,7 @@ void ui_settings_update(bool initialize) {
             lv_obj_clear_flag(ui_settings_wifi_connect_button, LV_OBJ_FLAG_HIDDEN);  // Show connect button
             lv_obj_add_flag(ui_settings_wifi_disconnect_button, LV_OBJ_FLAG_HIDDEN); // Hide disconnect button
             lv_obj_add_state(ui_settings_wifi_connect_button, LV_STATE_DISABLED);    // Disable connect button
+            break;
         case WL_CONNECT_FAILED:
         case WL_CONNECTION_LOST:
         case WL_DISCONNECTED:

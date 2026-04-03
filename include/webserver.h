@@ -1,5 +1,5 @@
-#ifndef API_H
-#define API_H
+#ifndef WEBSERVER_H
+#define WEBSERVER_H
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>

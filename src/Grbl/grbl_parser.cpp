@@ -15,8 +15,8 @@
 #endif
 
 static bool grbl_remove_prefix_suffix(char **input, const char *prefix, const char *suffix = NULL) {
-    size_t input_length = strnlen(*input, GRBL_MAX_LINE_lENGTH);
-    size_t prefix_length = strnlen(prefix, GRBL_MAX_LINE_lENGTH);
+    size_t input_length = strnlen(*input, GRBL_MAX_LINE_LENGTH);
+    size_t prefix_length = strnlen(prefix, GRBL_MAX_LINE_LENGTH);
 
     if (prefix_length > input_length) {
         return false;
@@ -27,7 +27,7 @@ static bool grbl_remove_prefix_suffix(char **input, const char *prefix, const ch
     }
 
     if (suffix != NULL) {
-        size_t suffix_length = strnlen(suffix, GRBL_MAX_LINE_lENGTH);
+        size_t suffix_length = strnlen(suffix, GRBL_MAX_LINE_LENGTH);
         if (suffix_length > input_length - prefix_length) {
             return false;
         }
@@ -202,31 +202,32 @@ static void grbl_process_report(char *report_body) {
 
         if (grbl_remove_prefix_suffix(&report_token, "Pn:")) {
             log_d("Triggered pins: %s", report_token);
+            report.active_pins = 0;
             for (int pinIndex = 0; report_token[pinIndex] != '\0'; pinIndex++) {
                 switch (report_token[pinIndex]) {
                 case 'X':
-                    report.active_pins += GRBL_PIN_FLAG_X;
+                    report.active_pins |= GRBL_PIN_FLAG_X;
                     break;
                 case 'Y':
-                    report.active_pins += GRBL_PIN_FLAG_Y;
+                    report.active_pins |= GRBL_PIN_FLAG_Y;
                     break;
                 case 'Z':
-                    report.active_pins += GRBL_PIN_FLAG_Z;
+                    report.active_pins |= GRBL_PIN_FLAG_Z;
                     break;
                 case 'P':
-                    report.active_pins += GRBL_PIN_FLAG_P;
+                    report.active_pins |= GRBL_PIN_FLAG_P;
                     break;
                 case 'D':
-                    report.active_pins += GRBL_PIN_FLAG_D;
+                    report.active_pins |= GRBL_PIN_FLAG_D;
                     break;
                 case 'H':
-                    report.active_pins += GRBL_PIN_FLAG_H;
+                    report.active_pins |= GRBL_PIN_FLAG_H;
                     break;
                 case 'R':
-                    report.active_pins += GRBL_PIN_FLAG_R;
+                    report.active_pins |= GRBL_PIN_FLAG_R;
                     break;
                 case 'S':
-                    report.active_pins += GRBL_PIN_FLAG_S;
+                    report.active_pins |= GRBL_PIN_FLAG_S;
                     break;
                 default:
                     log_w("Unknown pin identifier %c", report_token[pinIndex]);
@@ -237,19 +238,20 @@ static void grbl_process_report(char *report_body) {
 
         if (grbl_remove_prefix_suffix(&report_token, "A:")) {
             log_d("Enabled accessories: %s", report_token);
+            report.enabled_accessories = 0;
             for (int accessoryIndex = 0; report_token[accessoryIndex] != '\0'; accessoryIndex++) {
                 switch (report_token[accessoryIndex]) {
                 case 'S':
-                    report.enabled_accessories += GRBL_ACCESSORY_FLAG_SPINDLE_CW;
+                    report.enabled_accessories |= GRBL_ACCESSORY_FLAG_SPINDLE_CW;
                     break;
                 case 'C':
-                    report.enabled_accessories += GRBL_ACCESSORY_FLAG_SPINDLE_CCW;
+                    report.enabled_accessories |= GRBL_ACCESSORY_FLAG_SPINDLE_CCW;
                     break;
                 case 'F':
-                    report.enabled_accessories += GRBL_ACCESSORY_FLAG_FLOOD_COOLANT;
+                    report.enabled_accessories |= GRBL_ACCESSORY_FLAG_FLOOD_COOLANT;
                     break;
                 case 'M':
-                    report.enabled_accessories += GRBL_ACCESSORY_FLAG_MIST_COOLANT;
+                    report.enabled_accessories |= GRBL_ACCESSORY_FLAG_MIST_COOLANT;
                     break;
                 default:
                     log_w("Unknown accessory identifier %c", report_token[accessoryIndex]);
